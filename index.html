@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ระบบพิจารณาอนุมัติแผนพัฒนาบุคลากร ปีงบประมาณ 2570</title>
+<link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-header-row">
+    <div class="app-title">
+      <h1>ระบบพิจารณาอนุมัติแผนพัฒนาบุคลากร</h1>
+      <span class="fy-badge">ปีงบประมาณ 2570</span>
+      <span class="subtitle">สรุปแผนที่หน่วยงานเสนอเพื่อให้ผู้บริหารพิจารณากลั่นกรอง</span>
+    </div>
+    <div class="header-actions">
+      <div class="filter-field" style="min-width:150px;">
+        <label>ผู้พิจารณา</label>
+        <input type="text" id="reviewer-name" placeholder="ชื่อผู้บริหารผู้พิจารณา" />
+      </div>
+      <button class="btn" id="import-file-btn">⬆ นำเข้าข้อมูล</button>
+      <input type="file" id="import-file-input" accept=".xlsx,.xls,.csv" hidden />
+      <button class="btn" id="export-csv-btn">⬇ ส่งออกผลพิจารณา (CSV)</button>
+      <button class="btn btn-ghost" id="reset-decisions-btn">ล้างผลพิจารณา</button>
+      <button class="btn icon-btn" id="theme-toggle" title="สลับธีม">🖥️</button>
+    </div>
+  </div>
+</header>
+
+<div class="app-shell">
+  <div class="import-banner" id="import-banner"></div>
+  <div style="font-size:12px;color:var(--text-muted);margin:-10px 0 14px;" id="import-status"></div>
+
+  <div class="filter-bar" id="filter-bar"></div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="overview">ภาพรวม</button>
+    <button class="tab-btn" data-tab="review">พิจารณาแผนรายฉบับ</button>
+    <button class="tab-btn" data-tab="dept">สรุปตามหน่วยงาน</button>
+  </div>
+
+  <div class="tab-panel active" id="panel-overview"></div>
+  <div class="tab-panel" id="panel-review"></div>
+  <div class="tab-panel" id="panel-dept"></div>
+</div>
+
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="drawer">
+    <div class="drawer-header">
+      <h2 id="drawer-title"></h2>
+      <button class="btn icon-btn btn-ghost" id="drawer-close">✕</button>
+    </div>
+    <div class="drawer-body" id="drawer-body"></div>
+  </div>
+</div>
+
+<script src="assets/js/vendor/xlsx.full.min.js"></script>
+<script src="assets/js/schema.js"></script>
+<script src="assets/js/sampleData.js"></script>
+<script src="assets/js/importer.js"></script>
+<script src="assets/js/charts.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
