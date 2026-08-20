@@ -72,6 +72,14 @@ function resetAllDecisions() {
   loadAllRecords();
 }
 
+// เผื่อกดผิด — ล้างผลพิจารณาของแผนนี้แผนเดียว กลับไปเป็น "รอพิจารณา" แบบไม่มีประวัติเดิมค้างอยู่
+function revertToPending(id) {
+  const overrides = loadReviewOverrides();
+  delete overrides[id];
+  saveReviewOverrides(overrides);
+  loadAllRecords();
+}
+
 /* ---------------- filtering helpers ---------------- */
 function uniqueValues(records, key) {
   return Array.from(new Set(records.map((r) => r[key]).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'th'));
@@ -378,6 +386,7 @@ function closeDrawer() {
 }
 
 const DECISION_META = {
+  pending: { label: REVIEW_STATUS.pending.label, btnClass: 'btn-pending', icon: '↩' },
   approved: { label: REVIEW_STATUS.approved.label, btnClass: 'btn-good', icon: '✓' },
   revise: { label: REVIEW_STATUS.revise.label, btnClass: 'btn-warning', icon: '↺' },
   rejected: { label: REVIEW_STATUS.rejected.label, btnClass: 'btn-critical', icon: '✕' },
@@ -464,8 +473,15 @@ function renderDecisionArea() {
   area.querySelectorAll('[data-decision]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const status = btn.dataset.decision;
+      if (status === 'pending') {
+        revertToPending(r.id);
+        STATE.noteDraft = null;
+        renderDrawer();
+        renderAll();
+        return;
+      }
       const note = noteField.value.trim();
-      const requireNote = status !== 'approved';
+      const requireNote = status === 'revise' || status === 'rejected';
       if (requireNote && !note) {
         document.getElementById('decision-error').style.display = 'block';
         noteField.focus();

@@ -152,6 +152,8 @@ button { font-family: inherit; }
 .btn-warning:hover { filter: brightness(0.96); }
 .btn-critical { background: var(--status-critical); border-color: var(--status-critical); color: #fff; }
 .btn-critical:hover { filter: brightness(0.94); }
+.btn-pending { background: var(--surface-2); border-color: var(--status-pending); color: var(--status-pending-text); }
+.btn-pending:hover { background: color-mix(in srgb, var(--status-pending) 14%, var(--surface-2)); }
 .btn-ghost { background: transparent; }
 .btn-sm { padding: 6px 11px; font-size: 12.5px; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
@@ -315,7 +317,7 @@ tr.clickable { cursor: pointer; }
 .section-heading { font-size: 12.5px; font-weight: 600; color: var(--series-1); margin: 22px 0 10px; padding-top: 16px; border-top: 1px solid var(--grid); text-transform: uppercase; letter-spacing: .04em; }
 
 .review-history { background: var(--surface-0); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 13px 15px; margin-bottom: 18px; font-size: 13px; font-weight: 300; }
-.action-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.action-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
 .note-field { width: 100%; min-height: 72px; resize: vertical; }
 
 .empty-state { text-align: center; padding: 48px 20px; color: var(--text-muted); font-weight: 300; }
