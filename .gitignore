@@ -1,2 +1,13 @@
 .DS_Store
 *.log
+
+# Defense in depth — real employee data / secrets must never be committed.
+# The app never writes these itself; these entries just guard against
+# accidentally `git add`-ing a local working file with the same pattern.
+*.xlsx
+*.xls
+.env
+.env.*
+/seed/
+seedaccounts.ps1
+seed-accounts.ps1
