@@ -77,10 +77,18 @@ function uniqueValues(records, key) {
   return Array.from(new Set(records.map((r) => r[key]).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'th'));
 }
 
-// ประเภทการส่งอบรม (ภายใน/ภายนอก) ไม่ถูกกรอกทุกแผน — จัดกลุ่มที่ว่างเป็น "ไม่ระบุ" แทนการตัดทิ้ง
-function deliveryTypeOf(r) { return r.deliveryType || 'ไม่ระบุ'; }
+// หลักสูตรกลาง อศค. ดำเนินการ ไม่มีการกรอกประเภทการอบรม/วัตถุประสงค์/ผลลัพธ์ ฯลฯ โดยธรรมชาติของหลักสูตรประเภทนี้
+// (ข้อมูลชุดนี้มีเฉพาะหลักสูตรที่หน่วยงานเสนอเพิ่มเติมตาม Training Needs) จึงไม่ถือเป็นข้อมูลขาดหาย
+function isCentralCourse(r) { return (r.courseType || '').indexOf('หลักสูตรกลาง') === 0; }
+
+// ประเภทการส่งอบรม (ภายใน/ภายนอก) — คืนค่า null สำหรับหลักสูตรกลาง (ไม่เกี่ยวข้อง ไม่นับเป็น "ไม่ระบุ")
+// ส่วนหลักสูตรเสนอเพิ่มเติมที่เว้นว่างจริงๆ ยังคงนับเป็น "ไม่ระบุ" ตามเดิม
+function deliveryTypeOf(r) {
+  if (isCentralCourse(r)) return null;
+  return r.deliveryType || 'ไม่ระบุ';
+}
 function uniqueDeliveryTypes(records) {
-  return Array.from(new Set(records.map(deliveryTypeOf))).sort((a, b) => a.localeCompare(b, 'th'));
+  return Array.from(new Set(records.map(deliveryTypeOf).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'th'));
 }
 
 function matchesFilters(r) {
@@ -167,7 +175,7 @@ function renderOverview() {
     </div>
     <div class="charts-grid">
       <div class="card"><div class="card-title">สัดส่วนตามปัจจัยนำเข้าหลัก</div><div class="card-sub">การจัดหมวดเนื้อหาการพัฒนา</div><div id="chart-inputfactor"></div></div>
-      <div class="card"><div class="card-title">สัดส่วนตามประเภทการอบรม</div><div class="card-sub">จัดภายในหน่วยงาน / ส่งอบรมภายนอก</div><div id="chart-deliverytype"></div></div>
+      <div class="card"><div class="card-title">สัดส่วนตามประเภทการอบรม</div><div class="card-sub">นับเฉพาะหลักสูตรเสนอเพิ่มเติม — หลักสูตรกลาง อศค. ดำเนินการ ไม่มีข้อมูลนี้</div><div id="chart-deliverytype"></div></div>
     </div>
     <div class="charts-grid">
       <div class="card wide"><div class="card-title">งบประมาณรวมต่อหน่วยงาน</div><div class="card-sub">เรียงตามงบประมาณสูงสุด 10 อันดับ</div><div id="chart-budget" style="overflow-x:auto;"></div></div>
@@ -245,7 +253,7 @@ function renderReviewTab() {
               <td class="cell-name">${escapeHtml(r.nameTh)}</td>
               <td>${escapeHtml(r.sectionName || r.divisionName || r.deptName || '-')}</td>
               <td><span class="pill">${escapeHtml(r.courseType || '-')}</span></td>
-              <td><span class="pill">${escapeHtml(deliveryTypeOf(r))}</span></td>
+              <td>${deliveryTypeOf(r) ? `<span class="pill">${escapeHtml(deliveryTypeOf(r))}</span>` : '<span class="cell-muted">—</span>'}</td>
               <td class="num">${fmtNum(r.participants)}</td>
               <td class="num">${r.budgetTotal ? fmtBaht(r.budgetTotal) : '<span class="cell-muted">-</span>'}</td>
               <td>${statusBadge(r.reviewStatus)}${r.reviewNote ? `<div class="note-snippet" title="${escapeAttr(r.reviewNote)}">📝 ${escapeHtml(truncate(r.reviewNote, 42))}</div>` : ''}</td>
@@ -283,7 +291,7 @@ function renderDeptSummaryTab() {
     const byInputFactor = {};
     rows.forEach((r) => { byInputFactor[r.inputFactor] = (byInputFactor[r.inputFactor] || 0) + 1; });
     const byDeliveryType = {};
-    rows.forEach((r) => { const t = deliveryTypeOf(r); byDeliveryType[t] = (byDeliveryType[t] || 0) + 1; });
+    rows.forEach((r) => { const t = deliveryTypeOf(r); if (t) byDeliveryType[t] = (byDeliveryType[t] || 0) + 1; });
     return { name, total: rows.length, counts, rate, byCourseType, byInputFactor, byDeliveryType };
   }).sort((a, b) => b.total - a.total);
 
@@ -320,10 +328,11 @@ function renderDeptSummaryTab() {
               <div class="type-breakdown" style="margin-bottom:12px;">
                 ${Object.entries(row.byInputFactor).map(([t, c]) => `<span class="type-chip">${escapeHtml(t)}: <b>${fmtNum(c)}</b></span>`).join('')}
               </div>
+              ${Object.keys(row.byDeliveryType).length ? `
               <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">แยกตามประเภทการอบรม</div>
               <div class="type-breakdown">
                 ${Object.entries(row.byDeliveryType).map(([t, c]) => `<span class="type-chip">${escapeHtml(t)}: <b>${fmtNum(c)}</b></span>`).join('')}
-              </div>
+              </div>` : ''}
             </div></td></tr>
           `).join('') : `<tr><td colspan="7"><div class="empty-state"><div class="big">📋</div>ไม่พบข้อมูล</div></td></tr>`}
         </tbody>
@@ -387,6 +396,25 @@ function renderDrawer() {
       ${r.reviewNote ? `<div><b style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">หมายเหตุที่บันทึกไว้</b><div style="margin-top:2px;">${escapeHtml(r.reviewNote)}</div></div>` : '<div style="color:var(--text-muted);font-size:12.5px;">ไม่มีหมายเหตุ</div>'}
     </div>` : '';
 
+  const isCentral = isCentralCourse(r);
+
+  // หลักสูตรกลาง อศค. ดำเนินการ ไม่มีประเภทการอบรม/วัตถุประสงค์/ผลลัพธ์ ฯลฯ กรอกไว้ตั้งแต่ต้น
+  // จึงซ่อนช่องเหล่านี้แทนการโชว์ "ไม่ระบุ" ทุกช่อง และอธิบายเหตุผลสั้นๆ แทน
+  const considerationSection = isCentral ? `
+    <div class="section-heading">ข้อมูลสำหรับพิจารณา</div>
+    <div style="color:var(--text-muted);font-size:12.5px;">หลักสูตรกลาง อศค. ดำเนินการ ไม่มีการกรอกวัตถุประสงค์/ผลลัพธ์ที่คาดหวัง/ตัวชี้วัด ฯลฯ แยกเป็นรายหลักสูตร</div>
+  ` : `
+    <div class="section-heading">ข้อมูลสำหรับพิจารณา</div>
+    <dl class="detail-grid">
+      <div class="detail-item full">${fieldRow('ความจำเป็น/หลักการและเหตุผล', r.rationale)}</div>
+      <div class="detail-item full">${fieldRow('วัตถุประสงค์', r.objective)}</div>
+      <div class="detail-item full">${fieldRow('ทักษะ/ความรู้ที่จะได้รับ', r.skillsGained)}</div>
+      <div class="detail-item full">${fieldRow('ผลลัพธ์ที่คาดหวัง', r.outcome)}</div>
+      <div class="detail-item full">${fieldRow('ตัวชี้วัด (KPI)', r.kpi)}</div>
+      <div class="detail-item full">${fieldRow('หมายเหตุ', r.remark)}</div>
+    </dl>
+  `;
+
   body.innerHTML = `
     ${history}
     <dl class="detail-grid">
@@ -397,7 +425,7 @@ function renderDrawer() {
       ${fieldRow('ปัจจัยนำเข้าหลัก', r.inputFactor)}
       ${fieldRow('สถานะต้นทาง', r.sourceStatus)}
       ${fieldRow('รูปแบบการเรียนรู้', r.learningFormat)}
-      ${fieldRow('ประเภทการส่งอบรม', r.deliveryType)}
+      ${isCentral ? '' : fieldRow('ประเภทการส่งอบรม', r.deliveryType)}
       ${fieldRow('จำนวนผู้เข้าอบรม (คน)', r.participants)}
       ${fieldRow('จำนวนวันอบรม (วัน)', r.days)}
       ${fieldRow('งบประมาณรวมทั้งหมด', r.budgetTotal ? fmtBaht(r.budgetTotal) : '')}
@@ -408,15 +436,7 @@ function renderDrawer() {
       ${fieldRow('ตำแหน่งผู้เสนอ', r.creatorPosition)}
       <div class="detail-item full">${fieldRow('กลุ่มเป้าหมาย', r.targetGroupNames)}</div>
     </dl>
-    <div class="section-heading">ข้อมูลสำหรับพิจารณา</div>
-    <dl class="detail-grid">
-      <div class="detail-item full">${fieldRow('ความจำเป็น/หลักการและเหตุผล', r.rationale)}</div>
-      <div class="detail-item full">${fieldRow('วัตถุประสงค์', r.objective)}</div>
-      <div class="detail-item full">${fieldRow('ทักษะ/ความรู้ที่จะได้รับ', r.skillsGained)}</div>
-      <div class="detail-item full">${fieldRow('ผลลัพธ์ที่คาดหวัง', r.outcome)}</div>
-      <div class="detail-item full">${fieldRow('ตัวชี้วัด (KPI)', r.kpi)}</div>
-      <div class="detail-item full">${fieldRow('หมายเหตุ', r.remark)}</div>
-    </dl>
+    ${considerationSection}
     <div class="section-heading">การพิจารณา</div>
     <div id="decision-area"></div>
   `;
@@ -547,7 +567,7 @@ function handleFileImport(file) {
 function exportCsv() {
   const cols = [
     ['id', 'รหัส'], ['nameTh', 'ชื่อหลักสูตร'], ['deptName', 'ฝ่าย'], ['divisionName', 'กอง'], ['sectionName', 'แผนก'],
-    ['courseType', 'ประเภทหลักสูตร'], ['inputFactor', 'ปัจจัยนำเข้าหลัก'], ['participants', 'จำนวนผู้เข้าอบรม'],
+    ['courseType', 'ประเภทหลักสูตร'], ['inputFactor', 'ปัจจัยนำเข้าหลัก'], ['deliveryType', 'ประเภทการอบรม'], ['participants', 'จำนวนผู้เข้าอบรม'],
     ['budgetTotal', 'งบประมาณรวม'], ['reviewStatus', 'สถานะ'], ['reviewNote', 'หมายเหตุการพิจารณา'],
     ['reviewedBy', 'ผู้พิจารณา'], ['reviewedDate', 'วันที่พิจารณา'],
   ];
