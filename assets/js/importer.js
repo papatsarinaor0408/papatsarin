@@ -38,6 +38,9 @@ function mapRowToRecord(row, index) {
     else if (field.key === 'startDate' || field.key === 'endDate') rec[field.key] = toDateLabel(val);
     else rec[field.key] = (val === undefined || val === null) ? '' : String(val).trim();
   });
+  // บางแถวไม่มี "กอง" กรอกไว้ (แต่มีแผนก/ฝ่าย) — ใช้หน่วยงานที่เจาะจงกว่าแทน "ไม่ระบุ"
+  if (!rec.divisionName) rec.divisionName = rec.sectionName || rec.deptName || '';
+
   // ค่าที่จำเป็นแต่ไม่มีในไฟล์ ให้ค่าเริ่มต้นว่าง เพื่อกันหน้าจอพัง
   ['nameTh', 'deptName', 'divisionName', 'sectionName', 'courseType', 'inputFactor'].forEach((k) => {
     if (!rec[k]) rec[k] = k === 'nameTh' ? '(ไม่ระบุชื่อหลักสูตร)' : 'ไม่ระบุ';
