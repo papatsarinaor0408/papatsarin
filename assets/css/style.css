@@ -336,7 +336,7 @@ table.data-table tbody tr:hover { background: var(--table-hover-bg); }
 table.data-table tbody tr:last-child td { border-bottom: none; }
 .cell-name { font-weight: 500; max-width: 320px; }
 .cell-muted { color: var(--text-muted); }
-.num { font-variant-numeric: tabular-nums; text-align: right; }
+.num, table.data-table th.num { font-variant-numeric: tabular-nums; text-align: right; }
 tr.clickable { cursor: pointer; }
 
 /* Thin background tint on already-decided rows in the review table, using
