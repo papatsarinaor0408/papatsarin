@@ -427,18 +427,18 @@ function renderDeptSummaryTab() {
   const orgLevel = STATE.filters.orgLevel;
   const orgNames = uniqueValues(data, orgLevel);
   const rows = orgNames.map((name) => {
-    const rows = data.filter((r) => r[orgLevel] === name);
+    const deptRecords = data.filter((r) => r[orgLevel] === name);
     const counts = { pending: 0, approved: 0, revise: 0, rejected: 0 };
-    rows.forEach((r) => { counts[r.reviewStatus]++; });
+    deptRecords.forEach((r) => { counts[r.reviewStatus]++; });
     const decided = counts.approved + counts.revise + counts.rejected;
     const rate = decided ? (counts.approved / decided) * 100 : null;
     const byCourseType = {};
-    rows.forEach((r) => { byCourseType[r.courseType] = (byCourseType[r.courseType] || 0) + 1; });
+    deptRecords.forEach((r) => { byCourseType[r.courseType] = (byCourseType[r.courseType] || 0) + 1; });
     const byInputFactor = {};
-    rows.forEach((r) => { byInputFactor[r.inputFactor] = (byInputFactor[r.inputFactor] || 0) + 1; });
+    deptRecords.forEach((r) => { byInputFactor[r.inputFactor] = (byInputFactor[r.inputFactor] || 0) + 1; });
     const byDeliveryType = {};
-    rows.forEach((r) => { const t = deliveryTypeOf(r); if (t) byDeliveryType[t] = (byDeliveryType[t] || 0) + 1; });
-    return { name, total: rows.length, counts, rate, byCourseType, byInputFactor, byDeliveryType };
+    deptRecords.forEach((r) => { const t = deliveryTypeOf(r); if (t) byDeliveryType[t] = (byDeliveryType[t] || 0) + 1; });
+    return { name, total: deptRecords.length, counts, rate, byCourseType, byInputFactor, byDeliveryType, records: deptRecords };
   }).sort((a, b) => b.total - a.total);
 
   root.innerHTML = `
@@ -476,9 +476,24 @@ function renderDeptSummaryTab() {
               </div>
               ${Object.keys(row.byDeliveryType).length ? `
               <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">แยกตามประเภทการอบรม</div>
-              <div class="type-breakdown">
+              <div class="type-breakdown" style="margin-bottom:12px;">
                 ${Object.entries(row.byDeliveryType).map(([t, c]) => `<span class="type-chip">${escapeHtml(t)}: <b>${fmtNum(c)}</b></span>`).join('')}
               </div>` : ''}
+              <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">รายชื่อหลักสูตร (${fmtNum(row.records.length)}) — คลิกแถวเพื่อดูรายละเอียด</div>
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead><tr><th>ชื่อหลักสูตร</th><th>ผู้เสนอแผน</th><th>สถานะ</th></tr></thead>
+                  <tbody>
+                    ${row.records.map((r) => `
+                      <tr class="clickable dept-course-row${r.reviewStatus !== 'pending' ? ` row-status-${r.reviewStatus}` : ''}" data-id="${r.id}">
+                        <td class="cell-name">${escapeHtml(r.nameTh)}</td>
+                        <td>${escapeHtml(r.creatorName || '-')}</td>
+                        <td>${statusBadge(r.reviewStatus)}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
             </div></td></tr>
           `).join('') : `<tr><td colspan="7"><div class="empty-state"><div class="big">📋</div>ไม่พบข้อมูล</div></td></tr>`}
         </tbody>
@@ -486,6 +501,12 @@ function renderDeptSummaryTab() {
     </div>
     <div style="font-size:11.5px;color:var(--text-muted);margin-top:8px;">*อัตราเห็นชอบ = เห็นชอบ ÷ (เห็นชอบ + เห็นชอบแต่ให้ทบทวน + ไม่เห็นชอบ) ไม่นับแผนที่ยังรอพิจารณา</div>
   `;
+  root.querySelectorAll('.dept-course-row').forEach((tr) => {
+    tr.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openDrawer(tr.dataset.id);
+    });
+  });
   root.querySelectorAll('.dept-row-toggle').forEach((tr) => {
     tr.addEventListener('click', () => {
       const key = tr.dataset.key;
