@@ -761,7 +761,8 @@ async function init() {
   if (!profile) return;
 
   applyRoleVisibility();
-  document.getElementById('user-position').textContent = profile.position || profile.employee_id;
+  document.getElementById('user-name').textContent = profile.full_name || profile.employee_id;
+  document.getElementById('user-position').textContent = profile.position || '';
   document.getElementById('user-role-pill').textContent = profile.role === 'Admin' ? 'Admin' : 'Reviewer';
   document.getElementById('logout-btn').addEventListener('click', signOut);
 
