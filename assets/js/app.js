@@ -66,20 +66,7 @@ function uniqueDeliveryTypes(records) {
   return Array.from(new Set(records.map(deliveryTypeOf).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'th'));
 }
 
-function matchesFilters(r) {
-  const f = STATE.filters;
-  if (f.orgValue && r[f.orgLevel] !== f.orgValue) return false;
-  if (f.courseType && r.courseType !== f.courseType) return false;
-  if (f.inputFactor && r.inputFactor !== f.inputFactor) return false;
-  if (f.deliveryType && deliveryTypeOf(r) !== f.deliveryType) return false;
-  if (f.status && r.reviewStatus !== f.status) return false;
-  if (f.search) {
-    const q = f.search.toLowerCase();
-    const hay = [r.nameTh, r.creatorName, r.targetGroupNames, r.divisionName, r.sectionName].join(' ').toLowerCase();
-    if (!hay.includes(q)) return false;
-  }
-  return true;
-}
+function matchesFilters(r) { return matchesFiltersExcept(r, null); }
 
 function getFiltered() { return STATE.records.filter(matchesFilters); }
 
@@ -96,7 +83,10 @@ function matchesFiltersExcept(r, exceptKey) {
   if (exceptKey !== 'courseType' && f.courseType && r.courseType !== f.courseType) return false;
   if (exceptKey !== 'inputFactor' && f.inputFactor && r.inputFactor !== f.inputFactor) return false;
   if (exceptKey !== 'deliveryType' && f.deliveryType && deliveryTypeOf(r) !== f.deliveryType) return false;
-  if (exceptKey !== 'status' && f.status && r.reviewStatus !== f.status) return false;
+  if (exceptKey !== 'status' && f.status) {
+    if (f.status === 'decided') { if (r.reviewStatus === 'pending') return false; }
+    else if (r.reviewStatus !== f.status) return false;
+  }
   if (exceptKey !== 'search' && f.search) {
     const q = f.search.toLowerCase();
     const hay = [r.nameTh, r.creatorName, r.targetGroupNames, r.divisionName, r.sectionName].join(' ').toLowerCase();
@@ -365,7 +355,31 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
 function renderReviewTab() {
   const root = document.getElementById('panel-review');
   const data = getFiltered();
+
+  // Counts respect every OTHER active filter (org/type/etc.) but not the
+  // status filter itself — same cascading logic as the dropdowns — so each
+  // chip's number always shows what you'd get by picking it, regardless of
+  // which status chip happens to be active right now.
+  const statusBase = getFilteredExcept('status');
+  const activeStatus = STATE.filters.status;
+  const countAll = statusBase.length;
+  const countPending = statusBase.filter((r) => r.reviewStatus === 'pending').length;
+  const countApproved = statusBase.filter((r) => r.reviewStatus === 'approved').length;
+  const countRevise = statusBase.filter((r) => r.reviewStatus === 'revise').length;
+  const countRejected = statusBase.filter((r) => r.reviewStatus === 'rejected').length;
+  const countDecided = countApproved + countRevise + countRejected;
+  const chip = (status, label, count, extraClass) =>
+    `<button class="status-chip${extraClass ? ' ' + extraClass : ''}${activeStatus === status ? ' active' : ''}" data-status="${status}">${label} <span class="status-chip-count">${fmtNum(count)}</span></button>`;
+
   root.innerHTML = `
+    <div class="status-quickbar">
+      ${chip('', 'ทั้งหมด', countAll)}
+      ${chip('pending', 'รอพิจารณา', countPending)}
+      ${chip('decided', 'พิจารณาแล้ว', countDecided)}
+      ${chip('approved', '↳ เห็นชอบ', countApproved, 'sub sub-approved')}
+      ${chip('revise', '↳ เห็นชอบแต่ให้ทบทวน', countRevise, 'sub sub-revise')}
+      ${chip('rejected', '↳ ไม่เห็นชอบ', countRejected, 'sub sub-rejected')}
+    </div>
     <div class="filter-count" style="margin-bottom:10px;">พบ ${fmtNum(data.length)} แผน จากทั้งหมด ${fmtNum(STATE.records.length)} แผน</div>
     <div class="table-wrap">
       <table class="data-table">
@@ -394,6 +408,12 @@ function renderReviewTab() {
     elm.addEventListener('click', (e) => {
       e.stopPropagation();
       openDrawer(elm.dataset.id || elm.closest('tr').dataset.id);
+    });
+  });
+  root.querySelectorAll('.status-chip').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      STATE.filters.status = btn.dataset.status;
+      renderAll();
     });
   });
 }
@@ -962,7 +982,9 @@ function renderFilterBar() {
   const deliveryTypes = uniqueDeliveryTypes(getFilteredExcept('deliveryType'));
   if (STATE.filters.deliveryType && !deliveryTypes.includes(STATE.filters.deliveryType)) STATE.filters.deliveryType = '';
   const statusOptions = new Set(getFilteredExcept('status').map((r) => r.reviewStatus));
-  if (STATE.filters.status && !statusOptions.has(STATE.filters.status)) STATE.filters.status = '';
+  // 'decided' is a synthetic group (any status but pending) set by the review
+  // tab's status chips, not an actual reviewStatus value — never auto-clear it.
+  if (STATE.filters.status && STATE.filters.status !== 'decided' && !statusOptions.has(STATE.filters.status)) STATE.filters.status = '';
   // Autocomplete suggestions for the search box — course names under the
   // other active filters, so it stays consistent with the cascading dropdowns above.
   const courseNameOptions = uniqueValues(getFilteredExcept('search'), 'nameTh');
