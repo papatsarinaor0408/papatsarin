@@ -14,16 +14,16 @@
   --table-header-text: #344054;
   --table-hover-bg: #F7F3FA;
 
-  /* Brand — warm gradient family (yellow → orange → pink → purple) */
+  /* Brand — smooth 8-stop gradient interpolated across purple → pink → orange → yellow */
   --series-1: #75539A; /* primary purple */
-  --series-2: #9E55A8; /* medium purple */
-  --series-3: #BB589B; /* pink purple */
-  --series-4: #CD5575; /* rose pink */
-  --series-5: #E87557; /* soft orange */
-  --series-6: #FDBE5A; /* warm yellow */
-  --series-7: #4E3767; /* deep plum (extended range) */
-  --series-8: #FFD98A; /* pale gold (extended range) */
-  --series-1-hover: #9E55A8;
+  --series-2: #9254A4;
+  --series-3: #AA56A2;
+  --series-4: #BE5896; /* rose pink */
+  --series-5: #CA557A;
+  --series-6: #DC6764;
+  --series-7: #EE8A58; /* soft orange */
+  --series-8: #FDBE5A; /* warm yellow */
+  --series-1-hover: #9254A4;
 
   --seq-100: #EDE7F3; --seq-200: #D8CBE6; --seq-300: #B79ECF;
   --seq-400: #9575B8; --seq-450: #75539A; --seq-500: #664887;
@@ -63,10 +63,10 @@
     --table-header-text: #D6D2DC;
     --table-hover-bg: #2A2533;
 
-    --series-1: #9B7CC0; --series-2: #C07BC7; --series-3: #D480B6;
-    --series-4: #E17E96; --series-5: #F0916F; --series-6: #FDCB7A;
-    --series-7: #7458A0; --series-8: #FFE1A3;
-    --series-1-hover: #B18ED0;
+    --series-1: #A48DBC; --series-2: #B78EC3; --series-3: #C790C2;
+    --series-4: #D490B9; --series-5: #DC8FA8; --series-6: #E89B99;
+    --series-7: #F4B291; --series-8: #FED492;
+    --series-1-hover: #B78EC3;
 
     --seq-100: #2C2536; --seq-200: #3B3049; --seq-300: #52407A;
     --seq-400: #6C4E9A; --seq-450: #9B7CC0; --seq-500: #AC91CC;
@@ -85,10 +85,10 @@
   --text-primary: #F3F1F6; --text-secondary: #C2BCCA; --text-muted: #8F899A;
   --grid: #34303D; --border: #34303D;
   --table-header-bg: #262230; --table-header-text: #D6D2DC; --table-hover-bg: #2A2533;
-  --series-1: #9B7CC0; --series-2: #C07BC7; --series-3: #D480B6;
-  --series-4: #E17E96; --series-5: #F0916F; --series-6: #FDCB7A;
-  --series-7: #7458A0; --series-8: #FFE1A3;
-  --series-1-hover: #B18ED0;
+  --series-1: #A48DBC; --series-2: #B78EC3; --series-3: #C790C2;
+  --series-4: #D490B9; --series-5: #DC8FA8; --series-6: #E89B99;
+  --series-7: #F4B291; --series-8: #FED492;
+  --series-1-hover: #B78EC3;
   --seq-100: #2C2536; --seq-200: #3B3049; --seq-300: #52407A;
   --seq-400: #6C4E9A; --seq-450: #9B7CC0; --seq-500: #AC91CC;
   --seq-600: #C3AAD9; --seq-700: #DAC6E7;
