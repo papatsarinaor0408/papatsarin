@@ -9,6 +9,7 @@ const STATE = {
   activeTab: 'overview',
   filters: { orgLevel: 'divisionName', orgValue: '', courseType: '', inputFactor: '', deliveryType: '', status: '', search: '' },
   openDeptKeys: new Set(),
+  openDupCourseKeys: new Set(),
   selectedId: null,
   noteDraft: null, // in-progress text in the review note field, kept across re-renders
 
@@ -643,6 +644,100 @@ function renderDeptSummaryTab() {
 }
 function cssEscape(s) { return String(s).replace(/["\\]/g, '\\$&'); }
 
+/* ==================================================================== */
+/* TAB: DUPLICATE COURSES — same course name proposed by 2+ departments  */
+/* ==================================================================== */
+function joinUnitsPreview(units, max) {
+  max = max || 3;
+  const shown = units.slice(0, max).join(', ');
+  return units.length > max ? `${shown} +${units.length - max} หน่วยงาน` : shown;
+}
+
+function renderDupCoursesTab() {
+  const root = document.getElementById('panel-dupcourses');
+  if (!root) return;
+  const data = getFiltered();
+  const unitOf = (r) => r.sectionName || r.divisionName || r.deptName || '-';
+
+  const groups = {};
+  data.forEach((r) => { (groups[r.nameTh] = groups[r.nameTh] || []).push(r); });
+  const dupGroups = Object.entries(groups)
+    .map(([name, records]) => ({ name, records, units: Array.from(new Set(records.map(unitOf))) }))
+    .filter((g) => g.units.length >= 2)
+    .sort((a, b) => b.units.length - a.units.length || a.name.localeCompare(b.name, 'th'));
+  const totalParticipants = (records) => records.reduce((s, r) => s + (Number(r.participants) || 0), 0);
+
+  root.innerHTML = `
+    <div class="filter-count" style="margin-bottom:10px;">
+      พบหลักสูตรที่มากกว่า 1 หน่วยงานเสนอเหมือนกัน ${fmtNum(dupGroups.length)} หลักสูตร (จากทั้งหมด ${fmtNum(data.length)} แผนที่ตรงตัวกรอง) — คลิกแถวเพื่อดูรายละเอียดแต่ละหน่วยงาน
+    </div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>ชื่อหลักสูตร</th><th>ประเภทหลักสูตร</th><th>ประเภทการอบรม</th>
+          <th>หน่วยงานเจ้าของหลักสูตร</th><th class="num">ผู้เข้าอบรม (รวม)</th><th></th>
+        </tr></thead>
+        <tbody>
+          ${dupGroups.length ? dupGroups.map((g) => {
+            const sample = g.records[0];
+            return `
+            <tr class="dept-row-toggle" data-key="${escapeHtml(g.name)}">
+              <td class="cell-name"><span class="chev">▸</span>${escapeHtml(g.name)}</td>
+              <td>${escapeHtml(sample.courseType || '-')}</td>
+              <td>${deliveryTypeOf(sample) ? escapeHtml(deliveryTypeOf(sample)) : '<span class="cell-muted">—</span>'}</td>
+              <td>${fmtNum(g.units.length)} หน่วยงาน<div class="cell-muted" style="font-size:11.5px;margin-top:2px;">${escapeHtml(joinUnitsPreview(g.units))}</div></td>
+              <td class="num">${fmtNum(totalParticipants(g.records))}</td>
+              <td></td>
+            </tr>
+            <tr class="dept-detail-row" data-key="${escapeHtml(g.name)}"><td colspan="6"><div class="dept-detail-inner">
+              <div class="subheading-label" style="margin-bottom:6px;">รายละเอียดแต่ละหน่วยงาน (${fmtNum(g.records.length)}) — คลิกแถวเพื่อดูรายละเอียด</div>
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead><tr><th>หน่วยงาน</th><th>ผู้เสนอแผน</th><th class="num">ผู้เข้าอบรม</th><th class="num">งบประมาณ</th><th>สถานะ</th></tr></thead>
+                  <tbody>
+                    ${g.records.map((r) => `
+                      <tr class="clickable dept-course-row${r.reviewStatus !== 'pending' ? ` row-status-${r.reviewStatus}` : ''}" data-id="${r.id}">
+                        <td class="cell-name">${escapeHtml(unitOf(r))}</td>
+                        <td>${escapeHtml(r.creatorName || '-')}</td>
+                        <td class="num">${fmtNum(r.participants)}</td>
+                        <td class="num">${r.budgetTotal ? fmtBaht(r.budgetTotal) : '<span class="cell-muted">-</span>'}</td>
+                        <td>${statusBadge(r.reviewStatus)}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div></td></tr>
+          `;
+          }).join('') : `<tr><td colspan="6"><div class="empty-state"><div class="big">🔍</div>ไม่พบหลักสูตรที่มากกว่า 1 หน่วยงานเสนอเหมือนกัน</div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  root.querySelectorAll('.dept-course-row').forEach((tr) => {
+    tr.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openDrawer(tr.dataset.id);
+    });
+  });
+  root.querySelectorAll('.dept-row-toggle').forEach((tr) => {
+    tr.addEventListener('click', () => {
+      const key = tr.dataset.key;
+      const detail = root.querySelector(`.dept-detail-row[data-key="${cssEscape(key)}"]`);
+      const isOpen = STATE.openDupCourseKeys.has(key);
+      if (isOpen) STATE.openDupCourseKeys.delete(key); else STATE.openDupCourseKeys.add(key);
+      tr.classList.toggle('open', !isOpen);
+      if (detail) detail.classList.toggle('open', !isOpen);
+    });
+    if (STATE.openDupCourseKeys.has(tr.dataset.key)) {
+      tr.classList.add('open');
+      const detail = root.querySelector(`.dept-detail-row[data-key="${cssEscape(tr.dataset.key)}"]`);
+      if (detail) detail.classList.add('open');
+    }
+  });
+}
+
 /** Shared CSV builder — BOM + CRLF + quote-escaping, matching exportCsv(). */
 function downloadCsv(filename, cols, rows, cellFmt) {
   const csvRows = [cols.map((c) => c[1]).join(',')];
@@ -1274,6 +1369,7 @@ function renderAll() {
   renderOverview();
   renderReviewTab();
   renderDeptSummaryTab();
+  renderDupCoursesTab();
 }
 
 function applyTheme(mode) {
