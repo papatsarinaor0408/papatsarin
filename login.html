@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>เข้าสู่ระบบ — ระบบพิจารณาแผนพัฒนาบุคลากร (โรงไฟฟ้าบางปะกง) ปี 2570</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+<div class="auth-page">
+  <div class="auth-card card">
+    <div class="auth-brand">
+      <div class="auth-title-th">ระบบพิจารณาแผนพัฒนาบุคลากร</div>
+      <div class="auth-title-th">(โรงไฟฟ้าบางปะกง) ปี 2570</div>
+    </div>
+
+    <form id="screen-login" class="auth-screen active" autocomplete="off">
+      <div class="auth-field">
+        <label for="login-employee-id">เลขประจำตัว</label>
+        <input type="text" id="login-employee-id" inputmode="numeric" autocomplete="username" required />
+      </div>
+      <div class="auth-field">
+        <label for="login-password">รหัสผ่าน</label>
+        <div class="auth-password-row">
+          <input type="password" id="login-password" autocomplete="current-password" required />
+          <button type="button" class="btn icon-btn btn-ghost" id="login-password-toggle" title="แสดง/ซ่อนรหัสผ่าน" tabindex="-1">👁</button>
+        </div>
+      </div>
+      <div class="auth-error" id="login-error" hidden></div>
+      <button type="submit" class="btn btn-primary auth-submit" id="login-submit-btn">เข้าสู่ระบบ</button>
+    </form>
+
+    <form id="screen-changepw" class="auth-screen" autocomplete="off">
+      <div class="auth-subtitle">เพื่อความปลอดภัย กรุณาตั้งรหัสผ่านใหม่ก่อนเข้าใช้งานระบบ</div>
+      <div class="auth-field">
+        <label for="newpw-1">รหัสผ่านใหม่</label>
+        <input type="password" id="newpw-1" autocomplete="new-password" minlength="8" required />
+      </div>
+      <div class="auth-field">
+        <label for="newpw-2">ยืนยันรหัสผ่านใหม่</label>
+        <input type="password" id="newpw-2" autocomplete="new-password" minlength="8" required />
+      </div>
+      <div class="auth-error" id="changepw-error" hidden></div>
+      <button type="submit" class="btn btn-primary auth-submit" id="changepw-submit-btn">ตั้งรหัสผ่านใหม่</button>
+    </form>
+  </div>
+</div>
+
+<script src="assets/js/vendor/supabase-js.min.js"></script>
+<script src="assets/js/supabaseClient.js"></script>
+<script src="assets/js/auth.js"></script>
+<script>
+function showScreen(id) {
+  document.querySelectorAll('.auth-screen').forEach((el) => el.classList.toggle('active', el.id === id));
+}
+
+function setError(elId, message) {
+  const el = document.getElementById(elId);
+  if (message) { el.textContent = message; el.hidden = false; }
+  else { el.textContent = ''; el.hidden = true; }
+}
+
+async function init() {
+  const params = new URLSearchParams(window.location.search);
+  const { data: { session } } = await SB.auth.getSession();
+
+  if (session) {
+    const { data: { user } } = await SB.auth.getUser();
+    const { data: profile } = await SB.from('profiles').select('*').eq('id', user.id).maybeSingle();
+    if (profile && profile.status === 'active') {
+      if (profile.must_change_password || params.get('mode') === 'changepw') {
+        showScreen('screen-changepw');
+        return;
+      }
+      window.location.href = 'index.html';
+      return;
+    }
+    await SB.auth.signOut();
+  }
+
+  showScreen('screen-login');
+}
+
+document.getElementById('login-password-toggle').addEventListener('click', () => {
+  const input = document.getElementById('login-password');
+  input.type = input.type === 'password' ? 'text' : 'password';
+});
+
+let loginSubmitting = false;
+document.getElementById('screen-login').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (loginSubmitting) return;
+  loginSubmitting = true;
+  setError('login-error', '');
+  const btn = document.getElementById('login-submit-btn');
+  btn.disabled = true;
+
+  const employeeId = document.getElementById('login-employee-id').value.trim();
+  const password = document.getElementById('login-password').value;
+
+  try {
+    const result = await signIn(employeeId, password);
+    if (!result.ok) {
+      setError('login-error', result.message);
+      return;
+    }
+    if (result.mustChangePassword) {
+      showScreen('screen-changepw');
+      return;
+    }
+    window.location.href = 'index.html';
+  } finally {
+    btn.disabled = false;
+    loginSubmitting = false;
+  }
+});
+
+let changepwSubmitting = false;
+document.getElementById('screen-changepw').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (changepwSubmitting) return;
+  changepwSubmitting = true;
+  setError('changepw-error', '');
+  const btn = document.getElementById('changepw-submit-btn');
+  btn.disabled = true;
+
+  const pw1 = document.getElementById('newpw-1').value;
+  const pw2 = document.getElementById('newpw-2').value;
+
+  try {
+    if (pw1.length < 8) {
+      setError('changepw-error', 'รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร');
+      return;
+    }
+    if (pw1 !== pw2) {
+      setError('changepw-error', 'รหัสผ่านใหม่ทั้งสองช่องไม่ตรงกัน');
+      return;
+    }
+    const result = await submitNewPassword(pw1);
+    if (!result.ok) {
+      setError('changepw-error', result.message);
+      return;
+    }
+    window.location.href = 'index.html';
+  } finally {
+    btn.disabled = false;
+    changepwSubmitting = false;
+  }
+});
+
+init();
+</script>
+</body>
+</html>
