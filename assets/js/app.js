@@ -123,6 +123,22 @@ function fmtThaiDateTime(iso) {
 }
 const CATEGORICAL = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)', 'var(--series-5)', 'var(--series-6)', 'var(--series-7)', 'var(--series-8)'];
 
+// Selection accent palette (Navy/Indigo/Magenta/Coral/Amber) — cycled across
+// filter chips to give each an Active-state color, per the corporate-dashboard
+// visual spec. Distinct from CATEGORICAL, which is for chart series.
+const ACCENT_PALETTE = ['#003F5C', '#58508D', '#BC5090', '#FF6361', '#FFA600'];
+
+// WCAG relative-luminance check — picks readable text (dark vs white) for a
+// solid accent chip background, since white-on-Amber fails contrast badly.
+function readableTextOn(hex) {
+  const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const lin = (v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+  const L = 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+  // Threshold tuned so Coral (~0.31) also gets dark text — white-on-Coral
+  // only clears ~3:1, short of the 4.5:1 AA target for chip label text.
+  return L > 0.28 ? '#2E2935' : '#ffffff';
+}
+
 // จำกัดจำนวนหมวดหมู่ที่ใช้สีแยกกันไม่เกิน 8 สี (พ้องกับจำนวนสี categorical ที่ผ่านเกณฑ์แยกแยะ)
 // เกินกว่านั้นให้รวมหมวดที่เล็กที่สุดเป็น "อื่นๆ" เพื่อไม่ให้สีวนซ้ำจนแยกหมวดหมู่ไม่ออก
 function topNWithOther(items, n) {
@@ -379,14 +395,17 @@ function renderReviewTab() {
   const countRevise = statusBase.filter((r) => r.reviewStatus === 'revise').length;
   const countRejected = statusBase.filter((r) => r.reviewStatus === 'rejected').length;
   const countDecided = countApproved + countRevise + countRejected;
-  const chip = (status, label, count, extraClass) =>
-    `<button class="status-chip${extraClass ? ' ' + extraClass : ''}${activeStatus === status ? ' active' : ''}" data-status="${status}">${label} <span class="status-chip-count">${fmtNum(count)}</span></button>`;
+  const chip = (status, label, count, extraClass, accentIdx) => {
+    const accent = accentIdx != null ? ACCENT_PALETTE[accentIdx % ACCENT_PALETTE.length] : null;
+    const style = accent ? ` style="--chip-accent:${accent};--chip-text:${readableTextOn(accent)}"` : '';
+    return `<button class="status-chip${extraClass ? ' ' + extraClass : ''}${activeStatus === status ? ' active' : ''}"${style} data-status="${status}">${label} <span class="status-chip-count">${fmtNum(count)}</span></button>`;
+  };
 
   root.innerHTML = `
     <div class="status-quickbar">
-      ${chip('', 'ทั้งหมด', countAll)}
-      ${chip('pending', 'รอพิจารณา', countPending)}
-      ${chip('decided', 'พิจารณาแล้ว', countDecided)}
+      ${chip('', 'ทั้งหมด', countAll, null, 0)}
+      ${chip('pending', 'รอพิจารณา', countPending, null, 1)}
+      ${chip('decided', 'พิจารณาแล้ว', countDecided, null, 2)}
       ${chip('approved', '↳ เห็นชอบ', countApproved, 'sub sub-approved')}
       ${chip('revise', '↳ เห็นชอบแต่ให้ทบทวน', countRevise, 'sub sub-revise')}
       ${chip('rejected', '↳ ไม่เห็นชอบ', countRejected, 'sub sub-rejected')}
@@ -472,12 +491,13 @@ function renderDeptSummaryTab() {
   };
   const breakdownHeading = (label, dim) => `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-      <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">${label}</div>
+      <div class="subheading-label">${label}</div>
       <button type="button" class="sort-toggle-btn" data-dim="${dim}">เรียง: ${STATE.deptBreakdownSort[dim] === 'az' ? 'A-Z' : 'มากไปน้อย'}</button>
     </div>`;
-  const breakdownChip = (deptName, field, value, count) => {
+  const breakdownChip = (deptName, field, value, count, i) => {
     const active = STATE.deptCourseListFilter[deptName] && STATE.deptCourseListFilter[deptName].field === field && STATE.deptCourseListFilter[deptName].value === value;
-    return `<button type="button" class="type-chip type-chip-btn${active ? ' active' : ''}" data-dept="${escapeAttr(deptName)}" data-field="${field}" data-value="${escapeAttr(value)}">${escapeHtml(value)}: <b>${fmtNum(count)}</b></button>`;
+    const accent = ACCENT_PALETTE[i % ACCENT_PALETTE.length];
+    return `<button type="button" class="type-chip type-chip-btn${active ? ' active' : ''}" style="--chip-accent:${accent};--chip-text:${readableTextOn(accent)}" data-dept="${escapeAttr(deptName)}" data-field="${field}" data-value="${escapeAttr(value)}">${escapeHtml(value)}: <b>${fmtNum(count)}</b></button>`;
   };
 
   root.innerHTML = `
@@ -517,16 +537,16 @@ function renderDeptSummaryTab() {
             <tr class="dept-detail-row" data-key="${escapeHtml(row.name)}"><td colspan="7"><div class="dept-detail-inner">
               ${breakdownHeading('แยกตามประเภทหลักสูตร', 'courseType')}
               <div class="type-breakdown" style="margin-bottom:12px;">
-                ${sortBreakdownEntries(row.byCourseType, STATE.deptBreakdownSort.courseType).map(([t, c]) => breakdownChip(row.name, 'courseType', t, c)).join('')}
+                ${sortBreakdownEntries(row.byCourseType, STATE.deptBreakdownSort.courseType).map(([t, c], i) => breakdownChip(row.name, 'courseType', t, c, i)).join('')}
               </div>
               ${breakdownHeading('แยกตามปัจจัยนำเข้าหลัก', 'inputFactor')}
               <div class="type-breakdown" style="margin-bottom:12px;">
-                ${sortBreakdownEntries(row.byInputFactor, STATE.deptBreakdownSort.inputFactor).map(([t, c]) => breakdownChip(row.name, 'inputFactor', t, c)).join('')}
+                ${sortBreakdownEntries(row.byInputFactor, STATE.deptBreakdownSort.inputFactor).map(([t, c], i) => breakdownChip(row.name, 'inputFactor', t, c, i)).join('')}
               </div>
               ${Object.keys(row.byDeliveryType).length ? `
               ${breakdownHeading('แยกตามประเภทการอบรม', 'deliveryType')}
               <div class="type-breakdown" style="margin-bottom:12px;">
-                ${sortBreakdownEntries(row.byDeliveryType, STATE.deptBreakdownSort.deliveryType).map(([t, c]) => breakdownChip(row.name, 'deliveryType', t, c)).join('')}
+                ${sortBreakdownEntries(row.byDeliveryType, STATE.deptBreakdownSort.deliveryType).map(([t, c], i) => breakdownChip(row.name, 'deliveryType', t, c, i)).join('')}
               </div>` : ''}
               ${(() => {
                 const courseFilter = STATE.deptCourseListFilter[row.name];
@@ -535,8 +555,8 @@ function renderDeptSummaryTab() {
                   : row.records;
                 return `
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
-                <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">รายชื่อหลักสูตร (${fmtNum(listRecords.length)}${courseFilter ? ` จาก ${fmtNum(row.records.length)}` : ''}) — คลิกแถวเพื่อดูรายละเอียด</div>
-                ${courseFilter ? `<button type="button" class="sort-toggle-btn dept-course-clear" data-dept="${escapeAttr(row.name)}">กรองอยู่: ${escapeHtml(courseFilter.value)} ✕ ล้าง</button>` : ''}
+                <div class="subheading-label">${courseFilter ? `กำลังแสดง: ${escapeHtml(courseFilter.value)} · ${fmtNum(listRecords.length)} รายการ` : `รายชื่อหลักสูตร (${fmtNum(listRecords.length)}) — คลิกแถวเพื่อดูรายละเอียด`}</div>
+                ${courseFilter ? `<button type="button" class="sort-toggle-btn dept-course-clear" data-dept="${escapeAttr(row.name)}">✕ ล้างตัวกรอง</button>` : ''}
               </div>
               <div class="table-wrap">
                 <table class="data-table">
@@ -919,7 +939,7 @@ function renderDrawer() {
   const history = r.reviewStatus !== 'pending' ? `
     <div class="review-history">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">${statusBadge(r.reviewStatus)}<span style="color:var(--text-muted);font-size:12px;">โดย ${escapeHtml(actorLine)} · ${escapeHtml(fmtThaiDateTime(r.reviewedAtRaw))}</span></div>
-      ${r.reviewNote ? `<div><b style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">หมายเหตุที่บันทึกไว้</b><div style="margin-top:2px;">${escapeHtml(r.reviewNote)}</div></div>` : '<div style="color:var(--text-muted);font-size:12.5px;">ไม่มีหมายเหตุ</div>'}
+      ${r.reviewNote ? `<div><b class="subheading-label" style="font-size:11px;">หมายเหตุที่บันทึกไว้</b><div style="margin-top:2px;">${escapeHtml(r.reviewNote)}</div></div>` : '<div style="color:var(--text-muted);font-size:12.5px;">ไม่มีหมายเหตุ</div>'}
     </div>` : '';
 
   const isCentral = isCentralCourse(r);
@@ -1025,7 +1045,7 @@ function renderDecisionArea() {
   }
   const draft = STATE.noteDraft != null ? STATE.noteDraft : (r.reviewNote || '');
   area.innerHTML = `
-    <label for="decision-note" style="display:block;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.02em;margin-bottom:6px;">หมายเหตุของผู้พิจารณา</label>
+    <label for="decision-note" class="subheading-label" style="display:block;font-size:11px;margin-bottom:6px;">หมายเหตุของผู้พิจารณา</label>
     <textarea class="note-field" id="decision-note" placeholder="ระบุประเด็นที่ต้องการให้หน่วยงานแก้ไข เหตุผลการพิจารณา หรือข้อเสนอแนะเพิ่มเติม (จำเป็นเมื่อเลือก &quot;ให้ทบทวน&quot; หรือ &quot;ไม่เห็นชอบ&quot;)">${escapeHtml(draft)}</textarea>
     <div id="decision-error" style="color:var(--status-critical);font-size:12px;margin-top:4px;display:none;">กรุณาระบุหมายเหตุก่อนบันทึกผล "เห็นชอบแต่ให้ทบทวน" หรือ "ไม่เห็นชอบ"</div>
     <div class="action-row">
