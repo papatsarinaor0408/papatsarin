@@ -83,6 +83,29 @@ function matchesFilters(r) {
 
 function getFiltered() { return STATE.records.filter(matchesFilters); }
 
+/**
+ * Same as matchesFilters, but ignores one filter field — used to compute
+ * each filter dropdown's own option list from what the OTHER active filters
+ * currently allow (cascading/faceted filters), so e.g. picking a หน่วยงาน
+ * only shows ประเภทการอบรม values that actually occur there, instead of
+ * every possible value regardless of what's already selected.
+ */
+function matchesFiltersExcept(r, exceptKey) {
+  const f = STATE.filters;
+  if (exceptKey !== 'orgValue' && f.orgValue && r[f.orgLevel] !== f.orgValue) return false;
+  if (exceptKey !== 'courseType' && f.courseType && r.courseType !== f.courseType) return false;
+  if (exceptKey !== 'inputFactor' && f.inputFactor && r.inputFactor !== f.inputFactor) return false;
+  if (exceptKey !== 'deliveryType' && f.deliveryType && deliveryTypeOf(r) !== f.deliveryType) return false;
+  if (exceptKey !== 'status' && f.status && r.reviewStatus !== f.status) return false;
+  if (f.search) {
+    const q = f.search.toLowerCase();
+    const hay = [r.nameTh, r.creatorName, r.targetGroupNames, r.divisionName, r.sectionName].join(' ').toLowerCase();
+    if (!hay.includes(q)) return false;
+  }
+  return true;
+}
+function getFilteredExcept(exceptKey) { return STATE.records.filter((r) => matchesFiltersExcept(r, exceptKey)); }
+
 /* ---------------- shared status color/label ---------------- */
 function statusColor(status) {
   return { pending: 'var(--status-pending)', approved: 'var(--status-good)', revise: 'var(--status-warning)', rejected: 'var(--status-critical)' }[status];
@@ -897,11 +920,24 @@ function renderDecisionArea() {
 /* ==================================================================== */
 function renderFilterBar() {
   const bar = document.getElementById('filter-bar');
-  const data = STATE.records;
-  const orgOptions = uniqueValues(data, STATE.filters.orgLevel);
-  const courseTypes = uniqueValues(data, 'courseType');
-  const inputFactors = uniqueValues(data, 'inputFactor');
-  const deliveryTypes = uniqueDeliveryTypes(data);
+
+  // Cascading/faceted options: each dropdown's choices reflect what the
+  // OTHER currently active filters allow, not the full unfiltered dataset —
+  // so a value with zero matching records under the current selection never
+  // shows up as pickable. If the currently-selected value in a dropdown is
+  // no longer among its (now narrower) options, clear that filter so the UI
+  // and STATE never disagree about what's actually selected.
+  const orgOptions = uniqueValues(getFilteredExcept('orgValue'), STATE.filters.orgLevel);
+  if (STATE.filters.orgValue && !orgOptions.includes(STATE.filters.orgValue)) STATE.filters.orgValue = '';
+  const courseTypes = uniqueValues(getFilteredExcept('courseType'), 'courseType');
+  if (STATE.filters.courseType && !courseTypes.includes(STATE.filters.courseType)) STATE.filters.courseType = '';
+  const inputFactors = uniqueValues(getFilteredExcept('inputFactor'), 'inputFactor');
+  if (STATE.filters.inputFactor && !inputFactors.includes(STATE.filters.inputFactor)) STATE.filters.inputFactor = '';
+  const deliveryTypes = uniqueDeliveryTypes(getFilteredExcept('deliveryType'));
+  if (STATE.filters.deliveryType && !deliveryTypes.includes(STATE.filters.deliveryType)) STATE.filters.deliveryType = '';
+  const statusOptions = new Set(getFilteredExcept('status').map((r) => r.reviewStatus));
+  if (STATE.filters.status && !statusOptions.has(STATE.filters.status)) STATE.filters.status = '';
+
   bar.innerHTML = `
     <div class="filter-field">
       <label>มุมมองหน่วยงาน</label>
@@ -925,7 +961,7 @@ function renderFilterBar() {
     </div>
     <div class="filter-field">
       <label>สถานะ</label>
-      <select id="f-status"><option value="">ทั้งหมด</option>${Object.entries(REVIEW_STATUS).map(([k, v]) => `<option value="${k}" ${k === STATE.filters.status ? 'selected' : ''}>${v.label}</option>`).join('')}</select>
+      <select id="f-status"><option value="">ทั้งหมด</option>${Object.entries(REVIEW_STATUS).filter(([k]) => statusOptions.has(k)).map(([k, v]) => `<option value="${k}" ${k === STATE.filters.status ? 'selected' : ''}>${v.label}</option>`).join('')}</select>
     </div>
     <div class="filter-field filter-search">
       <label>ค้นหา</label>
