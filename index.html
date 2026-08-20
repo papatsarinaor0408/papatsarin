@@ -19,22 +19,23 @@
       <span class="subtitle">สรุปแผนที่หน่วยงานเสนอเพื่อให้ผู้บริหารพิจารณากลั่นกรอง</span>
     </div>
     <div class="header-actions">
-      <div class="filter-field" style="min-width:150px;">
-        <label>ผู้พิจารณา</label>
-        <input type="text" id="reviewer-name" placeholder="ชื่อผู้บริหารผู้พิจารณา" />
-      </div>
-      <button class="btn" id="import-file-btn">⬆ นำเข้าข้อมูล</button>
+      <button class="btn admin-only" id="import-file-btn">⬆ นำเข้าข้อมูล</button>
       <input type="file" id="import-file-input" accept=".xlsx,.xls,.csv" hidden />
       <button class="btn" id="export-csv-btn">⬇ ส่งออกผลพิจารณา (CSV)</button>
-      <button class="btn btn-ghost" id="reset-decisions-btn">ล้างผลพิจารณา</button>
+      <button class="btn btn-ghost admin-only" id="reset-decisions-btn">ล้างผลพิจารณา</button>
       <button class="btn icon-btn" id="theme-toggle" title="สลับธีม">🖥️</button>
+      <div class="user-badge">
+        <span class="user-badge-position" id="user-position"></span>
+        <span class="role-pill" id="user-role-pill"></span>
+      </div>
+      <button class="btn btn-ghost" id="logout-btn">ออกจากระบบ</button>
     </div>
   </div>
 </header>
 
 <div class="app-shell">
   <div class="import-banner" id="import-banner"></div>
-  <div style="font-size:12px;color:var(--text-muted);margin:-10px 0 14px;" id="import-status"></div>
+  <div style="font-size:12px;color:var(--text-muted);margin:-10px 0 14px;white-space:pre-line;" id="import-status"></div>
 
   <div class="filter-bar" id="filter-bar"></div>
 
@@ -60,10 +61,14 @@
 </div>
 
 <script src="assets/js/vendor/xlsx.full.min.js"></script>
+<script src="assets/js/vendor/supabase-js.min.js"></script>
+<script src="assets/js/supabaseClient.js"></script>
 <script src="assets/js/schema.js"></script>
-<script src="assets/js/sampleData.js"></script>
 <script src="assets/js/importer.js"></script>
 <script src="assets/js/charts.js"></script>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/permissions.js"></script>
+<script src="assets/js/dataClient.js"></script>
 <script src="assets/js/app.js"></script>
 </body>
 </html>

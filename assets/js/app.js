@@ -1,17 +1,11 @@
 /* ===== ระบบพิจารณาแผนพัฒนาบุคลากร (โรงไฟฟ้าบางปะกง) ปี 2570 ===== */
 
 const LS_KEYS = {
-  reviews: 'ppd2570_reviews_v1',
-  imported: 'ppd2570_imported_v1',
-  importedMeta: 'ppd2570_imported_meta_v1',
-  reviewer: 'ppd2570_reviewer_v1',
   theme: 'ppd2570_theme_v1',
 };
 
 const STATE = {
   records: [],
-  dataSource: 'sample',
-  importedMeta: null,
   activeTab: 'overview',
   filters: { orgLevel: 'divisionName', orgValue: '', courseType: '', inputFactor: '', deliveryType: '', status: '', search: '' },
   openDeptKeys: new Set(),
@@ -19,69 +13,30 @@ const STATE = {
   noteDraft: null, // in-progress text in the review note field, kept across re-renders
 };
 
-/* ---------------- persistence ---------------- */
-function loadReviewOverrides() {
-  try { return JSON.parse(localStorage.getItem(LS_KEYS.reviews) || '{}'); } catch (e) { return {}; }
+/* ---------------- persistence (central database — see dataClient.js) ---------------- */
+async function loadAllRecords() {
+  await fetchPlansAndDecisions();
 }
-function saveReviewOverrides(map) { localStorage.setItem(LS_KEYS.reviews, JSON.stringify(map)); }
-
-function loadBaseRecords() {
-  const importedRaw = localStorage.getItem(LS_KEYS.imported);
-  if (importedRaw) {
-    try {
-      STATE.dataSource = 'imported';
-      STATE.importedMeta = JSON.parse(localStorage.getItem(LS_KEYS.importedMeta) || 'null');
-      const records = JSON.parse(importedRaw);
-      // ข้อมูลที่เคยนำเข้าไว้ก่อนหน้านี้อาจยังมี "ไม่ระบุ" ค้างจากลอจิกเวอร์ชันเก่า
-      // จึง normalize ชื่อฝ่าย/กอง/แผนกซ้ำทุกครั้งที่โหลด เพื่อให้ตรงกับลอจิกล่าสุดเสมอ
-      records.forEach(normalizeOrgHierarchy);
-      return records;
-    } catch (e) { /* fall through to sample */ }
-  }
-  STATE.dataSource = 'sample';
-  return buildSampleRecords();
-}
-
-function applyOverrides(records) {
-  const overrides = loadReviewOverrides();
-  return records.map((r) => {
-    const ov = overrides[r.id];
-    return ov ? Object.assign({}, r, ov) : r;
-  });
-}
-
-function loadAllRecords() {
-  STATE.records = applyOverrides(loadBaseRecords());
-}
-
-function getReviewerName() { return localStorage.getItem(LS_KEYS.reviewer) || ''; }
-function setReviewerName(name) { localStorage.setItem(LS_KEYS.reviewer, name); }
 
 /* ---------------- decision persistence ---------------- */
-function commitDecision(id, status, note) {
-  const overrides = loadReviewOverrides();
-  const today = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' });
-  overrides[id] = {
-    reviewStatus: status,
-    reviewNote: note || '',
-    reviewedBy: getReviewerName() || 'ไม่ระบุผู้พิจารณา',
-    reviewedDate: today,
-  };
-  saveReviewOverrides(overrides);
-  loadAllRecords();
+async function commitDecision(id, status, note) {
+  await submitDecisionRemote(id, status, note);
+  await loadAllRecords();
 }
 
-function resetAllDecisions() {
-  localStorage.removeItem(LS_KEYS.reviews);
-  loadAllRecords();
+// Admin-only (enforced server-side by admin_reset_all_decisions) — clears
+// every reviewer's current decision, kept per explicit request even in the
+// shared online system, but gated to Admin so no single Reviewer click can
+// wipe out everyone else's work.
+async function resetAllDecisions() {
+  await resetAllDecisionsRemote();
+  await loadAllRecords();
 }
 
 // เผื่อกดผิด — ล้างผลพิจารณาของแผนนี้แผนเดียว กลับไปเป็น "รอพิจารณา" แบบไม่มีประวัติเดิมค้างอยู่
-function revertToPending(id) {
-  const overrides = loadReviewOverrides();
-  delete overrides[id];
-  saveReviewOverrides(overrides);
-  loadAllRecords();
+async function revertToPending(id) {
+  await submitDecisionRemote(id, 'pending', null);
+  await loadAllRecords();
 }
 
 /* ---------------- filtering helpers ---------------- */
@@ -594,26 +549,38 @@ function renderDecisionArea() {
     document.getElementById('decision-error').style.display = 'none';
   });
   area.querySelectorAll('[data-decision]').forEach((btn) => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const status = btn.dataset.decision;
-      if (status === 'pending') {
-        revertToPending(r.id);
+      const errorEl = document.getElementById('decision-error');
+      const allButtons = Array.from(area.querySelectorAll('[data-decision]'));
+
+      if (status !== 'pending') {
+        const note = noteField.value.trim();
+        const requireNote = status === 'revise' || status === 'rejected';
+        if (requireNote && !note) {
+          errorEl.textContent = 'กรุณาระบุหมายเหตุก่อนบันทึกผล "เห็นชอบแต่ให้ทบทวน" หรือ "ไม่เห็นชอบ"';
+          errorEl.style.display = 'block';
+          noteField.focus();
+          return;
+        }
+      }
+
+      allButtons.forEach((b) => { b.disabled = true; });
+      errorEl.style.display = 'none';
+      try {
+        if (status === 'pending') {
+          await revertToPending(r.id);
+        } else {
+          await commitDecision(r.id, status, noteField.value.trim());
+        }
         STATE.noteDraft = null;
         renderDrawer();
         renderAll();
-        return;
+      } catch (err) {
+        errorEl.textContent = (err && err.message) ? err.message : 'บันทึกผลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+        errorEl.style.display = 'block';
+        allButtons.forEach((b) => { b.disabled = false; });
       }
-      const note = noteField.value.trim();
-      const requireNote = status === 'revise' || status === 'rejected';
-      if (requireNote && !note) {
-        document.getElementById('decision-error').style.display = 'block';
-        noteField.focus();
-        return;
-      }
-      commitDecision(r.id, status, note);
-      STATE.noteDraft = null;
-      renderDrawer();
-      renderAll();
     });
   });
 }
@@ -687,20 +654,41 @@ function switchTab(tab) {
 /* ==================================================================== */
 /* IMPORT / EXPORT / RESET                                              */
 /* ==================================================================== */
+function formatImportValidationDetail(validation) {
+  if (!validation || !validation.detail) return '';
+  const rows = validation.detail;
+  const lines = rows.slice(0, 20).map((d) => {
+    if (d.row_indexes) return `- แถวที่ ${d.row_indexes.join(', ')}: ค่าซ้ำกัน (${d.stable_key})`;
+    return `- แถวที่ ${d.row_index}${d.name_th ? ' (' + d.name_th + ')' : ''}${d.creator_id ? ' [เลขประจำตัวผู้สร้าง: ' + d.creator_id + ']' : ''}: ${d.reason}`;
+  });
+  return lines.join('\n') + (rows.length > 20 ? `\n... และอีก ${rows.length - 20} รายการ` : '');
+}
+
 function handleFileImport(file) {
+  if (!isAdmin()) return; // server-side RLS/RPC is the real gate — this is defense in depth only
   const statusEl = document.getElementById('import-status');
   statusEl.textContent = 'กำลังอ่านไฟล์...';
-  importPlanFile(file, (err, result) => {
+  importPlanFile(file, async (err, result) => {
     if (err) { statusEl.textContent = '⚠ ' + err.message; return; }
-    localStorage.setItem(LS_KEYS.imported, JSON.stringify(result.records));
-    const meta = { fileName: file.name, importedAt: new Date().toLocaleString('th-TH'), rowCount: result.rowCount };
-    localStorage.setItem(LS_KEYS.importedMeta, JSON.stringify(meta));
-    localStorage.removeItem(LS_KEYS.reviews);
-    loadAllRecords();
-    STATE.filters.orgValue = '';
-    renderImportBanner();
-    renderAll();
-    statusEl.textContent = `นำเข้าสำเร็จ ${result.rowCount} รายการ`;
+
+    const confirmMsg = 'การนำเข้าไฟล์นี้จะปรับปรุงข้อมูลแผนที่มีอยู่ (คงผลการพิจารณาเดิมไว้), เพิ่มแผนใหม่ที่ยังไม่มี, และนำแผนที่ไม่มีในไฟล์นี้ออกจากรายการปัจจุบัน (ประวัติการพิจารณายังคงอยู่) ยืนยันดำเนินการ?';
+    if (!confirm(confirmMsg)) { statusEl.textContent = ''; return; }
+
+    statusEl.textContent = 'กำลังนำเข้าข้อมูล...';
+    try {
+      const counts = await importDatasetRemote(result.records, file.name);
+      await loadAllRecords();
+      STATE.filters.orgValue = '';
+      renderImportBanner();
+      renderAll();
+      statusEl.textContent = `นำเข้าสำเร็จ — เพิ่มใหม่ ${counts.new_count}, ปรับปรุง ${counts.matched_count}, กลับมาใช้งาน ${counts.reactivated_count}, นำออกจากรายการปัจจุบัน ${counts.deactivated_count}`;
+    } catch (e) {
+      if (e.validation) {
+        statusEl.textContent = '⚠ นำเข้าไม่สำเร็จ: ' + e.validation.message + '\n' + formatImportValidationDetail(e.validation);
+      } else {
+        statusEl.textContent = '⚠ นำเข้าไม่สำเร็จ: ' + (e.message || 'เกิดข้อผิดพลาด');
+      }
+    }
   });
 }
 
@@ -728,22 +716,8 @@ function exportCsv() {
 
 function renderImportBanner() {
   const el = document.getElementById('import-banner');
-  if (STATE.dataSource === 'imported' && STATE.importedMeta) {
-    el.style.display = 'flex';
-    el.innerHTML = `<span class="icon">📄</span><div class="grow"><div class="title">ใช้ข้อมูลนำเข้า: ${escapeHtml(STATE.importedMeta.fileName)}</div><div>นำเข้าเมื่อ ${escapeHtml(STATE.importedMeta.importedAt)} · ${fmtNum(STATE.importedMeta.rowCount)} รายการ</div></div><button class="btn btn-sm btn-ghost" id="clear-import-btn">กลับไปใช้ข้อมูลตัวอย่าง</button>`;
-    document.getElementById('clear-import-btn').addEventListener('click', () => {
-      if (!confirm('เปลี่ยนกลับไปใช้ข้อมูลตัวอย่างและล้างผลการพิจารณาปัจจุบัน?')) return;
-      localStorage.removeItem(LS_KEYS.imported);
-      localStorage.removeItem(LS_KEYS.importedMeta);
-      localStorage.removeItem(LS_KEYS.reviews);
-      loadAllRecords();
-      renderImportBanner();
-      renderAll();
-    });
-  } else {
-    el.style.display = 'flex';
-    el.innerHTML = `<span class="icon">ℹ️</span><div class="grow"><div class="title">กำลังแสดงข้อมูลตัวอย่าง (สมมติ)</div><div>นำเข้าไฟล์ Excel/CSV จริงของหน่วยงานได้จากปุ่ม "นำเข้าข้อมูล" ด้านบน — ข้อมูลจะถูกประมวลผลในเบราว์เซอร์ของคุณเท่านั้น ไม่ถูกส่งออกไปที่ใด</div></div>`;
-  }
+  el.style.display = 'flex';
+  el.innerHTML = `<span class="icon">📄</span><div class="grow"><div class="title">ข้อมูลส่วนกลาง</div><div>แผนที่ใช้งานอยู่ในระบบขณะนี้: ${fmtNum(STATE.records.length)} รายการ</div></div>`;
 }
 
 /* ==================================================================== */
@@ -782,17 +756,21 @@ function initTheme() {
   });
 }
 
-function init() {
-  loadAllRecords();
+async function init() {
+  const profile = await requireSession(); // redirects to login.html and returns null if not allowed in
+  if (!profile) return;
+
+  applyRoleVisibility();
+  document.getElementById('user-position').textContent = profile.position || profile.employee_id;
+  document.getElementById('user-role-pill').textContent = profile.role === 'Admin' ? 'Admin' : 'Reviewer';
+  document.getElementById('logout-btn').addEventListener('click', signOut);
+
+  await loadAllRecords();
   initTheme();
 
   document.querySelectorAll('.tab-btn').forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
   document.getElementById('modal-backdrop').addEventListener('click', (e) => { if (e.target.id === 'modal-backdrop') closeDrawer(); });
   document.getElementById('drawer-close').addEventListener('click', closeDrawer);
-
-  const reviewerInput = document.getElementById('reviewer-name');
-  reviewerInput.value = getReviewerName();
-  reviewerInput.addEventListener('change', (e) => setReviewerName(e.target.value.trim()));
 
   document.getElementById('import-file-input').addEventListener('change', (e) => {
     if (e.target.files && e.target.files[0]) handleFileImport(e.target.files[0]);
@@ -800,8 +778,15 @@ function init() {
   });
   document.getElementById('import-file-btn').addEventListener('click', () => document.getElementById('import-file-input').click());
   document.getElementById('export-csv-btn').addEventListener('click', exportCsv);
-  document.getElementById('reset-decisions-btn').addEventListener('click', () => {
-    if (confirm('ล้างผลการพิจารณาทั้งหมด (แผนทุกรายการจะกลับเป็น "รอพิจารณา")?')) { resetAllDecisions(); renderImportBanner(); renderAll(); }
+  document.getElementById('reset-decisions-btn').addEventListener('click', async () => {
+    if (!confirm('ล้างผลการพิจารณาทั้งหมด (แผนทุกรายการจะกลับเป็น "รอพิจารณา")?')) return;
+    try {
+      await resetAllDecisions();
+      renderImportBanner();
+      renderAll();
+    } catch (e) {
+      alert('ล้างผลการพิจารณาไม่สำเร็จ: ' + (e.message || 'เกิดข้อผิดพลาด'));
+    }
   });
 
   renderImportBanner();
