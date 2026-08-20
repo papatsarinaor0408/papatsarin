@@ -175,18 +175,20 @@ function renderOverview() {
       <div class="card"><div class="card-title">สัดส่วนตามประเภทหลักสูตร</div><div class="card-sub">ประเภทหลักสูตร (courseType)</div><div id="chart-coursetype"></div></div>
     </div>
     <div class="charts-grid">
-      <div class="card wide">
+      <div class="card"><div class="card-title">สัดส่วนตามปัจจัยนำเข้าหลัก</div><div class="card-sub">การจัดหมวดเนื้อหาการพัฒนา</div><div id="chart-inputfactor"></div></div>
+      <div class="card"><div class="card-title">สัดส่วนตามประเภทการอบรม</div><div class="card-sub">นับเฉพาะหลักสูตรเสนอเพิ่มเติม — หลักสูตรกลาง อศค. ดำเนินการ ไม่มีข้อมูลนี้</div><div id="chart-deliverytype"></div></div>
+    </div>
+    <div class="charts-grid split-even">
+      <div class="card">
         <div class="card-title">จำนวนแผนต่อหน่วยงาน แยกตามสถานะการพิจารณา</div>
         <div class="card-sub">มุมมองหน่วยงาน: <b id="org-level-label"></b> — เรียงจากมากไปน้อย</div>
         <div id="chart-org-status" style="overflow-x:auto;"></div>
       </div>
-    </div>
-    <div class="charts-grid">
-      <div class="card"><div class="card-title">สัดส่วนตามปัจจัยนำเข้าหลัก</div><div class="card-sub">การจัดหมวดเนื้อหาการพัฒนา</div><div id="chart-inputfactor"></div></div>
-      <div class="card"><div class="card-title">สัดส่วนตามประเภทการอบรม</div><div class="card-sub">นับเฉพาะหลักสูตรเสนอเพิ่มเติม — หลักสูตรกลาง อศค. ดำเนินการ ไม่มีข้อมูลนี้</div><div id="chart-deliverytype"></div></div>
-    </div>
-    <div class="charts-grid">
-      <div class="card wide"><div class="card-title">งบประมาณรวมต่อหน่วยงาน</div><div class="card-sub">เรียงตามงบประมาณสูงสุด 10 อันดับ</div><div id="chart-budget" style="overflow-x:auto;"></div></div>
+      <div class="card">
+        <div class="card-title">งบประมาณรวมต่อหน่วยงาน</div>
+        <div class="card-sub">เรียงตามงบประมาณสูงสุด 10 อันดับ</div>
+        <div id="chart-budget" style="overflow-x:auto;"></div>
+      </div>
     </div>
   `;
 
@@ -225,7 +227,7 @@ function renderOverview() {
     { key: 'rejected', label: REVIEW_STATUS.rejected.label, color: 'var(--status-critical)' },
   ];
   if (groups.length) {
-    renderStackedBar(document.getElementById('chart-org-status'), groups, statusSeries, { width: 760, labelW: 190 });
+    renderStackedBar(document.getElementById('chart-org-status'), groups, statusSeries, { width: 520, labelW: 150 });
   } else {
     document.getElementById('chart-org-status').innerHTML = '<div class="empty-state">ไม่มีข้อมูลตรงตัวกรอง</div>';
   }
@@ -235,7 +237,7 @@ function renderOverview() {
     label: name, value: data.filter((r) => r[orgLevel] === name).reduce((s, r) => s + (r.budgetTotal || 0), 0),
   })).sort((a, b) => b.value - a.value).slice(0, 10);
   if (budgetItems.some((d) => d.value > 0)) {
-    renderHBar(document.getElementById('chart-budget'), budgetItems, { width: 640, labelW: 190, formatValue: fmtBaht, color: 'var(--seq-450)' });
+    renderHBar(document.getElementById('chart-budget'), budgetItems, { width: 520, labelW: 150, formatValue: fmtBaht, color: 'var(--seq-450)' });
   } else {
     document.getElementById('chart-budget').innerHTML = '<div class="empty-state">ไม่มีข้อมูลงบประมาณ</div>';
   }

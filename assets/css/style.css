@@ -221,6 +221,7 @@ select:focus, input:focus, textarea:focus {
 /* ---------- Charts grid ---------- */
 .charts-grid { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; margin-bottom: 16px; }
 .charts-grid .card.wide { grid-column: 1 / -1; }
+.charts-grid.split-even { grid-template-columns: 1fr 1fr; }
 .viz-root { color-scheme: inherit; }
 .donut-svg { filter: var(--shadow-donut); }
 .chart-legend { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 14px; font-size: 12.5px; }
@@ -339,7 +340,7 @@ tr.clickable { cursor: pointer; }
 
 @media (max-width: 1180px) {
   .kpi-grid { grid-template-columns: repeat(3, 1fr); }
-  .charts-grid { grid-template-columns: 1fr; }
+  .charts-grid, .charts-grid.split-even { grid-template-columns: 1fr; }
 }
 @media (max-width: 900px) {
   .app-shell { padding: 0 16px 48px; }
