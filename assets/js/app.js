@@ -494,10 +494,16 @@ function renderDeptSummaryTab() {
       <div class="subheading-label">${label}</div>
       <button type="button" class="sort-toggle-btn" data-dim="${dim}">เรียง: ${STATE.deptBreakdownSort[dim] === 'az' ? 'A-Z' : 'มากไปน้อย'}</button>
     </div>`;
-  const breakdownChip = (deptName, field, value, count, i) => {
-    const active = STATE.deptCourseListFilter[deptName] && STATE.deptCourseListFilter[deptName].field === field && STATE.deptCourseListFilter[deptName].value === value;
-    const accent = ACCENT_PALETTE[i % ACCENT_PALETTE.length];
-    return `<button type="button" class="type-chip type-chip-btn${active ? ' active' : ''}" style="--chip-accent:${accent};--chip-text:${readableTextOn(accent)}" data-dept="${escapeAttr(deptName)}" data-field="${field}" data-value="${escapeAttr(value)}">${escapeHtml(value)}: <b>${fmtNum(count)}</b></button>`;
+  // Dropdown instead of a chip row — fewer always-visible controls, less
+  // clutter than one button per value when a dimension has many values.
+  // Count stays visible at the end of each option's label.
+  const breakdownSelect = (deptName, field, entries) => {
+    const cur = STATE.deptCourseListFilter[deptName];
+    const curValue = cur && cur.field === field ? cur.value : '';
+    return `<select class="breakdown-select" data-dept="${escapeAttr(deptName)}" data-field="${field}">
+      <option value="">ทั้งหมด</option>
+      ${entries.map(([t, c]) => `<option value="${escapeAttr(t)}" ${t === curValue ? 'selected' : ''}>${escapeHtml(t)} — ${fmtNum(c)}</option>`).join('')}
+    </select>`;
   };
 
   root.innerHTML = `
@@ -536,17 +542,17 @@ function renderDeptSummaryTab() {
             </tr>
             <tr class="dept-detail-row" data-key="${escapeHtml(row.name)}"><td colspan="7"><div class="dept-detail-inner">
               ${breakdownHeading('แยกตามประเภทหลักสูตร', 'courseType')}
-              <div class="type-breakdown" style="margin-bottom:12px;">
-                ${sortBreakdownEntries(row.byCourseType, STATE.deptBreakdownSort.courseType).map(([t, c], i) => breakdownChip(row.name, 'courseType', t, c, i)).join('')}
+              <div style="margin-bottom:12px;">
+                ${breakdownSelect(row.name, 'courseType', sortBreakdownEntries(row.byCourseType, STATE.deptBreakdownSort.courseType))}
               </div>
               ${breakdownHeading('แยกตามปัจจัยนำเข้าหลัก', 'inputFactor')}
-              <div class="type-breakdown" style="margin-bottom:12px;">
-                ${sortBreakdownEntries(row.byInputFactor, STATE.deptBreakdownSort.inputFactor).map(([t, c], i) => breakdownChip(row.name, 'inputFactor', t, c, i)).join('')}
+              <div style="margin-bottom:12px;">
+                ${breakdownSelect(row.name, 'inputFactor', sortBreakdownEntries(row.byInputFactor, STATE.deptBreakdownSort.inputFactor))}
               </div>
               ${Object.keys(row.byDeliveryType).length ? `
               ${breakdownHeading('แยกตามประเภทการอบรม', 'deliveryType')}
-              <div class="type-breakdown" style="margin-bottom:12px;">
-                ${sortBreakdownEntries(row.byDeliveryType, STATE.deptBreakdownSort.deliveryType).map(([t, c], i) => breakdownChip(row.name, 'deliveryType', t, c, i)).join('')}
+              <div style="margin-bottom:12px;">
+                ${breakdownSelect(row.name, 'deliveryType', sortBreakdownEntries(row.byDeliveryType, STATE.deptBreakdownSort.deliveryType))}
               </div>` : ''}
               ${(() => {
                 const courseFilter = STATE.deptCourseListFilter[row.name];
@@ -602,12 +608,12 @@ function renderDeptSummaryTab() {
       renderDeptSummaryTab();
     });
   });
-  root.querySelectorAll('.type-chip-btn').forEach((btn) => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const { dept, field, value } = btn.dataset;
-      const cur = STATE.deptCourseListFilter[dept];
-      if (cur && cur.field === field && cur.value === value) delete STATE.deptCourseListFilter[dept];
+  root.querySelectorAll('.breakdown-select').forEach((sel) => {
+    sel.addEventListener('click', (e) => e.stopPropagation());
+    sel.addEventListener('change', (e) => {
+      const { dept, field } = sel.dataset;
+      const value = e.target.value;
+      if (!value) delete STATE.deptCourseListFilter[dept];
       else STATE.deptCourseListFilter[dept] = { field, value };
       renderDeptSummaryTab();
     });
