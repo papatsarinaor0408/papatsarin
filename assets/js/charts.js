@@ -67,7 +67,7 @@ function renderDonut(container, data, opts) {
   const circumference = 2 * Math.PI * r;
   const gapDeg = total > 0 ? 2 : 0; // 2px-equivalent visual gap between segments
 
-  const svg = el('svg', { viewBox: `0 0 ${size} ${size}`, width: '100%', height: size, class: 'viz-root' });
+  const svg = el('svg', { viewBox: `0 0 ${size} ${size}`, width: '100%', height: size, class: 'viz-root donut-svg' });
   const g = el('g', { transform: `rotate(-90 ${cx} ${cy})` });
 
   if (total === 0) {
