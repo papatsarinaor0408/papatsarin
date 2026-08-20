@@ -170,25 +170,29 @@ function renderOverview() {
           <div class="kpi-pct">${total ? ((k.value / total) * 100).toFixed(1) : '0.0'}% ของทั้งหมด</div>
         </div>`).join('')}
     </div>
-    <div class="charts-grid">
+    <div class="analytics-grid-top">
       <div class="card"><div class="card-title">สัดส่วนสถานะการพิจารณา</div><div class="card-sub">จากแผนที่ตรงตัวกรองปัจจุบัน ${fmtNum(total)} แผน</div><div id="chart-status"></div></div>
       <div class="card"><div class="card-title">สัดส่วนตามประเภทหลักสูตร</div><div class="card-sub">ประเภทหลักสูตร (courseType)</div><div id="chart-coursetype"></div></div>
+      <div class="card"><div class="card-title">สัดส่วนตามปัจจัยนำเข้าหลัก</div><div class="card-sub">การจัดหมวดเนื้อหาการพัฒนา</div><div id="chart-inputfactor"></div></div>
     </div>
     <div class="charts-grid">
-      <div class="card"><div class="card-title">สัดส่วนตามปัจจัยนำเข้าหลัก</div><div class="card-sub">การจัดหมวดเนื้อหาการพัฒนา</div><div id="chart-inputfactor"></div></div>
-      <div class="card"><div class="card-title">สัดส่วนตามประเภทการอบรม</div><div class="card-sub">นับเฉพาะหลักสูตรเสนอเพิ่มเติม — หลักสูตรกลาง อศค. ดำเนินการ ไม่มีข้อมูลนี้</div><div id="chart-deliverytype"></div></div>
-    </div>
-    <div class="charts-grid split-even">
       <div class="card">
         <div class="card-title">จำนวนแผนต่อหน่วยงาน แยกตามสถานะการพิจารณา</div>
         <div class="card-sub">มุมมองหน่วยงาน: <b id="org-level-label"></b> — เรียงจากมากไปน้อย</div>
         <div id="chart-org-status" style="overflow-x:auto;"></div>
       </div>
-      <div class="card">
-        <div class="card-title">งบประมาณรวมต่อหน่วยงาน</div>
-        <div class="card-sub">เรียงตามงบประมาณสูงสุด 10 อันดับ</div>
-        <div id="chart-budget" style="overflow-x:auto;"></div>
+      <div class="card"><div class="card-title">สัดส่วนตามประเภทการอบรม</div><div class="card-sub">นับเฉพาะหลักสูตรเสนอเพิ่มเติม — หลักสูตรกลาง อศค. ดำเนินการ ไม่มีข้อมูลนี้</div><div id="chart-deliverytype"></div></div>
+    </div>
+    <div class="budget-section">
+      <div class="budget-main">
+        <div class="mini-kpi-grid" id="budget-mini-kpis"></div>
+        <div class="card">
+          <div class="card-title">งบประมาณรวมต่อหน่วยงาน แยกตามสถานะการพิจารณา</div>
+          <div class="card-sub">เรียงตามงบประมาณสูงสุด 10 อันดับ</div>
+          <div id="chart-budget" style="overflow-x:auto;"></div>
+        </div>
       </div>
+      <div id="budget-insight-panel"></div>
     </div>
   `;
 
@@ -227,20 +231,133 @@ function renderOverview() {
     { key: 'rejected', label: REVIEW_STATUS.rejected.label, color: 'var(--status-critical)' },
   ];
   if (groups.length) {
-    renderStackedBar(document.getElementById('chart-org-status'), groups, statusSeries, { width: 520, labelW: 150 });
+    renderStackedBar(document.getElementById('chart-org-status'), groups, statusSeries, { width: 640, labelW: 170 });
   } else {
     document.getElementById('chart-org-status').innerHTML = '<div class="empty-state">ไม่มีข้อมูลตรงตัวกรอง</div>';
   }
 
-  // budget by org
-  const budgetItems = orgNames.map((name) => ({
-    label: name, value: data.filter((r) => r[orgLevel] === name).reduce((s, r) => s + (r.budgetTotal || 0), 0),
-  })).sort((a, b) => b.value - a.value).slice(0, 10);
-  if (budgetItems.some((d) => d.value > 0)) {
-    renderHBar(document.getElementById('chart-budget'), budgetItems, { width: 520, labelW: 150, formatValue: fmtBaht, color: 'var(--seq-450)' });
+  renderBudgetExecutiveSection(data, orgLevel, orgNames);
+}
+
+/* ---------------- Budget Executive Section (mini-KPIs + stacked budget bar + insight panel) ---------------- */
+function computeOrgBudgetStats(data, orgLevel, orgNames) {
+  const orgs = orgNames.map((name) => {
+    const rows = data.filter((r) => r[orgLevel] === name);
+    const byStatus = { pending: 0, approved: 0, revise: 0, rejected: 0 };
+    rows.forEach((r) => { byStatus[r.reviewStatus] += (r.budgetTotal || 0); });
+    const total = rows.reduce((s, r) => s + (r.budgetTotal || 0), 0);
+    return { name, count: rows.length, total, byStatus, avg: rows.length ? total / rows.length : 0 };
+  });
+  const grandTotal = orgs.reduce((s, o) => s + o.total, 0);
+  return { orgs, grandTotal };
+}
+
+function maxOrgBy(orgs, getValue) {
+  let best = null;
+  orgs.forEach((o) => { const v = getValue(o); if (v > 0 && (!best || v > getValue(best))) best = o; });
+  return best;
+}
+
+function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
+  const { orgs, grandTotal } = computeOrgBudgetStats(data, orgLevel, orgNames);
+  const planCount = data.length;
+  const avgPerPlan = planCount ? grandTotal / planCount : 0;
+  const topOrg = orgs.slice().sort((a, b) => b.total - a.total)[0] || null;
+  const pctOf = (v) => (grandTotal > 0 ? ((v / grandTotal) * 100).toFixed(1) : '0.0');
+
+  // A. Mini KPIs — dynamic, ห้าม hard-code
+  const miniKpis = document.getElementById('budget-mini-kpis');
+  miniKpis.innerHTML = `
+    <div class="mini-kpi-card">
+      <div class="mini-kpi-label">งบประมาณรวม</div>
+      <div class="mini-kpi-value">${fmtBaht(grandTotal)}</div>
+    </div>
+    <div class="mini-kpi-card">
+      <div class="mini-kpi-label">จำนวนแผน</div>
+      <div class="mini-kpi-value">${fmtNum(planCount)} แผน</div>
+    </div>
+    <div class="mini-kpi-card">
+      <div class="mini-kpi-label">งบเฉลี่ยต่อแผน</div>
+      <div class="mini-kpi-value">${planCount ? fmtBaht(avgPerPlan) : '—'}</div>
+    </div>
+    <div class="mini-kpi-card">
+      <div class="mini-kpi-label">หน่วยงานที่ใช้งบสูงสุด</div>
+      <div class="mini-kpi-value" style="font-size:15px;">${topOrg ? escapeHtml(topOrg.name) : '—'}</div>
+      <div class="mini-kpi-sub">${topOrg ? `${fmtBaht(topOrg.total)} · ${pctOf(topOrg.total)}%` : ''}</div>
+    </div>
+  `;
+
+  // B. Budget chart — horizontal stacked bar by status, top 10 by total budget desc
+  const statusSeriesBudget = [
+    { key: 'pending', label: REVIEW_STATUS.pending.label, color: 'var(--status-pending)' },
+    { key: 'approved', label: REVIEW_STATUS.approved.label, color: 'var(--status-good)' },
+    { key: 'revise', label: REVIEW_STATUS.revise.label, color: 'var(--status-warning)' },
+    { key: 'rejected', label: REVIEW_STATUS.rejected.label, color: 'var(--status-critical)' },
+  ];
+  const budgetGroups = orgs.slice().sort((a, b) => b.total - a.total).slice(0, 10)
+    .map((o) => ({ label: o.name, values: o.byStatus, count: o.count, avg: o.avg }));
+  const budgetEl = document.getElementById('chart-budget');
+  if (budgetGroups.some((g) => g.count > 0)) {
+    renderStackedBar(budgetEl, budgetGroups, statusSeriesBudget, {
+      width: 900, labelW: 190, trackPad: 130,
+      formatTotal: (t) => `${fmtBaht(t)} · ${pctOf(t)}%`,
+      formatLegendValue: fmtBaht,
+      tooltipHtml: (g, sr, v, t) => `
+        <div class="tt-title">${escapeHtml(g.label)}</div>
+        <dl class="tt-grid">
+          <dt>จำนวนแผน</dt><dd>${fmtNum(g.count)} แผน</dd>
+          <dt>งบประมาณรวม</dt><dd>${fmtBaht(t)}</dd>
+          <dt>งบเฉลี่ยต่อแผน</dt><dd>${fmtBaht(g.avg)}</dd>
+          <dt>${REVIEW_STATUS.pending.label}</dt><dd>${fmtBaht(g.values.pending || 0)}</dd>
+          <dt>${REVIEW_STATUS.approved.label}</dt><dd>${fmtBaht(g.values.approved || 0)}</dd>
+          <dt>${REVIEW_STATUS.revise.label}</dt><dd>${fmtBaht(g.values.revise || 0)}</dd>
+          <dt>${REVIEW_STATUS.rejected.label}</dt><dd>${fmtBaht(g.values.rejected || 0)}</dd>
+          <dt>% ของงบรวมทั้งหมด</dt><dd>${pctOf(t)}%</dd>
+        </dl>`,
+    });
   } else {
-    document.getElementById('chart-budget').innerHTML = '<div class="empty-state">ไม่มีข้อมูลงบประมาณ</div>';
+    budgetEl.innerHTML = '<div class="empty-state">ไม่มีข้อมูลงบประมาณ</div>';
   }
+
+  // C. Executive Insight Panel — คำนวณจากข้อมูลที่ผ่าน filter ปัจจุบันทั้งหมด ไม่มีข้อมูลสมมติ
+  const top3 = orgs.slice().sort((a, b) => b.total - a.total).filter((o) => o.total > 0).slice(0, 3);
+  const maxPending = maxOrgBy(orgs, (o) => o.byStatus.pending);
+  const maxApproved = maxOrgBy(orgs, (o) => o.byStatus.approved);
+  const maxRejected = maxOrgBy(orgs, (o) => o.byStatus.rejected);
+  const maxPlans = orgs.slice().sort((a, b) => b.count - a.count)[0] || null;
+
+  const insightItem = (icon, color, title, bodyHtml) => `
+    <div class="insight-item">
+      <div class="insight-icon" style="--insight-color:${color}">${icon}</div>
+      <div class="insight-body">
+        <div class="insight-title">${title}</div>
+        ${bodyHtml}
+      </div>
+    </div>`;
+
+  document.getElementById('budget-insight-panel').innerHTML = `
+    <div class="insight-panel">
+      <div>
+        <div class="card-title">ข้อมูลเชิงลึก (Insight)</div>
+        <div class="card-sub" style="margin-bottom:0;">อัปเดตตามตัวกรองปัจจุบัน</div>
+      </div>
+      ${insightItem('🏆', 'var(--series-1)', '3 หน่วยงานที่ใช้งบสูงสุด',
+        top3.length ? `<div class="insight-rank-list">${top3.map((o, i) => `
+          <div class="insight-rank-row">
+            <span class="insight-rank-num">${i + 1}</span>
+            <span class="insight-rank-name">${escapeHtml(o.name)}</span>
+            <span class="insight-rank-value">${fmtBaht(o.total)} · ${pctOf(o.total)}%</span>
+          </div>`).join('')}</div>` : '<div class="insight-value">—</div>')}
+      ${insightItem('⏳', 'var(--status-pending)', 'หน่วยงานที่มีงบรอพิจารณาสูงสุด',
+        maxPending ? `<div class="insight-name">${escapeHtml(maxPending.name)}</div><div class="insight-value">${fmtBaht(maxPending.byStatus.pending)} · ${pctOf(maxPending.byStatus.pending)}%</div>` : '<div class="insight-value">—</div>')}
+      ${insightItem('✓', 'var(--status-good)', 'หน่วยงานที่มีงบเห็นชอบสูงสุด',
+        maxApproved ? `<div class="insight-name">${escapeHtml(maxApproved.name)}</div><div class="insight-value">${fmtBaht(maxApproved.byStatus.approved)}</div>` : '<div class="insight-value">—</div>')}
+      ${insightItem('✕', 'var(--status-critical)', 'หน่วยงานที่มีงบไม่เห็นชอบสูงสุด',
+        maxRejected ? `<div class="insight-name">${escapeHtml(maxRejected.name)}</div><div class="insight-value">${fmtBaht(maxRejected.byStatus.rejected)}</div>` : '<div class="insight-value">—</div>')}
+      ${insightItem('📋', 'var(--series-1)', 'หน่วยงานที่มีจำนวนแผนมากที่สุด',
+        maxPlans && maxPlans.count > 0 ? `<div class="insight-name">${escapeHtml(maxPlans.name)}</div><div class="insight-value">${fmtNum(maxPlans.count)} แผน</div>` : '<div class="insight-value">—</div>')}
+    </div>
+  `;
 }
 
 /* ==================================================================== */
@@ -557,6 +674,7 @@ function renderFilterBar() {
 }
 
 function switchTab(tab) {
+  hideTooltip(); // a chart tooltip from the outgoing tab must not float over the incoming one
   STATE.activeTab = tab;
   document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.tab-panel').forEach((p) => p.classList.toggle('active', p.id === 'panel-' + tab));
@@ -634,6 +752,7 @@ function escapeAttr(s) { return escapeHtml(s); }
 function truncate(s, n) { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; }
 
 function renderAll() {
+  hideTooltip(); // rebuilding chart DOM removes the hovered element without firing mouseleave
   renderFilterBar();
   renderOverview();
   renderReviewTab();

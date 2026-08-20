@@ -43,13 +43,14 @@ function hideTooltip() {
 function fmtNum(n) { return Number(n || 0).toLocaleString('th-TH'); }
 function fmtBaht(n) { return '฿' + Number(n || 0).toLocaleString('th-TH'); }
 
-function renderLegend(container, items) {
+function renderLegend(container, items, formatValue) {
+  const fmt = formatValue || fmtNum;
   const wrap = document.createElement('div');
   wrap.className = 'chart-legend';
   items.forEach((it) => {
     const row = document.createElement('span');
     row.className = 'legend-item';
-    row.innerHTML = `<span class="legend-swatch" style="background:${it.color}"></span>${it.label} <b>${fmtNum(it.value)}</b>`;
+    row.innerHTML = `<span class="legend-swatch" style="background:${it.color}"></span>${it.label} <b>${fmt(it.value)}</b>`;
     wrap.appendChild(row);
   });
   container.appendChild(wrap);
@@ -114,11 +115,13 @@ function renderDonut(container, data, opts) {
 }
 
 /* ---------------- Horizontal stacked bar ---------------- */
+// opts.formatTotal(total, group) — custom end-of-bar label (default: plain count)
+// opts.tooltipHtml(group, series, value, total) — full tooltip override per hovered segment
 function renderStackedBar(container, groups, series, opts) {
   container.innerHTML = '';
   opts = opts || {};
   const maxTotal = Math.max(1, ...groups.map((g) => series.reduce((s, sr) => s + (g.values[sr.key] || 0), 0)));
-  const rowH = 30, gap = 12, labelW = opts.labelW || 168, trackPad = 54;
+  const rowH = 30, gap = 12, labelW = opts.labelW || 168, trackPad = opts.trackPad || 54;
   const width = opts.width || 640;
   const trackW = width - labelW - trackPad;
   const height = groups.length * (rowH + gap);
@@ -137,17 +140,19 @@ function renderStackedBar(container, groups, series, opts) {
       const v = g.values[sr.key] || 0;
       if (v <= 0) return;
       const segW = Math.max((v / maxTotal) * trackW - 2, 0); // 2px surface gap between segments
-      const isFirst = x === labelW;
-      const isLast = (x + segW + 2) >= labelW + barW - 1;
       const rx = 4;
       const rect = el('rect', {
         x, y, width: Math.max(segW, 1), height: rowH, fill: sr.color,
         rx: rx, ry: rx, class: 'chart-bar-status', style: 'cursor:pointer;',
       });
-      // square off inner edge so only true ends are rounded (rounded data-ends anchored to baseline)
       rect.addEventListener('mousemove', (evt) => {
-        const pct = total > 0 ? ((v / total) * 100).toFixed(1) : '0.0';
-        showTooltip(evt, `<div><b>${g.label}</b></div><div class="tt-row"><span class="tt-dot" style="background:${sr.color}"></span>${sr.label}: <b>${fmtNum(v)}</b> (${pct}%)</div>`);
+        const html = opts.tooltipHtml
+          ? opts.tooltipHtml(g, sr, v, total)
+          : (() => {
+              const pct = total > 0 ? ((v / total) * 100).toFixed(1) : '0.0';
+              return `<div><b>${g.label}</b></div><div class="tt-row"><span class="tt-dot" style="background:${sr.color}"></span>${sr.label}: <b>${fmtNum(v)}</b> (${pct}%)</div>`;
+            })();
+        showTooltip(evt, html);
       });
       rect.addEventListener('mousemove', moveTooltip);
       rect.addEventListener('mouseleave', hideTooltip);
@@ -155,7 +160,7 @@ function renderStackedBar(container, groups, series, opts) {
       x += segW + 2;
     });
     const totalLabel = el('text', { x: labelW + barW + 8, y: y + rowH / 2 + 4, class: 'bar-total-label', 'font-size': 12.5 });
-    totalLabel.textContent = fmtNum(total);
+    totalLabel.textContent = opts.formatTotal ? opts.formatTotal(total, g) : fmtNum(total);
     svg.appendChild(totalLabel);
   });
 
@@ -164,7 +169,7 @@ function renderStackedBar(container, groups, series, opts) {
     renderLegend(container, series.map((sr) => ({
       label: sr.label, color: sr.color,
       value: groups.reduce((s, g) => s + (g.values[sr.key] || 0), 0),
-    })));
+    })), opts.formatLegendValue);
   }
 }
 
