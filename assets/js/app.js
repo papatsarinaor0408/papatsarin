@@ -1215,10 +1215,13 @@ function renderFilterBar() {
   if (STATE.filters.inputFactor && !inputFactors.includes(STATE.filters.inputFactor)) STATE.filters.inputFactor = '';
   const deliveryTypes = uniqueDeliveryTypes(getFilteredExcept('deliveryType'));
   if (STATE.filters.deliveryType && !deliveryTypes.includes(STATE.filters.deliveryType)) STATE.filters.deliveryType = '';
-  const statusOptions = new Set(getFilteredExcept('status').map((r) => r.reviewStatus));
-  // 'decided' is a synthetic group (any status but pending) set by the review
-  // tab's status chips, not an actual reviewStatus value — never auto-clear it.
-  if (STATE.filters.status && STATE.filters.status !== 'decided' && !statusOptions.has(STATE.filters.status)) STATE.filters.status = '';
+  // Unlike org/courseType/inputFactor/deliveryType (dynamic values that can
+  // genuinely disappear from the dataset), status is a fixed 4-value
+  // enumeration plus the synthetic 'decided' group — a status with 0
+  // current matches is still a valid, meaningful selection (e.g. "show me
+  // the 0 approved plans"), so it must never be auto-cleared here. Doing so
+  // previously made the review tab's เห็นชอบ/ทบทวน/ไม่เห็นชอบ chips silently
+  // snap back to "ทั้งหมด" whenever none of that status currently existed.
   // Autocomplete suggestions for the search box — course names under the
   // other active filters, so it stays consistent with the cascading dropdowns above.
   const courseNameOptions = uniqueValues(getFilteredExcept('search'), 'nameTh');
@@ -1246,7 +1249,7 @@ function renderFilterBar() {
     </div>
     <div class="filter-field">
       <label>สถานะ</label>
-      <select id="f-status"><option value="">ทั้งหมด</option>${Object.entries(REVIEW_STATUS).filter(([k]) => statusOptions.has(k)).map(([k, v]) => `<option value="${k}" ${k === STATE.filters.status ? 'selected' : ''}>${v.label}</option>`).join('')}</select>
+      <select id="f-status"><option value="">ทั้งหมด</option>${Object.entries(REVIEW_STATUS).map(([k, v]) => `<option value="${k}" ${k === STATE.filters.status ? 'selected' : ''}>${v.label}</option>`).join('')}</select>
     </div>
     <div class="filter-field filter-search">
       <label>ค้นหา</label>
