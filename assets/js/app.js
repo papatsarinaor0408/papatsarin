@@ -13,7 +13,7 @@ const STATE = {
   dataSource: 'sample',
   importedMeta: null,
   activeTab: 'overview',
-  filters: { orgLevel: 'divisionName', orgValue: '', courseType: '', inputFactor: '', status: '', search: '' },
+  filters: { orgLevel: 'divisionName', orgValue: '', courseType: '', inputFactor: '', deliveryType: '', status: '', search: '' },
   openDeptKeys: new Set(),
   selectedId: null,
   noteDraft: null, // in-progress text in the review note field, kept across re-renders
@@ -77,11 +77,18 @@ function uniqueValues(records, key) {
   return Array.from(new Set(records.map((r) => r[key]).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'th'));
 }
 
+// ประเภทการส่งอบรม (ภายใน/ภายนอก) ไม่ถูกกรอกทุกแผน — จัดกลุ่มที่ว่างเป็น "ไม่ระบุ" แทนการตัดทิ้ง
+function deliveryTypeOf(r) { return r.deliveryType || 'ไม่ระบุ'; }
+function uniqueDeliveryTypes(records) {
+  return Array.from(new Set(records.map(deliveryTypeOf))).sort((a, b) => a.localeCompare(b, 'th'));
+}
+
 function matchesFilters(r) {
   const f = STATE.filters;
   if (f.orgValue && r[f.orgLevel] !== f.orgValue) return false;
   if (f.courseType && r.courseType !== f.courseType) return false;
   if (f.inputFactor && r.inputFactor !== f.inputFactor) return false;
+  if (f.deliveryType && deliveryTypeOf(r) !== f.deliveryType) return false;
   if (f.status && r.reviewStatus !== f.status) return false;
   if (f.search) {
     const q = f.search.toLowerCase();
@@ -113,9 +120,10 @@ function topNWithOther(items, n) {
   head.push({ label: 'อื่นๆ', value: restTotal });
   return head;
 }
-function categoricalDonutData(records, key) {
-  const names = uniqueValues(records, key);
-  const raw = names.map((name) => ({ label: name, value: records.filter((r) => r[key] === name).length }));
+function categoricalDonutData(records, keyOrFn) {
+  const accessor = typeof keyOrFn === 'function' ? keyOrFn : (r) => r[keyOrFn];
+  const names = Array.from(new Set(records.map(accessor).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'th'));
+  const raw = names.map((name) => ({ label: name, value: records.filter((r) => accessor(r) === name).length }));
   return topNWithOther(raw, 8).map((d, i) => ({ ...d, color: CATEGORICAL[i % CATEGORICAL.length] }));
 }
 
@@ -159,7 +167,10 @@ function renderOverview() {
     </div>
     <div class="charts-grid">
       <div class="card"><div class="card-title">สัดส่วนตามปัจจัยนำเข้าหลัก</div><div class="card-sub">การจัดหมวดเนื้อหาการพัฒนา</div><div id="chart-inputfactor"></div></div>
-      <div class="card"><div class="card-title">งบประมาณรวมต่อหน่วยงาน</div><div class="card-sub">เรียงตามงบประมาณสูงสุด 10 อันดับ</div><div id="chart-budget" style="overflow-x:auto;"></div></div>
+      <div class="card"><div class="card-title">สัดส่วนตามประเภทการอบรม</div><div class="card-sub">จัดภายในหน่วยงาน / ส่งอบรมภายนอก</div><div id="chart-deliverytype"></div></div>
+    </div>
+    <div class="charts-grid">
+      <div class="card wide"><div class="card-title">งบประมาณรวมต่อหน่วยงาน</div><div class="card-sub">เรียงตามงบประมาณสูงสุด 10 อันดับ</div><div id="chart-budget" style="overflow-x:auto;"></div></div>
     </div>
   `;
 
@@ -178,6 +189,9 @@ function renderOverview() {
 
   // input factor donut
   renderDonut(document.getElementById('chart-inputfactor'), categoricalDonutData(data, 'inputFactor'), { centerLabel: 'แผน' });
+
+  // delivery type donut (ภายใน/ภายนอก) — ช่องว่างถูกจัดเป็น "ไม่ระบุ" แทนการตัดทิ้ง
+  renderDonut(document.getElementById('chart-deliverytype'), categoricalDonutData(data, deliveryTypeOf), { centerLabel: 'แผน' });
 
   // stacked bar by org x status
   const orgLevel = STATE.filters.orgLevel;
@@ -222,7 +236,7 @@ function renderReviewTab() {
     <div class="table-wrap">
       <table class="data-table">
         <thead><tr>
-          <th>ชื่อหลักสูตร / แผน</th><th>หน่วยงานที่เสนอ</th><th>ประเภทหลักสูตร</th>
+          <th>ชื่อหลักสูตร / แผน</th><th>หน่วยงานที่เสนอ</th><th>ประเภทหลักสูตร</th><th>ประเภทการอบรม</th>
           <th class="num">ผู้เข้าอบรม</th><th class="num">งบประมาณ</th><th>สถานะ</th><th></th>
         </tr></thead>
         <tbody>
@@ -231,12 +245,13 @@ function renderReviewTab() {
               <td class="cell-name">${escapeHtml(r.nameTh)}</td>
               <td>${escapeHtml(r.sectionName || r.divisionName || r.deptName || '-')}</td>
               <td><span class="pill">${escapeHtml(r.courseType || '-')}</span></td>
+              <td><span class="pill">${escapeHtml(deliveryTypeOf(r))}</span></td>
               <td class="num">${fmtNum(r.participants)}</td>
               <td class="num">${r.budgetTotal ? fmtBaht(r.budgetTotal) : '<span class="cell-muted">-</span>'}</td>
               <td>${statusBadge(r.reviewStatus)}${r.reviewNote ? `<div class="note-snippet" title="${escapeAttr(r.reviewNote)}">📝 ${escapeHtml(truncate(r.reviewNote, 42))}</div>` : ''}</td>
               <td><button class="btn btn-sm review-open-btn" data-id="${r.id}">พิจารณา</button></td>
             </tr>
-          `).join('') : `<tr><td colspan="7"><div class="empty-state"><div class="big">🔍</div>ไม่พบแผนที่ตรงกับตัวกรอง</div></td></tr>`}
+          `).join('') : `<tr><td colspan="8"><div class="empty-state"><div class="big">🔍</div>ไม่พบแผนที่ตรงกับตัวกรอง</div></td></tr>`}
         </tbody>
       </table>
     </div>
@@ -267,7 +282,9 @@ function renderDeptSummaryTab() {
     rows.forEach((r) => { byCourseType[r.courseType] = (byCourseType[r.courseType] || 0) + 1; });
     const byInputFactor = {};
     rows.forEach((r) => { byInputFactor[r.inputFactor] = (byInputFactor[r.inputFactor] || 0) + 1; });
-    return { name, total: rows.length, counts, rate, byCourseType, byInputFactor };
+    const byDeliveryType = {};
+    rows.forEach((r) => { const t = deliveryTypeOf(r); byDeliveryType[t] = (byDeliveryType[t] || 0) + 1; });
+    return { name, total: rows.length, counts, rate, byCourseType, byInputFactor, byDeliveryType };
   }).sort((a, b) => b.total - a.total);
 
   root.innerHTML = `
@@ -300,8 +317,12 @@ function renderDeptSummaryTab() {
                 ${Object.entries(row.byCourseType).map(([t, c]) => `<span class="type-chip">${escapeHtml(t)}: <b>${fmtNum(c)}</b></span>`).join('')}
               </div>
               <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">แยกตามปัจจัยนำเข้าหลัก</div>
-              <div class="type-breakdown">
+              <div class="type-breakdown" style="margin-bottom:12px;">
                 ${Object.entries(row.byInputFactor).map(([t, c]) => `<span class="type-chip">${escapeHtml(t)}: <b>${fmtNum(c)}</b></span>`).join('')}
+              </div>
+              <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">แยกตามประเภทการอบรม</div>
+              <div class="type-breakdown">
+                ${Object.entries(row.byDeliveryType).map(([t, c]) => `<span class="type-chip">${escapeHtml(t)}: <b>${fmtNum(c)}</b></span>`).join('')}
               </div>
             </div></td></tr>
           `).join('') : `<tr><td colspan="7"><div class="empty-state"><div class="big">📋</div>ไม่พบข้อมูล</div></td></tr>`}
@@ -447,6 +468,7 @@ function renderFilterBar() {
   const orgOptions = uniqueValues(data, STATE.filters.orgLevel);
   const courseTypes = uniqueValues(data, 'courseType');
   const inputFactors = uniqueValues(data, 'inputFactor');
+  const deliveryTypes = uniqueDeliveryTypes(data);
   bar.innerHTML = `
     <div class="filter-field">
       <label>มุมมองหน่วยงาน</label>
@@ -463,6 +485,10 @@ function renderFilterBar() {
     <div class="filter-field">
       <label>ปัจจัยนำเข้าหลัก</label>
       <select id="f-inputfactor"><option value="">ทั้งหมด</option>${inputFactors.map((o) => `<option value="${escapeAttr(o)}" ${o === STATE.filters.inputFactor ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('')}</select>
+    </div>
+    <div class="filter-field">
+      <label>ประเภทการอบรม</label>
+      <select id="f-deliverytype"><option value="">ทั้งหมด</option>${deliveryTypes.map((o) => `<option value="${escapeAttr(o)}" ${o === STATE.filters.deliveryType ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('')}</select>
     </div>
     <div class="filter-field">
       <label>สถานะ</label>
@@ -483,10 +509,11 @@ function renderFilterBar() {
   bind('f-orgvalue', 'orgValue');
   bind('f-coursetype', 'courseType');
   bind('f-inputfactor', 'inputFactor');
+  bind('f-deliverytype', 'deliveryType');
   bind('f-status', 'status');
   bind('f-search', 'search', 'input');
   document.getElementById('f-clear').addEventListener('click', () => {
-    STATE.filters = { orgLevel: STATE.filters.orgLevel, orgValue: '', courseType: '', inputFactor: '', status: '', search: '' };
+    STATE.filters = { orgLevel: STATE.filters.orgLevel, orgValue: '', courseType: '', inputFactor: '', deliveryType: '', status: '', search: '' };
     renderAll();
   });
 }
