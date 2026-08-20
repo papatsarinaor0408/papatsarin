@@ -16,7 +16,7 @@ const STATE = {
   filters: { orgLevel: 'divisionName', orgValue: '', courseType: '', inputFactor: '', status: '', search: '' },
   openDeptKeys: new Set(),
   selectedId: null,
-  pendingDecision: null, // { status } while choosing a note before confirm
+  noteDraft: null, // in-progress text in the review note field, kept across re-renders
 };
 
 /* ---------------- persistence ---------------- */
@@ -233,7 +233,7 @@ function renderReviewTab() {
               <td><span class="pill">${escapeHtml(r.courseType || '-')}</span></td>
               <td class="num">${fmtNum(r.participants)}</td>
               <td class="num">${r.budgetTotal ? fmtBaht(r.budgetTotal) : '<span class="cell-muted">-</span>'}</td>
-              <td>${statusBadge(r.reviewStatus)}</td>
+              <td>${statusBadge(r.reviewStatus)}${r.reviewNote ? `<div class="note-snippet" title="${escapeAttr(r.reviewNote)}">📝 ${escapeHtml(truncate(r.reviewNote, 42))}</div>` : ''}</td>
               <td><button class="btn btn-sm review-open-btn" data-id="${r.id}">พิจารณา</button></td>
             </tr>
           `).join('') : `<tr><td colspan="7"><div class="empty-state"><div class="big">🔍</div>ไม่พบแผนที่ตรงกับตัวกรอง</div></td></tr>`}
@@ -337,20 +337,20 @@ function fieldRow(label, value) {
 
 function openDrawer(id) {
   STATE.selectedId = id;
-  STATE.pendingDecision = null;
+  STATE.noteDraft = null;
   renderDrawer();
   document.getElementById('modal-backdrop').classList.add('show');
 }
 function closeDrawer() {
   document.getElementById('modal-backdrop').classList.remove('show');
   STATE.selectedId = null;
-  STATE.pendingDecision = null;
+  STATE.noteDraft = null;
 }
 
 const DECISION_META = {
-  approved: { label: REVIEW_STATUS.approved.label, btnClass: 'btn-good', notePlaceholder: 'หมายเหตุเพิ่มเติม (ถ้ามี)' },
-  revise: { label: REVIEW_STATUS.revise.label, btnClass: 'btn-warning', notePlaceholder: 'ระบุประเด็นที่ต้องให้หน่วยงานทบทวนและแก้ไข (จำเป็น)' },
-  rejected: { label: REVIEW_STATUS.rejected.label, btnClass: 'btn-critical', notePlaceholder: 'ระบุเหตุผลที่ไม่เห็นชอบ (จำเป็น)' },
+  approved: { label: REVIEW_STATUS.approved.label, btnClass: 'btn-good', icon: '✓' },
+  revise: { label: REVIEW_STATUS.revise.label, btnClass: 'btn-warning', icon: '↺' },
+  rejected: { label: REVIEW_STATUS.rejected.label, btnClass: 'btn-critical', icon: '✕' },
 };
 
 function renderDrawer() {
@@ -363,7 +363,7 @@ function renderDrawer() {
   const history = r.reviewStatus !== 'pending' ? `
     <div class="review-history">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">${statusBadge(r.reviewStatus)}<span style="color:var(--text-muted);font-size:12px;">โดย ${escapeHtml(r.reviewedBy || '-')} · ${escapeHtml(r.reviewedDate || '-')}</span></div>
-      ${r.reviewNote ? `<div>${escapeHtml(r.reviewNote)}</div>` : ''}
+      ${r.reviewNote ? `<div><b style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">หมายเหตุที่บันทึกไว้</b><div style="margin-top:2px;">${escapeHtml(r.reviewNote)}</div></div>` : '<div style="color:var(--text-muted);font-size:12.5px;">ไม่มีหมายเหตุ</div>'}
     </div>` : '';
 
   body.innerHTML = `
@@ -406,41 +406,36 @@ function renderDecisionArea() {
   const area = document.getElementById('decision-area');
   const r = STATE.records.find((x) => x.id === STATE.selectedId);
   if (!area || !r) return;
-  if (!STATE.pendingDecision) {
-    area.innerHTML = `
-      <div class="action-row">
-        <button class="btn btn-good" data-decision="approved">✓ เห็นชอบ</button>
-        <button class="btn btn-warning" data-decision="revise">↺ เห็นชอบแต่ให้ทบทวน</button>
-        <button class="btn btn-critical" data-decision="rejected">✕ ไม่เห็นชอบ</button>
-      </div>
-    `;
-    area.querySelectorAll('[data-decision]').forEach((btn) => {
-      btn.addEventListener('click', () => { STATE.pendingDecision = { status: btn.dataset.decision }; renderDecisionArea(); });
-    });
-  } else {
-    const meta = DECISION_META[STATE.pendingDecision.status];
-    const requireNote = STATE.pendingDecision.status !== 'approved';
-    area.innerHTML = `
-      <div class="pending-decision-box">
-        <div class="chosen-label">กำลังบันทึกผล: ${meta.label}</div>
-        <textarea class="note-field" id="decision-note" placeholder="${meta.notePlaceholder}">${escapeHtml(STATE.pendingDecision.note || '')}</textarea>
-        <div class="confirm-row">
-          <button class="btn btn-ghost btn-sm" id="decision-cancel">ยกเลิก</button>
-          <button class="btn ${meta.btnClass} btn-sm" id="decision-confirm">ยืนยัน${meta.label}</button>
-        </div>
-        <div id="decision-error" style="color:var(--status-critical);font-size:12px;margin-top:6px;display:none;">กรุณาระบุหมายเหตุก่อนบันทึก</div>
-      </div>
-    `;
-    document.getElementById('decision-cancel').addEventListener('click', () => { STATE.pendingDecision = null; renderDecisionArea(); });
-    document.getElementById('decision-confirm').addEventListener('click', () => {
-      const note = document.getElementById('decision-note').value.trim();
-      if (requireNote && !note) { document.getElementById('decision-error').style.display = 'block'; return; }
-      commitDecision(r.id, STATE.pendingDecision.status, note);
-      STATE.pendingDecision = null;
+  const draft = STATE.noteDraft != null ? STATE.noteDraft : (r.reviewNote || '');
+  area.innerHTML = `
+    <label for="decision-note" style="display:block;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.02em;margin-bottom:6px;">หมายเหตุของผู้พิจารณา</label>
+    <textarea class="note-field" id="decision-note" placeholder="ระบุประเด็นที่ต้องการให้หน่วยงานแก้ไข เหตุผลการพิจารณา หรือข้อเสนอแนะเพิ่มเติม (จำเป็นเมื่อเลือก &quot;ให้ทบทวน&quot; หรือ &quot;ไม่เห็นชอบ&quot;)">${escapeHtml(draft)}</textarea>
+    <div id="decision-error" style="color:var(--status-critical);font-size:12px;margin-top:4px;display:none;">กรุณาระบุหมายเหตุก่อนบันทึกผล "เห็นชอบแต่ให้ทบทวน" หรือ "ไม่เห็นชอบ"</div>
+    <div class="action-row">
+      ${Object.entries(DECISION_META).map(([status, meta]) => `<button class="btn ${meta.btnClass}" data-decision="${status}">${meta.icon} ${meta.label}</button>`).join('')}
+    </div>
+  `;
+  const noteField = document.getElementById('decision-note');
+  noteField.addEventListener('input', () => {
+    STATE.noteDraft = noteField.value;
+    document.getElementById('decision-error').style.display = 'none';
+  });
+  area.querySelectorAll('[data-decision]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const status = btn.dataset.decision;
+      const note = noteField.value.trim();
+      const requireNote = status !== 'approved';
+      if (requireNote && !note) {
+        document.getElementById('decision-error').style.display = 'block';
+        noteField.focus();
+        return;
+      }
+      commitDecision(r.id, status, note);
+      STATE.noteDraft = null;
       renderDrawer();
       renderAll();
     });
-  }
+  });
 }
 
 /* ==================================================================== */
@@ -571,6 +566,7 @@ function escapeHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 function escapeAttr(s) { return escapeHtml(s); }
+function truncate(s, n) { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; }
 
 function renderAll() {
   renderFilterBar();
