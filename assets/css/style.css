@@ -319,6 +319,15 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
 .num { font-variant-numeric: tabular-nums; text-align: right; }
 tr.clickable { cursor: pointer; }
 
+/* Thin background tint on already-decided rows in the review table, using
+   the same status color as the decision buttons but much lighter — pending
+   rows (the majority) stay untinted to avoid visual noise. */
+tr.row-status-approved { background: color-mix(in srgb, var(--status-good) 7%, transparent); }
+tr.row-status-revise { background: color-mix(in srgb, var(--status-warning) 10%, transparent); }
+tr.row-status-rejected { background: color-mix(in srgb, var(--status-critical) 7%, transparent); }
+
+.cell-danger { color: var(--status-critical-text); font-weight: 500; }
+
 .badge {
   display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500;
   padding: 3px 10px; border-radius: 999px; white-space: nowrap;
@@ -352,7 +361,10 @@ tr.clickable { cursor: pointer; }
 }
 .modal-backdrop.show { display: flex; }
 .drawer {
-  width: min(580px, 100%); background: var(--surface-1); height: 100%;
+  /* A bit over half the screen on desktop (60vw), full-width on mobile
+     (the trailing 100% term), capped so it doesn't get absurdly wide on
+     ultra-wide monitors. */
+  width: min(1100px, max(60vw, 600px), 100%); background: var(--surface-1); height: 100%;
   box-shadow: var(--shadow-2); overflow-y: auto; animation: slidein .18s ease;
   display: flex; flex-direction: column;
 }

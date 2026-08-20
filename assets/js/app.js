@@ -97,7 +97,7 @@ function matchesFiltersExcept(r, exceptKey) {
   if (exceptKey !== 'inputFactor' && f.inputFactor && r.inputFactor !== f.inputFactor) return false;
   if (exceptKey !== 'deliveryType' && f.deliveryType && deliveryTypeOf(r) !== f.deliveryType) return false;
   if (exceptKey !== 'status' && f.status && r.reviewStatus !== f.status) return false;
-  if (f.search) {
+  if (exceptKey !== 'search' && f.search) {
     const q = f.search.toLowerCase();
     const hay = [r.nameTh, r.creatorName, r.targetGroupNames, r.divisionName, r.sectionName].join(' ').toLowerCase();
     if (!hay.includes(q)) return false;
@@ -375,7 +375,7 @@ function renderReviewTab() {
         </tr></thead>
         <tbody>
           ${data.length ? data.map((r) => `
-            <tr class="clickable" data-id="${r.id}">
+            <tr class="clickable${r.reviewStatus !== 'pending' ? ` row-status-${r.reviewStatus}` : ''}" data-id="${r.id}">
               <td class="cell-name">${escapeHtml(r.nameTh)}</td>
               <td>${escapeHtml(r.sectionName || r.divisionName || r.deptName || '-')}</td>
               <td><span class="pill">${escapeHtml(r.courseType || '-')}</span></td>
@@ -744,6 +744,14 @@ function fieldRow(label, value, mode = 'plain') {
   return `<div class="detail-item"><dt>${label}</dt><dd>${formatDetailValue(value, mode)}</dd></div>`;
 }
 
+// หลักสูตรเสนอเพิ่มเติมตาม Training Needs ต้องกรอกงบประมาณเสมอ — ถ้าไม่กรอก
+// ให้เน้นด้วยสีแดงแทน "ไม่ระบุ" สีเทาปกติ เพื่อให้เห็นชัดว่าเป็นข้อมูลที่ขาดไป
+function budgetFieldRow(label, amount, warnIfMissing) {
+  if (amount) return fieldRow(label, fmtBaht(amount));
+  if (warnIfMissing) return `<div class="detail-item"><dt>${label}</dt><dd><span class="cell-danger">ไม่ระบุงบประมาณ</span></dd></div>`;
+  return fieldRow(label, '');
+}
+
 function openDrawer(id) {
   STATE.selectedId = id;
   STATE.noteDraft = null;
@@ -784,11 +792,8 @@ function renderDrawer() {
   const isCentral = isCentralCourse(r);
 
   // หลักสูตรกลาง อศค. ดำเนินการ ไม่มีประเภทการอบรม/วัตถุประสงค์/ผลลัพธ์ ฯลฯ กรอกไว้ตั้งแต่ต้น
-  // จึงซ่อนช่องเหล่านี้แทนการโชว์ "ไม่ระบุ" ทุกช่อง และอธิบายเหตุผลสั้นๆ แทน
-  const considerationSection = isCentral ? `
-    <div class="section-heading">ข้อมูลสำหรับพิจารณา</div>
-    <div style="color:var(--text-muted);font-size:12.5px;">หลักสูตรกลาง อศค. ดำเนินการ ไม่มีการกรอกวัตถุประสงค์/ผลลัพธ์ที่คาดหวัง/ตัวชี้วัด ฯลฯ แยกเป็นรายหลักสูตร</div>
-  ` : `
+  // ตามคำขอผู้ใช้จึงซ่อนหัวข้อนี้ไปทั้งหมด (ไม่ต้องมีแม้แต่ข้อความอธิบาย) แทนที่จะโชว์ "ไม่ระบุ" ทุกช่อง
+  const considerationSection = isCentral ? '' : `
     <div class="section-heading">ข้อมูลสำหรับพิจารณา</div>
     <dl class="detail-grid">
       <div class="detail-item full">${fieldRow('ความจำเป็น/หลักการและเหตุผล', r.rationale, 'numbered')}</div>
@@ -813,12 +818,13 @@ function renderDrawer() {
       ${isCentral ? '' : fieldRow('ประเภทการส่งอบรม', r.deliveryType)}
       ${fieldRow('จำนวนผู้เข้าอบรม (คน)', r.participants)}
       ${fieldRow('จำนวนวันอบรม (วัน)', r.days)}
-      ${fieldRow('งบประมาณรวมทั้งหมด', r.budgetTotal ? fmtBaht(r.budgetTotal) : '')}
+      ${budgetFieldRow('งบประมาณรวมทั้งหมด', r.budgetTotal, !isCentral)}
       ${fieldRow('ค่าจ้างเหมา/วิทยากรภายนอก', r.budgetOutsource ? fmtBaht(r.budgetOutsource) : '')}
       ${fieldRow('วันเริ่มต้น', r.startDate)}
       ${fieldRow('วันสิ้นสุด', r.endDate)}
       ${fieldRow('ผู้เสนอ/ผู้ประสานงาน', r.creatorName)}
       ${fieldRow('ตำแหน่งผู้เสนอ', r.creatorPosition)}
+      <div class="detail-item full">${fieldRow('วิทยากรภายนอก (ชื่อ - เบอร์ติดต่อสถาบันผู้จัดอบรม)', r.externalInstructor)}</div>
       <div class="detail-item full">${fieldRow('กลุ่มเป้าหมาย', r.targetGroupNames, 'people')}</div>
     </dl>
     ${considerationSection}
@@ -957,6 +963,9 @@ function renderFilterBar() {
   if (STATE.filters.deliveryType && !deliveryTypes.includes(STATE.filters.deliveryType)) STATE.filters.deliveryType = '';
   const statusOptions = new Set(getFilteredExcept('status').map((r) => r.reviewStatus));
   if (STATE.filters.status && !statusOptions.has(STATE.filters.status)) STATE.filters.status = '';
+  // Autocomplete suggestions for the search box — course names under the
+  // other active filters, so it stays consistent with the cascading dropdowns above.
+  const courseNameOptions = uniqueValues(getFilteredExcept('search'), 'nameTh');
 
   bar.innerHTML = `
     <div class="filter-field">
@@ -985,7 +994,8 @@ function renderFilterBar() {
     </div>
     <div class="filter-field filter-search">
       <label>ค้นหา</label>
-      <input type="search" id="f-search" placeholder="ชื่อแผน, ผู้เสนอ, กลุ่มเป้าหมาย..." value="${escapeAttr(STATE.filters.search)}" />
+      <input type="search" id="f-search" list="course-suggestions" placeholder="ชื่อแผน, ผู้เสนอ, กลุ่มเป้าหมาย..." value="${escapeAttr(STATE.filters.search)}" />
+      <datalist id="course-suggestions">${courseNameOptions.map((n) => `<option value="${escapeAttr(n)}"></option>`).join('')}</datalist>
     </div>
     <button class="btn btn-ghost btn-sm" id="f-clear" style="align-self:flex-end;">ล้างตัวกรอง</button>
   `;
