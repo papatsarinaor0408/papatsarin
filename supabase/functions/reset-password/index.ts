@@ -7,6 +7,9 @@ const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
+// Kept in sync with is_admin() in supabase/migrations/0008_multiple_admins.sql.
+const ADMIN_EMPLOYEE_IDS = ['596203', '596421', '593952'];
+
 // Deployed with verify_jwt: true (the default) — the Supabase Gateway
 // rejects any request without a valid Supabase session before this code
 // even runs. We still resolve *who* the caller is and re-verify Admin
@@ -33,7 +36,7 @@ Deno.serve(async (req) => {
   if (
     profileErr || !callerProfile ||
     callerProfile.role !== 'Admin' ||
-    callerProfile.employee_id !== '596203' ||
+    !ADMIN_EMPLOYEE_IDS.includes(callerProfile.employee_id) ||
     callerProfile.status !== 'active'
   ) {
     return new Response(JSON.stringify({ error: 'Forbidden: admin only' }), { status: 403 });

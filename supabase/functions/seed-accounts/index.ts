@@ -8,6 +8,9 @@ const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
+// Kept in sync with is_admin() in supabase/migrations/0008_multiple_admins.sql.
+const ADMIN_EMPLOYEE_IDS = ['596203', '596421', '593952'];
+
 type SeedRow = {
   employee_id: string;
   full_name: string;
@@ -45,9 +48,9 @@ Deno.serve(async (req) => {
       const { data: existing } = await admin.from('profiles').select('id').eq('employee_id', employeeId).maybeSingle();
       if (existing) { results.push({ employee_id: employeeId, ok: true, detail: 'already exists, skipped' }); continue; }
 
-      // Admin is decided ONLY by this exact employee_id — never trust the sheet's role
-      // column for any other row, per requirement #2.
-      const role = employeeId === '596203' ? 'Admin' : 'Reviewer';
+      // Admin is decided ONLY by exact employee_id membership in the allowlist above —
+      // never trust the sheet's role column for any other row, per requirement #2.
+      const role = ADMIN_EMPLOYEE_IDS.includes(employeeId) ? 'Admin' : 'Reviewer';
 
       const { data: created, error: createErr } = await admin.auth.admin.createUser({
         email, password: row.initial_password, email_confirm: true,

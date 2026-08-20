@@ -1077,6 +1077,11 @@ async function init() {
   document.getElementById('user-position').textContent = profile.position || '';
   document.getElementById('user-role-pill').textContent = profile.role === 'Admin' ? 'Admin' : 'Reviewer';
   document.getElementById('logout-btn').addEventListener('click', signOut);
+  // Reuses login.html's own change-password screen (already handles an
+  // already-authenticated session via ?mode=changepw) — no separate form needed here.
+  document.getElementById('change-password-btn').addEventListener('click', () => {
+    window.location.href = 'login.html?mode=changepw';
+  });
 
   await loadAllRecords();
   initTheme();

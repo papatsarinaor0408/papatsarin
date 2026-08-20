@@ -46,6 +46,7 @@
       </div>
       <div class="auth-error" id="changepw-error" hidden></div>
       <button type="submit" class="btn btn-primary auth-submit" id="changepw-submit-btn">ตั้งรหัสผ่านใหม่</button>
+      <button type="button" class="btn btn-ghost auth-submit" id="changepw-cancel-btn" hidden>ยกเลิก</button>
     </form>
   </div>
 </div>
@@ -74,6 +75,9 @@ async function init() {
     if (profile && profile.status === 'active') {
       if (profile.must_change_password || params.get('mode') === 'changepw') {
         showScreen('screen-changepw');
+        // Skippable only when the user chose this voluntarily (not the
+        // forced first-login/post-reset flow, which must be completed).
+        document.getElementById('changepw-cancel-btn').hidden = !!profile.must_change_password;
         return;
       }
       window.location.href = 'index.html';
@@ -84,6 +88,10 @@ async function init() {
 
   showScreen('screen-login');
 }
+
+document.getElementById('changepw-cancel-btn').addEventListener('click', () => {
+  window.location.href = 'index.html';
+});
 
 document.getElementById('login-password-toggle').addEventListener('click', () => {
   const input = document.getElementById('login-password');
