@@ -534,6 +534,12 @@ function renderDecisionArea() {
   const area = document.getElementById('decision-area');
   const r = STATE.records.find((x) => x.id === STATE.selectedId);
   if (!area || !r) return;
+  // Reviewers are view-only — decision buttons are server-side Admin-only
+  // (submit_decision RPC), this is just the matching UI treatment.
+  if (!isAdmin()) {
+    area.innerHTML = `<div style="color:var(--text-muted);font-size:12.5px;">การบันทึกผลพิจารณาทำได้โดยผู้ดูแลระบบ (Admin) เท่านั้น</div>`;
+    return;
+  }
   const draft = STATE.noteDraft != null ? STATE.noteDraft : (r.reviewNote || '');
   area.innerHTML = `
     <label for="decision-note" style="display:block;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.02em;margin-bottom:6px;">หมายเหตุของผู้พิจารณา</label>
