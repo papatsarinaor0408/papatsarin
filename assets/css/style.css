@@ -369,6 +369,18 @@ tr.row-status-rejected { background: color-mix(in srgb, var(--status-critical) 7
 .type-breakdown { display: flex; flex-wrap: wrap; gap: 8px; }
 .type-chip { font-size: 12px; font-weight: 400; padding: 5px 11px; border-radius: 999px; background: var(--surface-1); border: 1px solid var(--border); }
 .type-chip b { font-weight: 500; font-variant-numeric: tabular-nums; }
+.type-chip-btn {
+  cursor: pointer; font-family: inherit; color: var(--text-secondary); transition: background .12s, border-color .12s, color .12s;
+}
+.type-chip-btn:hover { border-color: var(--series-1); color: var(--text-primary); }
+.type-chip-btn.active { background: var(--series-1); border-color: var(--series-1); color: #fff; }
+.type-chip-btn.active b { color: #fff; }
+.sort-toggle-btn {
+  cursor: pointer; font-family: inherit; font-size: 11px; font-weight: 400; padding: 3px 9px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted); transition: color .12s, border-color .12s;
+}
+.sort-toggle-btn:hover { color: var(--text-primary); border-color: var(--series-1); }
+.dept-course-clear { color: var(--status-critical-text); border-color: color-mix(in srgb, var(--status-critical) 40%, var(--border)); }
 .rate-bar { display:flex; height:8px; border-radius:5px; overflow:hidden; background:var(--grid); margin-top:6px; min-width:120px; }
 .rate-bar span { height: 100%; }
 

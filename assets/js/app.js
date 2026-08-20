@@ -12,6 +12,14 @@ const STATE = {
   selectedId: null,
   noteDraft: null, // in-progress text in the review note field, kept across re-renders
 
+  // "สรุปตามหน่วยงาน" tab display prefs (not filters — these only affect
+  // ordering/grouping of what's already shown).
+  deptSort: 'count', // 'count' | 'az' | 'orggroup'
+  deptBreakdownSort: { courseType: 'count', inputFactor: 'count', deliveryType: 'count' }, // 'count' | 'az'
+  deptCourseListFilter: {}, // { [deptName]: { field, value } } — narrows "รายชื่อหลักสูตร" when a breakdown chip is clicked
+
+
+
   // Admin-only history tabs — loaded lazily (only when the tab is first
   // opened) since a Reviewer never triggers this fetch and it would return
   // zero rows anyway (RLS is the real gate, this just avoids a wasted call).
@@ -137,7 +145,10 @@ function categoricalDonutData(records, keyOrFn) {
 /* ==================================================================== */
 function renderOverview() {
   const root = document.getElementById('panel-overview');
-  const data = getFiltered();
+  // Ignores the "สถานะ" filter on purpose — this view breaks everything down
+  // BY status itself, so pre-filtering to one status would make its own KPI
+  // cards degenerate (total == that one status, everything else zero).
+  const data = getFilteredExcept('status');
   const total = data.length;
   const counts = { pending: 0, approved: 0, revise: 0, rejected: 0 };
   data.forEach((r) => { counts[r.reviewStatus] = (counts[r.reviewStatus] || 0) + 1; });
@@ -423,7 +434,11 @@ function renderReviewTab() {
 /* ==================================================================== */
 function renderDeptSummaryTab() {
   const root = document.getElementById('panel-dept');
-  const data = getFiltered();
+  // Same reasoning as renderOverview() — this table's whole point is the
+  // per-status column breakdown, so the "สถานะ" filter (incl. the review
+  // tab's quick-filter chips, which share the same STATE.filters.status)
+  // must not collapse it down to one status.
+  const data = getFilteredExcept('status');
   const orgLevel = STATE.filters.orgLevel;
   const orgNames = uniqueValues(data, orgLevel);
   const rows = orgNames.map((name) => {
@@ -438,11 +453,45 @@ function renderDeptSummaryTab() {
     deptRecords.forEach((r) => { byInputFactor[r.inputFactor] = (byInputFactor[r.inputFactor] || 0) + 1; });
     const byDeliveryType = {};
     deptRecords.forEach((r) => { const t = deliveryTypeOf(r); if (t) byDeliveryType[t] = (byDeliveryType[t] || 0) + 1; });
-    return { name, total: deptRecords.length, counts, rate, byCourseType, byInputFactor, byDeliveryType, records: deptRecords };
-  }).sort((a, b) => b.total - a.total);
+    // Full org ancestry (regardless of the current grouping level) so
+    // "เรียงตามกลุ่มหน่วยงาน" can keep sibling units adjacent instead of
+    // scattering them by count or by name alone.
+    const sample = deptRecords[0];
+    const orgPath = sample ? [sample.deptName, sample.divisionName, sample.sectionName].filter(Boolean).join(' / ') : name;
+    return { name, total: deptRecords.length, counts, rate, byCourseType, byInputFactor, byDeliveryType, records: deptRecords, orgPath };
+  });
+  if (STATE.deptSort === 'az') rows.sort((a, b) => a.name.localeCompare(b.name, 'th'));
+  else if (STATE.deptSort === 'orggroup') rows.sort((a, b) => a.orgPath.localeCompare(b.orgPath, 'th') || a.name.localeCompare(b.name, 'th'));
+  else rows.sort((a, b) => b.total - a.total);
+
+  const sortBreakdownEntries = (obj, mode) => {
+    const entries = Object.entries(obj);
+    if (mode === 'az') entries.sort((a, b) => a[0].localeCompare(b[0], 'th'));
+    else entries.sort((a, b) => b[1] - a[1]);
+    return entries;
+  };
+  const breakdownHeading = (label, dim) => `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">${label}</div>
+      <button type="button" class="sort-toggle-btn" data-dim="${dim}">เรียง: ${STATE.deptBreakdownSort[dim] === 'az' ? 'A-Z' : 'มากไปน้อย'}</button>
+    </div>`;
+  const breakdownChip = (deptName, field, value, count) => {
+    const active = STATE.deptCourseListFilter[deptName] && STATE.deptCourseListFilter[deptName].field === field && STATE.deptCourseListFilter[deptName].value === value;
+    return `<button type="button" class="type-chip type-chip-btn${active ? ' active' : ''}" data-dept="${escapeAttr(deptName)}" data-field="${field}" data-value="${escapeAttr(value)}">${escapeHtml(value)}: <b>${fmtNum(count)}</b></button>`;
+  };
 
   root.innerHTML = `
-    <div class="filter-count" style="margin-bottom:10px;">สรุปตามหน่วยงานระดับ <b>${ORG_LEVELS.find((o) => o.key === orgLevel).label}</b> — คลิกแถวเพื่อดูรายละเอียดประเภทแผน</div>
+    <div class="filter-count" style="margin-bottom:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span>สรุปตามหน่วยงานระดับ <b>${ORG_LEVELS.find((o) => o.key === orgLevel).label}</b> — คลิกแถวเพื่อดูรายละเอียดประเภทแผน</span>
+      <span style="margin-left:auto;display:flex;align-items:center;gap:6px;">
+        <label style="font-size:12px;color:var(--text-muted);">เรียงลำดับ</label>
+        <select id="dept-sort">
+          <option value="count" ${STATE.deptSort === 'count' ? 'selected' : ''}>มากไปน้อย</option>
+          <option value="az" ${STATE.deptSort === 'az' ? 'selected' : ''}>ชื่อ (A-Z)</option>
+          <option value="orggroup" ${STATE.deptSort === 'orggroup' ? 'selected' : ''}>ตามกลุ่มหน่วยงาน</option>
+        </select>
+      </span>
+    </div>
     <div class="table-wrap">
       <table class="data-table">
         <thead><tr>
@@ -466,34 +515,47 @@ function renderDeptSummaryTab() {
               </td>
             </tr>
             <tr class="dept-detail-row" data-key="${escapeHtml(row.name)}"><td colspan="7"><div class="dept-detail-inner">
-              <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">แยกตามประเภทหลักสูตร</div>
+              ${breakdownHeading('แยกตามประเภทหลักสูตร', 'courseType')}
               <div class="type-breakdown" style="margin-bottom:12px;">
-                ${Object.entries(row.byCourseType).map(([t, c]) => `<span class="type-chip">${escapeHtml(t)}: <b>${fmtNum(c)}</b></span>`).join('')}
+                ${sortBreakdownEntries(row.byCourseType, STATE.deptBreakdownSort.courseType).map(([t, c]) => breakdownChip(row.name, 'courseType', t, c)).join('')}
               </div>
-              <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">แยกตามปัจจัยนำเข้าหลัก</div>
+              ${breakdownHeading('แยกตามปัจจัยนำเข้าหลัก', 'inputFactor')}
               <div class="type-breakdown" style="margin-bottom:12px;">
-                ${Object.entries(row.byInputFactor).map(([t, c]) => `<span class="type-chip">${escapeHtml(t)}: <b>${fmtNum(c)}</b></span>`).join('')}
+                ${sortBreakdownEntries(row.byInputFactor, STATE.deptBreakdownSort.inputFactor).map(([t, c]) => breakdownChip(row.name, 'inputFactor', t, c)).join('')}
               </div>
               ${Object.keys(row.byDeliveryType).length ? `
-              <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">แยกตามประเภทการอบรม</div>
+              ${breakdownHeading('แยกตามประเภทการอบรม', 'deliveryType')}
               <div class="type-breakdown" style="margin-bottom:12px;">
-                ${Object.entries(row.byDeliveryType).map(([t, c]) => `<span class="type-chip">${escapeHtml(t)}: <b>${fmtNum(c)}</b></span>`).join('')}
+                ${sortBreakdownEntries(row.byDeliveryType, STATE.deptBreakdownSort.deliveryType).map(([t, c]) => breakdownChip(row.name, 'deliveryType', t, c)).join('')}
               </div>` : ''}
-              <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">รายชื่อหลักสูตร (${fmtNum(row.records.length)}) — คลิกแถวเพื่อดูรายละเอียด</div>
+              ${(() => {
+                const courseFilter = STATE.deptCourseListFilter[row.name];
+                const listRecords = courseFilter
+                  ? row.records.filter((r) => (courseFilter.field === 'deliveryType' ? deliveryTypeOf(r) : r[courseFilter.field]) === courseFilter.value)
+                  : row.records;
+                return `
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+                <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;">รายชื่อหลักสูตร (${fmtNum(listRecords.length)}${courseFilter ? ` จาก ${fmtNum(row.records.length)}` : ''}) — คลิกแถวเพื่อดูรายละเอียด</div>
+                ${courseFilter ? `<button type="button" class="sort-toggle-btn dept-course-clear" data-dept="${escapeAttr(row.name)}">กรองอยู่: ${escapeHtml(courseFilter.value)} ✕ ล้าง</button>` : ''}
+              </div>
               <div class="table-wrap">
                 <table class="data-table">
-                  <thead><tr><th>ชื่อหลักสูตร</th><th>ผู้เสนอแผน</th><th>สถานะ</th></tr></thead>
+                  <thead><tr><th>ชื่อหลักสูตร</th><th>ผู้เสนอแผน</th><th>ประเภทหลักสูตร</th><th>ปัจจัยนำเข้าหลัก</th><th>ประเภทการอบรม</th><th>สถานะ</th></tr></thead>
                   <tbody>
-                    ${row.records.map((r) => `
+                    ${listRecords.length ? listRecords.map((r) => `
                       <tr class="clickable dept-course-row${r.reviewStatus !== 'pending' ? ` row-status-${r.reviewStatus}` : ''}" data-id="${r.id}">
                         <td class="cell-name">${escapeHtml(r.nameTh)}</td>
                         <td>${escapeHtml(r.creatorName || '-')}</td>
+                        <td>${escapeHtml(r.courseType || '-')}</td>
+                        <td>${escapeHtml(r.inputFactor || '-')}</td>
+                        <td>${deliveryTypeOf(r) ? escapeHtml(deliveryTypeOf(r)) : '<span class="cell-muted">—</span>'}</td>
                         <td>${statusBadge(r.reviewStatus)}</td>
                       </tr>
-                    `).join('')}
+                    `).join('') : `<tr><td colspan="6"><span class="cell-muted">ไม่พบหลักสูตรตามที่กรอง</span></td></tr>`}
                   </tbody>
                 </table>
-              </div>
+              </div>`;
+              })()}
             </div></td></tr>
           `).join('') : `<tr><td colspan="7"><div class="empty-state"><div class="big">📋</div>ไม่พบข้อมูล</div></td></tr>`}
         </tbody>
@@ -505,6 +567,36 @@ function renderDeptSummaryTab() {
     tr.addEventListener('click', (e) => {
       e.stopPropagation();
       openDrawer(tr.dataset.id);
+    });
+  });
+  const deptSortSelect = document.getElementById('dept-sort');
+  if (deptSortSelect) deptSortSelect.addEventListener('change', (e) => {
+    STATE.deptSort = e.target.value;
+    renderDeptSummaryTab();
+  });
+  root.querySelectorAll('.sort-toggle-btn[data-dim]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const dim = btn.dataset.dim;
+      STATE.deptBreakdownSort[dim] = STATE.deptBreakdownSort[dim] === 'az' ? 'count' : 'az';
+      renderDeptSummaryTab();
+    });
+  });
+  root.querySelectorAll('.type-chip-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const { dept, field, value } = btn.dataset;
+      const cur = STATE.deptCourseListFilter[dept];
+      if (cur && cur.field === field && cur.value === value) delete STATE.deptCourseListFilter[dept];
+      else STATE.deptCourseListFilter[dept] = { field, value };
+      renderDeptSummaryTab();
+    });
+  });
+  root.querySelectorAll('.dept-course-clear').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      delete STATE.deptCourseListFilter[btn.dataset.dept];
+      renderDeptSummaryTab();
     });
   });
   root.querySelectorAll('.dept-row-toggle').forEach((tr) => {
