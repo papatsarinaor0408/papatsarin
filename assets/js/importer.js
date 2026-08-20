@@ -21,6 +21,27 @@ function toDateLabel(v) {
   return String(v);
 }
 
+/**
+ * เติมชื่อหน่วยงาน ฝ่าย/กอง/แผนก ที่ขาดหายด้วยหน่วยงานที่เจาะจงกว่าซึ่งมีข้อมูลอยู่แล้ว
+ * (เช่น ไม่มี "กอง" ให้ใช้ "แผนก" แทน, ไม่มี "แผนก" ให้ใช้ "กอง"/"ฝ่าย" แทน)
+ * แทนที่จะโชว์ "ไม่ระบุ" เฉยๆ — ทำงานได้แบบ idempotent จึงเรียกซ้ำได้ปลอดภัย
+ * (ใช้ normalize ข้อมูลที่นำเข้าไว้ก่อนหน้าซึ่งอาจยังเป็น "ไม่ระบุ" ค้างจากโค้ดเวอร์ชันเก่า)
+ */
+function normalizeOrgHierarchy(rec) {
+  const clean = (v) => (v && v !== 'ไม่ระบุ') ? v : '';
+  let dept = clean(rec.deptName);
+  let division = clean(rec.divisionName);
+  let section = clean(rec.sectionName);
+
+  if (!division) division = section || dept;
+  if (!section) section = division || dept;
+
+  rec.deptName = dept || 'ไม่ระบุ';
+  rec.divisionName = division || 'ไม่ระบุ';
+  rec.sectionName = section || 'ไม่ระบุ';
+  return rec;
+}
+
 function mapRowToRecord(row, index) {
   const rec = {
     id: 'IMP-' + String(index + 1).padStart(4, '0'),
@@ -38,13 +59,10 @@ function mapRowToRecord(row, index) {
     else if (field.key === 'startDate' || field.key === 'endDate') rec[field.key] = toDateLabel(val);
     else rec[field.key] = (val === undefined || val === null) ? '' : String(val).trim();
   });
-  // บางแถวไม่มี "กอง" กรอกไว้ (แต่มีแผนก/ฝ่าย) — ใช้หน่วยงานที่เจาะจงกว่าแทน "ไม่ระบุ"
-  if (!rec.divisionName) rec.divisionName = rec.sectionName || rec.deptName || '';
-  // บางแถวไม่มี "แผนก" กรอกไว้ — ใช้กอง/ฝ่ายแทน "ไม่ระบุ" เช่นกัน (ทำหลังบรรทัดบนเพื่อได้กองที่เติมค่าแล้วด้วย)
-  if (!rec.sectionName) rec.sectionName = rec.divisionName || rec.deptName || '';
+  normalizeOrgHierarchy(rec);
 
   // ค่าที่จำเป็นแต่ไม่มีในไฟล์ ให้ค่าเริ่มต้นว่าง เพื่อกันหน้าจอพัง
-  ['nameTh', 'deptName', 'divisionName', 'sectionName', 'courseType', 'inputFactor'].forEach((k) => {
+  ['nameTh', 'courseType', 'inputFactor'].forEach((k) => {
     if (!rec[k]) rec[k] = k === 'nameTh' ? '(ไม่ระบุชื่อหลักสูตร)' : 'ไม่ระบุ';
   });
   return rec;

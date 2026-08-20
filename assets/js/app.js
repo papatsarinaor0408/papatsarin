@@ -31,7 +31,11 @@ function loadBaseRecords() {
     try {
       STATE.dataSource = 'imported';
       STATE.importedMeta = JSON.parse(localStorage.getItem(LS_KEYS.importedMeta) || 'null');
-      return JSON.parse(importedRaw);
+      const records = JSON.parse(importedRaw);
+      // ข้อมูลที่เคยนำเข้าไว้ก่อนหน้านี้อาจยังมี "ไม่ระบุ" ค้างจากลอจิกเวอร์ชันเก่า
+      // จึง normalize ชื่อฝ่าย/กอง/แผนกซ้ำทุกครั้งที่โหลด เพื่อให้ตรงกับลอจิกล่าสุดเสมอ
+      records.forEach(normalizeOrgHierarchy);
+      return records;
     } catch (e) { /* fall through to sample */ }
   }
   STATE.dataSource = 'sample';
