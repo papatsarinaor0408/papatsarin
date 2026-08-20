@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
   // Belt-and-suspenders: check both role AND the exact employee_id.
   const { data: callerProfile, error: profileErr } = await admin
     .from('profiles')
-    .select('employee_id, role, status')
+    .select('employee_id, role, status, full_name, position')
     .eq('id', callerId)
     .maybeSingle();
 
@@ -84,6 +84,8 @@ Deno.serve(async (req) => {
     user_id: callerId,
     employee_id: callerProfile.employee_id,
     role: callerProfile.role,
+    actor_full_name: callerProfile.full_name,
+    actor_position: callerProfile.position,
     action: 'Reset Password',
     target_type: 'account',
     target_id: targetEmployeeId,
