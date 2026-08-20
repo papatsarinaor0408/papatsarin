@@ -348,14 +348,14 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
             <span class="insight-rank-name">${escapeHtml(o.name)}</span>
             <span class="insight-rank-value">${fmtBaht(o.total)} · ${pctOf(o.total)}%</span>
           </div>`).join('')}</div>` : '<div class="insight-value">—</div>')}
-      ${insightItem('⏳', 'var(--status-pending)', 'หน่วยงานที่มีงบรอพิจารณาสูงสุด',
-        maxPending ? `<div class="insight-name">${escapeHtml(maxPending.name)}</div><div class="insight-value">${fmtBaht(maxPending.byStatus.pending)} · ${pctOf(maxPending.byStatus.pending)}%</div>` : '<div class="insight-value">—</div>')}
+      ${insightItem('📋', 'var(--series-1)', 'หน่วยงานที่มีจำนวนแผนมากที่สุด',
+        maxPlans && maxPlans.count > 0 ? `<div class="insight-name">${escapeHtml(maxPlans.name)}</div><div class="insight-value">${fmtNum(maxPlans.count)} แผน</div>` : '<div class="insight-value">—</div>')}
       ${insightItem('✓', 'var(--status-good)', 'หน่วยงานที่มีงบเห็นชอบสูงสุด',
         maxApproved ? `<div class="insight-name">${escapeHtml(maxApproved.name)}</div><div class="insight-value">${fmtBaht(maxApproved.byStatus.approved)}</div>` : '<div class="insight-value">—</div>')}
       ${insightItem('✕', 'var(--status-critical)', 'หน่วยงานที่มีงบไม่เห็นชอบสูงสุด',
         maxRejected ? `<div class="insight-name">${escapeHtml(maxRejected.name)}</div><div class="insight-value">${fmtBaht(maxRejected.byStatus.rejected)}</div>` : '<div class="insight-value">—</div>')}
-      ${insightItem('📋', 'var(--series-1)', 'หน่วยงานที่มีจำนวนแผนมากที่สุด',
-        maxPlans && maxPlans.count > 0 ? `<div class="insight-name">${escapeHtml(maxPlans.name)}</div><div class="insight-value">${fmtNum(maxPlans.count)} แผน</div>` : '<div class="insight-value">—</div>')}
+      ${insightItem('⏳', 'var(--status-pending)', 'หน่วยงานที่มีงบรอพิจารณาสูงสุด',
+        maxPending ? `<div class="insight-name">${escapeHtml(maxPending.name)}</div><div class="insight-value">${fmtBaht(maxPending.byStatus.pending)} · ${pctOf(maxPending.byStatus.pending)}%</div>` : '<div class="insight-value">—</div>')}
     </div>
   `;
 }
