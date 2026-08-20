@@ -360,12 +360,24 @@ tr.row-status-rejected { background: color-mix(in srgb, var(--status-critical) 7
 .status-chip.sub-rejected.active { background: var(--status-critical); border-color: var(--status-critical); }
 
 /* ---------- Department summary table ---------- */
-.dept-row-toggle { cursor: pointer; }
+.dept-row-toggle { cursor: pointer; transition: background .12s, box-shadow .12s; }
 .dept-row-toggle .chev { display:inline-block; transition: transform .15s; margin-right: 6px; color: var(--series-1); }
 .dept-row-toggle.open .chev { transform: rotate(90deg); }
+/* The currently-expanded department needs to read as clearly "active" at a
+   glance, not just via the small chevron rotation — a tinted row + solid
+   accent bar down the left edge does that without relying on color alone. */
+.dept-row-toggle.open {
+  background: color-mix(in srgb, var(--series-1) 9%, var(--surface-1));
+  box-shadow: inset 3px 0 0 var(--series-1);
+}
+.dept-row-toggle.open td:first-child { font-weight: 600; color: var(--text-primary); }
 .dept-detail-row td { background: var(--surface-0); padding: 0; }
 .dept-detail-inner { padding: 16px 20px; display: none; }
-.dept-detail-row.open .dept-detail-inner { display: block; }
+.dept-detail-row.open .dept-detail-inner {
+  display: block; background: var(--surface-1); border-left: 3px solid var(--series-1);
+  box-shadow: var(--shadow-card); margin: 10px 12px; border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+.dept-course-row:hover { background: color-mix(in srgb, var(--series-1) 6%, var(--table-hover-bg)); box-shadow: inset 2px 0 0 var(--series-1); }
 .type-breakdown { display: flex; flex-wrap: wrap; gap: 8px; }
 .type-chip { font-size: 12px; font-weight: 400; padding: 5px 11px; border-radius: 999px; background: var(--surface-1); border: 1px solid var(--border); }
 .type-chip b { font-weight: 500; font-variant-numeric: tabular-nums; }
