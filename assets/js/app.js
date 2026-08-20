@@ -720,8 +720,28 @@ function renderActivityLogTab() {
 /* ==================================================================== */
 /* DETAIL DRAWER + REVIEW ACTIONS                                       */
 /* ==================================================================== */
-function fieldRow(label, value) {
-  return `<div class="detail-item"><dt>${label}</dt><dd>${value && String(value).trim() ? escapeHtml(value) : '<span class="cell-muted">ไม่ระบุ</span>'}</dd></div>`;
+function formatDetailValue(value, mode = 'plain') {
+  if (!value || !String(value).trim()) return '<span class="cell-muted">ไม่ระบุ</span>';
+
+  let text = String(value).trim();
+
+  // ข้อความแบบลำดับข้อ: แยก 1. 2. 3. ... ให้ขึ้นบรรทัดใหม่อัตโนมัติ
+  if (mode === 'numbered') {
+    text = text.replace(/\s+(?=\d{1,2}\.\s)/g, '\n');
+  }
+
+  // กลุ่มเป้าหมาย: เลขประจำตัว 6 หลักถือเป็นจุดเริ่มต้นของบุคคลใหม่
+  if (mode === 'people') {
+    text = text.replace(/\s+(?=\d{6}(?:\s|$))/g, '\n');
+  }
+
+  // Escape HTML ก่อน แล้วค่อยแปลง line break เป็น <br> เพื่อป้องกัน XSS
+  const safe = escapeHtml(text);
+  return mode === 'plain' ? safe : safe.replace(/\r?\n/g, '<br>');
+}
+
+function fieldRow(label, value, mode = 'plain') {
+  return `<div class="detail-item"><dt>${label}</dt><dd>${formatDetailValue(value, mode)}</dd></div>`;
 }
 
 function openDrawer(id) {
@@ -771,12 +791,12 @@ function renderDrawer() {
   ` : `
     <div class="section-heading">ข้อมูลสำหรับพิจารณา</div>
     <dl class="detail-grid">
-      <div class="detail-item full">${fieldRow('ความจำเป็น/หลักการและเหตุผล', r.rationale)}</div>
-      <div class="detail-item full">${fieldRow('วัตถุประสงค์', r.objective)}</div>
-      <div class="detail-item full">${fieldRow('ทักษะ/ความรู้ที่จะได้รับ', r.skillsGained)}</div>
-      <div class="detail-item full">${fieldRow('ผลลัพธ์ที่คาดหวัง', r.outcome)}</div>
-      <div class="detail-item full">${fieldRow('ตัวชี้วัด (KPI)', r.kpi)}</div>
-      <div class="detail-item full">${fieldRow('หมายเหตุ', r.remark)}</div>
+      <div class="detail-item full">${fieldRow('ความจำเป็น/หลักการและเหตุผล', r.rationale, 'numbered')}</div>
+      <div class="detail-item full">${fieldRow('วัตถุประสงค์', r.objective, 'numbered')}</div>
+      <div class="detail-item full">${fieldRow('ทักษะ/ความรู้ที่จะได้รับ', r.skillsGained, 'numbered')}</div>
+      <div class="detail-item full">${fieldRow('ผลลัพธ์ที่คาดหวัง', r.outcome, 'numbered')}</div>
+      <div class="detail-item full">${fieldRow('ตัวชี้วัด (KPI)', r.kpi, 'numbered')}</div>
+      <div class="detail-item full">${fieldRow('หมายเหตุ', r.remark, 'numbered')}</div>
     </dl>
   `;
 
@@ -799,7 +819,7 @@ function renderDrawer() {
       ${fieldRow('วันสิ้นสุด', r.endDate)}
       ${fieldRow('ผู้เสนอ/ผู้ประสานงาน', r.creatorName)}
       ${fieldRow('ตำแหน่งผู้เสนอ', r.creatorPosition)}
-      <div class="detail-item full">${fieldRow('กลุ่มเป้าหมาย', r.targetGroupNames)}</div>
+      <div class="detail-item full">${fieldRow('กลุ่มเป้าหมาย', r.targetGroupNames, 'people')}</div>
     </dl>
     ${considerationSection}
     <div class="section-heading">การพิจารณา</div>
