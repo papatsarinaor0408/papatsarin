@@ -43,10 +43,15 @@ async function signIn(employeeId, password) {
   }
 
   CURRENT_USER = profile;
+  // Best-effort — a logging failure must never block a successful login.
+  try { await SB.rpc('record_login_event', { p_event: 'LOGIN_SUCCESS' }); } catch (e) { /* non-fatal */ }
   return { ok: true, mustChangePassword: !!profile.must_change_password };
 }
 
 async function signOut() {
+  // Best-effort, and must happen BEFORE signOut() clears the session
+  // (the RPC needs an authenticated caller to attribute the event to).
+  try { await SB.rpc('record_login_event', { p_event: 'LOGOUT' }); } catch (e) { /* non-fatal */ }
   await SB.auth.signOut();
   CURRENT_USER = null;
   window.location.href = 'login.html';

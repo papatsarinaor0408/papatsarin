@@ -11,6 +11,14 @@ const STATE = {
   openDeptKeys: new Set(),
   selectedId: null,
   noteDraft: null, // in-progress text in the review note field, kept across re-renders
+
+  // Admin-only history tabs — loaded lazily (only when the tab is first
+  // opened) since a Reviewer never triggers this fetch and it would return
+  // zero rows anyway (RLS is the real gate, this just avoids a wasted call).
+  loginHistory: [], loginHistoryLoaded: false,
+  loginHistoryFilters: { search: '', department: '', dateFrom: '', dateTo: '' },
+  activityLog: [], activityLogLoaded: false,
+  activityLogFilters: { search: '', action: '', dateFrom: '', dateTo: '' },
 };
 
 /* ---------------- persistence (central database — see dataClient.js) ---------------- */
@@ -82,6 +90,15 @@ function statusColor(status) {
 function statusBadge(status) {
   const meta = REVIEW_STATUS[status] || REVIEW_STATUS.pending;
   return `<span class="badge badge-${status}">${meta.label}</span>`;
+}
+/** e.g. "20 สิงหาคม 2569 เวลา 17:30 น." — server timestamptz is the source, this only formats it. */
+function fmtThaiDateTime(iso) {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '-';
+  const datePart = d.toLocaleDateString('th-TH-u-ca-buddhist', { year: 'numeric', month: 'long', day: 'numeric' });
+  const timePart = d.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${datePart} เวลา ${timePart} น.`;
 }
 const CATEGORICAL = ['var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)', 'var(--series-5)', 'var(--series-6)', 'var(--series-7)', 'var(--series-8)'];
 
@@ -444,6 +461,239 @@ function renderDeptSummaryTab() {
 }
 function cssEscape(s) { return String(s).replace(/["\\]/g, '\\$&'); }
 
+/** Shared CSV builder — BOM + CRLF + quote-escaping, matching exportCsv(). */
+function downloadCsv(filename, cols, rows, cellFmt) {
+  const csvRows = [cols.map((c) => c[1]).join(',')];
+  rows.forEach((r) => {
+    csvRows.push(cols.map(([key]) => {
+      let v = cellFmt(r, key);
+      v = String(v == null ? '' : v).replace(/"/g, '""');
+      return /[",\n]/.test(v) ? `"${v}"` : v;
+    }).join(','));
+  });
+  const blob = new Blob(['\uFEFF' + csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ==================================================================== */
+/* TAB: ADMIN — LOGIN HISTORY (ประวัติการเข้าใช้งาน) — Admin-only, RLS-   */
+/* enforced on login_events; the isAdmin() checks here are UI convenience */
+/* only, loaded lazily the first time the tab is opened.                 */
+/* ==================================================================== */
+async function loadLoginHistoryTab() {
+  const root = document.getElementById('panel-loginhistory');
+  if (!STATE.loginHistoryLoaded) {
+    root.innerHTML = '<div class="empty-state"><div class="big">⏳</div>กำลังโหลด...</div>';
+    try {
+      STATE.loginHistory = await fetchLoginHistory();
+      STATE.loginHistoryLoaded = true;
+    } catch (e) {
+      root.innerHTML = `<div class="empty-state"><div class="big">⚠</div>โหลดประวัติการเข้าใช้งานไม่สำเร็จ: ${escapeHtml(e.message || '')}</div>`;
+      return;
+    }
+  }
+  renderLoginHistoryTab();
+}
+
+function matchesLoginHistoryFilters(e) {
+  const f = STATE.loginHistoryFilters;
+  if (f.department && (e.department || '') !== f.department) return false;
+  if (f.dateFrom && e.created_at < f.dateFrom + 'T00:00:00') return false;
+  if (f.dateTo && e.created_at > f.dateTo + 'T23:59:59.999') return false;
+  if (f.search) {
+    const q = f.search.toLowerCase();
+    const hay = [e.employee_id, e.full_name, e.position, e.department].join(' ').toLowerCase();
+    if (!hay.includes(q)) return false;
+  }
+  return true;
+}
+
+const LOGIN_EVENT_LABEL = { LOGIN_SUCCESS: 'เข้าสู่ระบบ', LOGOUT: 'ออกจากระบบ' };
+
+function renderLoginHistoryTab() {
+  const root = document.getElementById('panel-loginhistory');
+  const f = STATE.loginHistoryFilters;
+  const departments = Array.from(new Set(STATE.loginHistory.map((e) => e.department).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'th'));
+  const filtered = STATE.loginHistory.filter(matchesLoginHistoryFilters);
+  const latest = filtered.length ? filtered[0].created_at : null; // already newest-first from fetchLoginHistory()
+
+  root.innerHTML = `
+    <div class="filter-bar" style="margin-bottom:14px;">
+      <div class="filter-field filter-search">
+        <label>ค้นหา</label>
+        <input type="search" id="lh-search" placeholder="เลขประจำตัว, ชื่อ, ตำแหน่ง..." value="${escapeAttr(f.search)}" />
+      </div>
+      <div class="filter-field">
+        <label>หน่วยงาน</label>
+        <select id="lh-department"><option value="">ทั้งหมด</option>${departments.map((d) => `<option value="${escapeAttr(d)}" ${d === f.department ? 'selected' : ''}>${escapeHtml(d)}</option>`).join('')}</select>
+      </div>
+      <div class="filter-field">
+        <label>จากวันที่</label>
+        <input type="date" id="lh-datefrom" value="${escapeAttr(f.dateFrom)}" />
+      </div>
+      <div class="filter-field">
+        <label>ถึงวันที่</label>
+        <input type="date" id="lh-dateto" value="${escapeAttr(f.dateTo)}" />
+      </div>
+      <button class="btn btn-ghost btn-sm" id="lh-clear" style="align-self:flex-end;">ล้างตัวกรอง</button>
+      <button class="btn btn-sm" id="lh-export" style="align-self:flex-end;">⬇ ส่งออก (CSV)</button>
+    </div>
+    <div class="filter-count" style="margin-bottom:10px;">พบ ${fmtNum(filtered.length)} รายการ จากทั้งหมด ${fmtNum(STATE.loginHistory.length)} รายการ · เข้าใช้งานล่าสุด: ${latest ? escapeHtml(fmtThaiDateTime(latest)) : '-'}</div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>วันเวลา</th><th>เลขประจำตัว</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th>หน่วยงาน</th><th>สิทธิ์</th><th>เหตุการณ์</th>
+        </tr></thead>
+        <tbody>
+          ${filtered.length ? filtered.map((e) => `
+            <tr>
+              <td>${escapeHtml(fmtThaiDateTime(e.created_at))}</td>
+              <td>${escapeHtml(e.employee_id || '-')}</td>
+              <td class="cell-name">${escapeHtml(e.full_name || '-')}</td>
+              <td>${escapeHtml(e.position || '-')}</td>
+              <td>${escapeHtml(e.department || '-')}</td>
+              <td>${escapeHtml(e.role || '-')}</td>
+              <td><span class="pill">${escapeHtml(LOGIN_EVENT_LABEL[e.event] || e.event)}</span></td>
+            </tr>
+          `).join('') : `<tr><td colspan="7"><div class="empty-state"><div class="big">🔍</div>ไม่พบข้อมูลที่ตรงกับตัวกรอง</div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  const bind = (id, key, evt) => document.getElementById(id).addEventListener(evt || 'change', (e) => {
+    STATE.loginHistoryFilters[key] = e.target.value;
+    renderLoginHistoryTab();
+  });
+  bind('lh-search', 'search', 'input');
+  bind('lh-department', 'department');
+  bind('lh-datefrom', 'dateFrom');
+  bind('lh-dateto', 'dateTo');
+  document.getElementById('lh-clear').addEventListener('click', () => {
+    STATE.loginHistoryFilters = { search: '', department: '', dateFrom: '', dateTo: '' };
+    renderLoginHistoryTab();
+  });
+  document.getElementById('lh-export').addEventListener('click', () => {
+    downloadCsv('ประวัติการเข้าใช้งาน_2570.csv',
+      [['created_at', 'วันเวลา'], ['employee_id', 'เลขประจำตัว'], ['full_name', 'ชื่อ-นามสกุล'], ['position', 'ตำแหน่ง'], ['department', 'หน่วยงาน'], ['role', 'สิทธิ์'], ['event', 'เหตุการณ์']],
+      filtered,
+      (r, key) => key === 'created_at' ? fmtThaiDateTime(r[key]) : (key === 'event' ? (LOGIN_EVENT_LABEL[r[key]] || r[key]) : r[key]));
+  });
+}
+
+/* ==================================================================== */
+/* TAB: ADMIN — ACTIVITY HISTORY (ประวัติการเปลี่ยนแปลง) — reuses         */
+/* audit_logs (Admin-only via RLS); Reviewers never see this tab (CSS)   */
+/* and would get zero rows from the general Admin-only policy even if   */
+/* they somehow triggered the fetch.                                    */
+/* ==================================================================== */
+async function loadActivityLogTab() {
+  const root = document.getElementById('panel-activitylog');
+  if (!STATE.activityLogLoaded) {
+    root.innerHTML = '<div class="empty-state"><div class="big">⏳</div>กำลังโหลด...</div>';
+    try {
+      STATE.activityLog = await fetchActivityLog();
+      STATE.activityLogLoaded = true;
+    } catch (e) {
+      root.innerHTML = `<div class="empty-state"><div class="big">⚠</div>โหลดประวัติการเปลี่ยนแปลงไม่สำเร็จ: ${escapeHtml(e.message || '')}</div>`;
+      return;
+    }
+  }
+  renderActivityLogTab();
+}
+
+function matchesActivityLogFilters(e) {
+  const f = STATE.activityLogFilters;
+  if (f.action && e.action !== f.action) return false;
+  if (f.dateFrom && e.created_at < f.dateFrom + 'T00:00:00') return false;
+  if (f.dateTo && e.created_at > f.dateTo + 'T23:59:59.999') return false;
+  if (f.search) {
+    const q = f.search.toLowerCase();
+    const hay = [e.employee_id, e.actor_full_name, e.actor_position, e.action, e.target_type, e.target_id, e.note].join(' ').toLowerCase();
+    if (!hay.includes(q)) return false;
+  }
+  return true;
+}
+
+/** Reconstructs a compact "what changed" summary; never hard-codes a specific action list. */
+function activityLogDetailLabel(e) {
+  if (e.target_type === 'plan' && e.new_value && e.new_value.decision) return planHistoryActionLabel(e);
+  if (e.note) return truncate(e.note, 70);
+  if (e.new_value) return truncate(JSON.stringify(e.new_value), 70);
+  return '-';
+}
+
+function renderActivityLogTab() {
+  const root = document.getElementById('panel-activitylog');
+  const f = STATE.activityLogFilters;
+  const actions = Array.from(new Set(STATE.activityLog.map((e) => e.action).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'th'));
+  const filtered = STATE.activityLog.filter(matchesActivityLogFilters);
+
+  root.innerHTML = `
+    <div class="filter-bar" style="margin-bottom:14px;">
+      <div class="filter-field filter-search">
+        <label>ค้นหา</label>
+        <input type="search" id="al-search" placeholder="เลขประจำตัว, ชื่อผู้ดำเนินการ, รหัสแผน, หมายเหตุ..." value="${escapeAttr(f.search)}" />
+      </div>
+      <div class="filter-field">
+        <label>ประเภทการเปลี่ยนแปลง</label>
+        <select id="al-action"><option value="">ทั้งหมด</option>${actions.map((a) => `<option value="${escapeAttr(a)}" ${a === f.action ? 'selected' : ''}>${escapeHtml(a)}</option>`).join('')}</select>
+      </div>
+      <div class="filter-field">
+        <label>จากวันที่</label>
+        <input type="date" id="al-datefrom" value="${escapeAttr(f.dateFrom)}" />
+      </div>
+      <div class="filter-field">
+        <label>ถึงวันที่</label>
+        <input type="date" id="al-dateto" value="${escapeAttr(f.dateTo)}" />
+      </div>
+      <button class="btn btn-ghost btn-sm" id="al-clear" style="align-self:flex-end;">ล้างตัวกรอง</button>
+      <button class="btn btn-sm" id="al-export" style="align-self:flex-end;">⬇ ส่งออก (CSV)</button>
+    </div>
+    <div class="filter-count" style="margin-bottom:10px;">พบ ${fmtNum(filtered.length)} รายการ จากทั้งหมด ${fmtNum(STATE.activityLog.length)} รายการ</div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>วันเวลา</th><th>ผู้ดำเนินการ</th><th>ประเภทการเปลี่ยนแปลง</th><th>เป้าหมาย</th><th>รายละเอียด</th>
+        </tr></thead>
+        <tbody>
+          ${filtered.length ? filtered.map((e) => `
+            <tr>
+              <td>${escapeHtml(fmtThaiDateTime(e.created_at))}</td>
+              <td class="cell-name">${escapeHtml(e.actor_full_name || '-')}${e.employee_id ? ` <span class="cell-muted">(${escapeHtml(e.employee_id)})</span>` : ''}<div style="color:var(--text-muted);font-size:11.5px;">${escapeHtml(e.actor_position || '')}${e.role ? ` · ${escapeHtml(e.role)}` : ''}</div></td>
+              <td><span class="pill">${escapeHtml(e.action)}</span></td>
+              <td>${escapeHtml(e.target_type || '-')}${e.target_id ? ` <span class="cell-muted">${escapeHtml(truncate(e.target_id, 24))}</span>` : ''}</td>
+              <td>${escapeHtml(activityLogDetailLabel(e))}</td>
+            </tr>
+          `).join('') : `<tr><td colspan="5"><div class="empty-state"><div class="big">🔍</div>ไม่พบข้อมูลที่ตรงกับตัวกรอง</div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  const bind = (id, key, evt) => document.getElementById(id).addEventListener(evt || 'change', (e) => {
+    STATE.activityLogFilters[key] = e.target.value;
+    renderActivityLogTab();
+  });
+  bind('al-search', 'search', 'input');
+  bind('al-action', 'action');
+  bind('al-datefrom', 'dateFrom');
+  bind('al-dateto', 'dateTo');
+  document.getElementById('al-clear').addEventListener('click', () => {
+    STATE.activityLogFilters = { search: '', action: '', dateFrom: '', dateTo: '' };
+    renderActivityLogTab();
+  });
+  document.getElementById('al-export').addEventListener('click', () => {
+    downloadCsv('ประวัติการเปลี่ยนแปลง_2570.csv',
+      [['created_at', 'วันเวลา'], ['employee_id', 'เลขประจำตัว'], ['actor_full_name', 'ชื่อผู้ดำเนินการ'], ['actor_position', 'ตำแหน่ง'], ['role', 'สิทธิ์'], ['action', 'ประเภทการเปลี่ยนแปลง'], ['target_type', 'เป้าหมาย'], ['target_id', 'รหัสเป้าหมาย'], ['detail', 'รายละเอียด']],
+      filtered,
+      (r, key) => key === 'created_at' ? fmtThaiDateTime(r[key]) : (key === 'detail' ? activityLogDetailLabel(r) : r[key]));
+  });
+}
+
 /* ==================================================================== */
 /* DETAIL DRAWER + REVIEW ACTIONS                                       */
 /* ==================================================================== */
@@ -477,9 +727,14 @@ function renderDrawer() {
   if (!r) { body.innerHTML = ''; return; }
   titleEl.textContent = r.nameTh;
 
+  const actorLine = [
+    r.reviewedByName || r.reviewedBy || '-',
+    r.reviewedByEmployeeId ? `(${r.reviewedByEmployeeId})` : '',
+    r.reviewedByRole || '',
+  ].filter(Boolean).join(' · ');
   const history = r.reviewStatus !== 'pending' ? `
     <div class="review-history">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">${statusBadge(r.reviewStatus)}<span style="color:var(--text-muted);font-size:12px;">โดย ${escapeHtml(r.reviewedBy || '-')} · ${escapeHtml(r.reviewedDate || '-')}</span></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">${statusBadge(r.reviewStatus)}<span style="color:var(--text-muted);font-size:12px;">โดย ${escapeHtml(actorLine)} · ${escapeHtml(fmtThaiDateTime(r.reviewedAtRaw))}</span></div>
       ${r.reviewNote ? `<div><b style="font-size:11px;color:var(--text-muted);text-transform:uppercase;">หมายเหตุที่บันทึกไว้</b><div style="margin-top:2px;">${escapeHtml(r.reviewNote)}</div></div>` : '<div style="color:var(--text-muted);font-size:12.5px;">ไม่มีหมายเหตุ</div>'}
     </div>` : '';
 
@@ -526,8 +781,54 @@ function renderDrawer() {
     ${considerationSection}
     <div class="section-heading">การพิจารณา</div>
     <div id="decision-area"></div>
+    <div class="section-heading">ประวัติการพิจารณา</div>
+    <div id="plan-history-section"><div class="plan-history-empty">กำลังโหลด...</div></div>
   `;
   renderDecisionArea();
+  renderPlanHistorySection(r.id);
+}
+
+/** old → new status label from an audit_logs row (submit_decision entries only). */
+function planHistoryActionLabel(e) {
+  const oldStatus = (e.old_value && e.old_value.decision) || 'pending';
+  const newStatus = (e.new_value && e.new_value.decision) || 'pending';
+  const oldLabel = (REVIEW_STATUS[oldStatus] || REVIEW_STATUS.pending).label;
+  const newLabel = (REVIEW_STATUS[newStatus] || REVIEW_STATUS.pending).label;
+  return `${oldLabel} → ${newLabel}`;
+}
+
+/**
+ * Async by nature (network fetch) — the drawer may already have closed or
+ * moved to a different plan by the time this resolves, so re-check
+ * STATE.selectedId before touching the DOM (race guard).
+ */
+async function renderPlanHistorySection(planId) {
+  let rows;
+  try {
+    rows = await fetchPlanHistory(planId);
+  } catch (e) {
+    if (STATE.selectedId !== planId) return;
+    const el = document.getElementById('plan-history-section');
+    if (el) el.innerHTML = '<div class="plan-history-empty">ไม่สามารถโหลดประวัติการพิจารณาได้</div>';
+    return;
+  }
+  if (STATE.selectedId !== planId) return;
+  const el = document.getElementById('plan-history-section');
+  if (!el) return;
+  if (!rows.length) {
+    el.innerHTML = '<div class="plan-history-empty">ยังไม่มีประวัติการพิจารณา</div>';
+    return;
+  }
+  el.innerHTML = `<div class="plan-history-list">${rows.map((e) => {
+    const actor = [e.actor_full_name || '-', e.employee_id ? `(${e.employee_id})` : '', e.role || ''].filter(Boolean).join(' · ');
+    return `
+    <div class="plan-history-item">
+      <div class="plan-history-time">${escapeHtml(fmtThaiDateTime(e.created_at))}</div>
+      <div class="plan-history-action">${escapeHtml(planHistoryActionLabel(e))}</div>
+      <div class="plan-history-actor">โดย ${escapeHtml(actor)}</div>
+      ${e.note ? `<div class="plan-history-note">${escapeHtml(e.note)}</div>` : ''}
+    </div>`;
+  }).join('')}</div>`;
 }
 
 function renderDecisionArea() {
@@ -655,6 +956,11 @@ function switchTab(tab) {
   STATE.activeTab = tab;
   document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
   document.querySelectorAll('.tab-panel').forEach((p) => p.classList.toggle('active', p.id === 'panel-' + tab));
+  // Server-side RLS is the real gate (a Reviewer gets zero rows regardless) —
+  // the isAdmin() check here only avoids a pointless fetch for a tab that's
+  // hidden from Reviewers by CSS anyway.
+  if (tab === 'loginhistory' && isAdmin()) loadLoginHistoryTab();
+  if (tab === 'activitylog' && isAdmin()) loadActivityLogTab();
 }
 
 /* ==================================================================== */

@@ -373,6 +373,17 @@ tr.clickable { cursor: pointer; }
 .action-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
 .note-field { width: 100%; min-height: 72px; resize: vertical; }
 
+.plan-history-empty { color: var(--text-muted); font-size: 12.5px; }
+.plan-history-list { display: flex; flex-direction: column; gap: 8px; }
+.plan-history-item {
+  background: var(--surface-0); border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 10px 13px; font-size: 12.5px; font-weight: 300;
+}
+.plan-history-time { color: var(--text-muted); font-size: 11px; margin-bottom: 2px; }
+.plan-history-action { font-weight: 500; margin-bottom: 2px; }
+.plan-history-actor { color: var(--text-muted); font-size: 12px; }
+.plan-history-note { margin-top: 5px; padding-top: 5px; border-top: 1px dashed var(--border); }
+
 .empty-state { text-align: center; padding: 48px 20px; color: var(--text-muted); font-weight: 300; }
 .empty-state .big { font-size: 34px; margin-bottom: 8px; }
 

@@ -21,6 +21,10 @@ function dbRowToRecord(planRow, decisionRow) {
     rec.reviewStatus = decisionRow.decision;
     rec.reviewNote = decisionRow.remark || '';
     rec.reviewedBy = decisionRow.reviewer_position || '';
+    rec.reviewedByName = decisionRow.reviewer_full_name || '';
+    rec.reviewedByEmployeeId = decisionRow.reviewer_employee_id || '';
+    rec.reviewedByRole = decisionRow.reviewer_role || '';
+    rec.reviewedAtRaw = decisionRow.reviewed_at || '';
     rec.reviewedDate = decisionRow.reviewed_at
       ? new Date(decisionRow.reviewed_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })
       : '';
@@ -28,6 +32,10 @@ function dbRowToRecord(planRow, decisionRow) {
     rec.reviewStatus = 'pending';
     rec.reviewNote = '';
     rec.reviewedBy = '';
+    rec.reviewedByName = '';
+    rec.reviewedByEmployeeId = '';
+    rec.reviewedByRole = '';
+    rec.reviewedAtRaw = '';
     rec.reviewedDate = '';
   }
   return rec;
@@ -99,4 +107,40 @@ async function importDatasetRemote(records, fileName) {
     throw e;
   }
   return (data && data[0]) || { new_count: 0, matched_count: 0, reactivated_count: 0, deactivated_count: 0 };
+}
+
+/**
+ * Admin-only (enforced by RLS — a Reviewer gets zero rows even if this is
+ * somehow called). Newest first.
+ */
+async function fetchLoginHistory() {
+  const { data, error } = await SB.from('login_events').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Admin-only general activity log (import/decision/account/password-reset/
+ * login-and-logout events) — enforced by RLS. Newest first.
+ */
+async function fetchActivityLog() {
+  const { data, error } = await SB.from('audit_logs').select('*').order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Plan-specific decision history for the drawer's "ประวัติการพิจารณา"
+ * section. Readable by any active user who can see the plan (RLS scopes
+ * audit_logs SELECT to target_type='plan' decision rows for non-admins),
+ * chronological oldest-first so it reads top-to-bottom as a timeline.
+ */
+async function fetchPlanHistory(planId) {
+  const { data, error } = await SB.from('audit_logs')
+    .select('*')
+    .eq('target_type', 'plan')
+    .eq('target_id', planId)
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
 }
