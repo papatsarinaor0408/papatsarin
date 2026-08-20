@@ -40,6 +40,8 @@ function mapRowToRecord(row, index) {
   });
   // บางแถวไม่มี "กอง" กรอกไว้ (แต่มีแผนก/ฝ่าย) — ใช้หน่วยงานที่เจาะจงกว่าแทน "ไม่ระบุ"
   if (!rec.divisionName) rec.divisionName = rec.sectionName || rec.deptName || '';
+  // บางแถวไม่มี "แผนก" กรอกไว้ — ใช้กอง/ฝ่ายแทน "ไม่ระบุ" เช่นกัน (ทำหลังบรรทัดบนเพื่อได้กองที่เติมค่าแล้วด้วย)
+  if (!rec.sectionName) rec.sectionName = rec.divisionName || rec.deptName || '';
 
   // ค่าที่จำเป็นแต่ไม่มีในไฟล์ ให้ค่าเริ่มต้นว่าง เพื่อกันหน้าจอพัง
   ['nameTh', 'deptName', 'divisionName', 'sectionName', 'courseType', 'inputFactor'].forEach((k) => {
