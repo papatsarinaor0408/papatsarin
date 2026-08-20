@@ -211,10 +211,10 @@ function renderOverview() {
     return { label: name, values, total: rows.length };
   }).sort((a, b) => b.total - a.total);
   const statusSeries = [
+    { key: 'pending', label: REVIEW_STATUS.pending.label, color: 'var(--status-pending)' },
     { key: 'approved', label: REVIEW_STATUS.approved.label, color: 'var(--status-good)' },
     { key: 'revise', label: REVIEW_STATUS.revise.label, color: 'var(--status-warning)' },
     { key: 'rejected', label: REVIEW_STATUS.rejected.label, color: 'var(--status-critical)' },
-    { key: 'pending', label: REVIEW_STATUS.pending.label, color: 'var(--status-pending)' },
   ];
   if (groups.length) {
     renderStackedBar(document.getElementById('chart-org-status'), groups, statusSeries, { width: 760, labelW: 190 });
@@ -320,16 +320,16 @@ function renderDeptSummaryTab() {
               </td>
             </tr>
             <tr class="dept-detail-row" data-key="${escapeHtml(row.name)}"><td colspan="7"><div class="dept-detail-inner">
-              <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">แยกตามประเภทหลักสูตร</div>
+              <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">แยกตามประเภทหลักสูตร</div>
               <div class="type-breakdown" style="margin-bottom:12px;">
                 ${Object.entries(row.byCourseType).map(([t, c]) => `<span class="type-chip">${escapeHtml(t)}: <b>${fmtNum(c)}</b></span>`).join('')}
               </div>
-              <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">แยกตามปัจจัยนำเข้าหลัก</div>
+              <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">แยกตามปัจจัยนำเข้าหลัก</div>
               <div class="type-breakdown" style="margin-bottom:12px;">
                 ${Object.entries(row.byInputFactor).map(([t, c]) => `<span class="type-chip">${escapeHtml(t)}: <b>${fmtNum(c)}</b></span>`).join('')}
               </div>
               ${Object.keys(row.byDeliveryType).length ? `
-              <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">แยกตามประเภทการอบรม</div>
+              <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">แยกตามประเภทการอบรม</div>
               <div class="type-breakdown">
                 ${Object.entries(row.byDeliveryType).map(([t, c]) => `<span class="type-chip">${escapeHtml(t)}: <b>${fmtNum(c)}</b></span>`).join('')}
               </div>` : ''}
@@ -449,7 +449,7 @@ function renderDecisionArea() {
   if (!area || !r) return;
   const draft = STATE.noteDraft != null ? STATE.noteDraft : (r.reviewNote || '');
   area.innerHTML = `
-    <label for="decision-note" style="display:block;font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.02em;margin-bottom:6px;">หมายเหตุของผู้พิจารณา</label>
+    <label for="decision-note" style="display:block;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.02em;margin-bottom:6px;">หมายเหตุของผู้พิจารณา</label>
     <textarea class="note-field" id="decision-note" placeholder="ระบุประเด็นที่ต้องการให้หน่วยงานแก้ไข เหตุผลการพิจารณา หรือข้อเสนอแนะเพิ่มเติม (จำเป็นเมื่อเลือก &quot;ให้ทบทวน&quot; หรือ &quot;ไม่เห็นชอบ&quot;)">${escapeHtml(draft)}</textarea>
     <div id="decision-error" style="color:var(--status-critical);font-size:12px;margin-top:4px;display:none;">กรุณาระบุหมายเหตุก่อนบันทึกผล "เห็นชอบแต่ให้ทบทวน" หรือ "ไม่เห็นชอบ"</div>
     <div class="action-row">

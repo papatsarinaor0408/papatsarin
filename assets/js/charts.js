@@ -84,7 +84,7 @@ function renderDonut(container, data, opts) {
       const circle = el('circle', {
         cx, cy, r, fill: 'none', stroke: d.color, 'stroke-width': stroke,
         'stroke-dasharray': dashArr, 'stroke-dashoffset': dashOffset, 'stroke-linecap': 'butt',
-        style: 'cursor:pointer;',
+        class: 'chart-arc', style: 'cursor:pointer;',
       });
       circle.addEventListener('mousemove', (evt) => {
         showTooltip(evt, `<div class="tt-row"><span class="tt-dot" style="background:${d.color}"></span>${d.label}: <b>${fmtNum(d.value)}</b> (${(frac * 100).toFixed(1)}%)</div>`);
@@ -142,7 +142,7 @@ function renderStackedBar(container, groups, series, opts) {
       const rx = 4;
       const rect = el('rect', {
         x, y, width: Math.max(segW, 1), height: rowH, fill: sr.color,
-        rx: rx, ry: rx, style: 'cursor:pointer;',
+        rx: rx, ry: rx, class: 'chart-bar-status', style: 'cursor:pointer;',
       });
       // square off inner edge so only true ends are rounded (rounded data-ends anchored to baseline)
       rect.addEventListener('mousemove', (evt) => {
@@ -185,7 +185,7 @@ function renderHBar(container, items, opts) {
     label.textContent = d.label;
     svg.appendChild(label);
     const w = Math.max((d.value / max) * trackW, d.value > 0 ? 3 : 0);
-    const rect = el('rect', { x: labelW, y, width: w, height: rowH, rx: 4, ry: 4, fill: d.color || 'var(--seq-450)', style: 'cursor:pointer;' });
+    const rect = el('rect', { x: labelW, y, width: w, height: rowH, rx: 4, ry: 4, fill: d.color || 'var(--seq-450)', class: 'chart-bar-magnitude', style: 'cursor:pointer;' });
     rect.addEventListener('mousemove', (evt) => showTooltip(evt, `<b>${d.label}</b><br>${opts.formatValue ? opts.formatValue(d.value) : fmtNum(d.value)}`));
     rect.addEventListener('mousemove', moveTooltip);
     rect.addEventListener('mouseleave', hideTooltip);
