@@ -827,7 +827,13 @@ function renderPersonnelTab() {
     const plans = Array.from(entry.plans.values());
     const counts = { pending: 0, approved: 0, revise: 0, rejected: 0 };
     plans.forEach((p) => { counts[p.reviewStatus] = (counts[p.reviewStatus] || 0) + 1; });
-    return { employeeId: entry.employeeId, name: entry.name, plans, count: plans.length, counts };
+    // The only department evidence the system actually has is which unit
+    // PROPOSED each course this person is named in — not their own home
+    // unit (a target can belong to a different department than the
+    // proposer, e.g. a centrally-run course), so this is shown as such
+    // rather than presented as "their department".
+    const proposingUnits = Array.from(new Set(plans.map((p) => p.sectionName || p.divisionName || p.deptName || '-')));
+    return { employeeId: entry.employeeId, name: entry.name, plans, count: plans.length, counts, proposingUnits };
   });
 
   const totalPeople = people.length;
@@ -877,7 +883,7 @@ function renderPersonnelTab() {
     <div class="table-wrap">
       <table class="data-table">
         <thead><tr>
-          <th>เลขประจำตัว</th><th>ชื่อ-นามสกุล</th><th>หน่วยงาน</th><th class="num">จำนวนหลักสูตร</th>
+          <th>เลขประจำตัว</th><th>ชื่อ-นามสกุล</th><th>หน่วยงานที่เสนอ*</th><th class="num">จำนวนหลักสูตร</th>
           <th class="num">รอพิจารณา</th><th class="num">เห็นชอบ</th><th class="num">เห็นชอบแต่ให้ทบทวน</th><th class="num">ไม่เห็นชอบ</th><th></th>
         </tr></thead>
         <tbody>
@@ -885,7 +891,9 @@ function renderPersonnelTab() {
             <tr class="dept-row-toggle" data-key="${p.employeeId}">
               <td>${escapeHtml(p.employeeId)}</td>
               <td class="cell-name"><span class="chev">▸</span>${escapeHtml(p.name)}</td>
-              <td><span class="cell-muted">ไม่สามารถระบุได้</span></td>
+              <td>${p.proposingUnits.length === 1
+                ? escapeHtml(p.proposingUnits[0])
+                : `${fmtNum(p.proposingUnits.length)} หน่วยงาน<div class="cell-muted" style="font-size:11.5px;margin-top:2px;">${escapeHtml(joinUnitsPreview(p.proposingUnits))}</div>`}</td>
               <td class="num">${fmtNum(p.count)}</td>
               <td class="num">${fmtNum(p.counts.pending || 0)}</td>
               <td class="num">${fmtNum(p.counts.approved || 0)}</td>
@@ -923,6 +931,7 @@ function renderPersonnelTab() {
         </tbody>
       </table>
     </div>
+    <div style="font-size:11.5px;color:var(--text-muted);margin-top:8px;">*หน่วยงานที่เสนอหลักสูตรที่บุคคลนั้นมีชื่ออยู่ ไม่ใช่หน่วยงานต้นสังกัดของบุคคลโดยตรง (ระบบไม่มีข้อมูลสังกัดรายบุคคลแยกต่างหาก บางหลักสูตรหน่วยงานหนึ่งอาจเสนอแต่ส่งคนจากหลายหน่วยงานเข้าอบรม)</div>
   `;
 
   root.querySelectorAll('.person-plan-row').forEach((tr) => {
