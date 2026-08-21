@@ -57,8 +57,8 @@
      clearly on all but the two lightest ones (revise/approved use dark text). */
   --kpi-fill-total: var(--accent-2);
   --kpi-fill-pending: #6F6878;
-  --kpi-fill-approved: #C7D090;
-  --kpi-fill-revise: #D89A3A;
+  --kpi-fill-approved: #617F5F;
+  --kpi-fill-revise: #FAC240;
   --kpi-fill-rejected: #B14A63;
   --radius-sm: 10px;
   --radius-md: 14px;

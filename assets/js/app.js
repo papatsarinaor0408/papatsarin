@@ -175,8 +175,8 @@ function renderOverview() {
   const kpis = [
     { key: 'total', label: 'แผนทั้งหมด', value: total, color: 'var(--kpi-fill-total)' },
     { key: 'pending', label: REVIEW_STATUS.pending.label, value: counts.pending, color: 'var(--kpi-fill-pending)' },
-    { key: 'approved', label: REVIEW_STATUS.approved.label, value: counts.approved, color: 'var(--kpi-fill-approved)', darkText: true },
-    { key: 'revise', label: REVIEW_STATUS.revise.label, value: counts.revise, color: 'var(--kpi-fill-revise)', darkText: true },
+    { key: 'approved', label: REVIEW_STATUS.approved.label, value: counts.approved, color: 'var(--kpi-fill-approved)' },
+    { key: 'revise', label: REVIEW_STATUS.revise.label, value: counts.revise, color: 'var(--kpi-fill-revise)' },
     { key: 'rejected', label: REVIEW_STATUS.rejected.label, value: counts.rejected, color: 'var(--kpi-fill-rejected)' },
   ];
 
