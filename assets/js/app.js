@@ -832,7 +832,7 @@ function renderPersonnelTab() {
     // unit (a target can belong to a different department than the
     // proposer, e.g. a centrally-run course), so this is shown as such
     // rather than presented as "their department".
-    const proposingUnits = Array.from(new Set(plans.map((p) => p.sectionName || p.divisionName || p.deptName || '-')));
+    const proposingUnits = Array.from(new Set(plans.map((p) => p.divisionName || '-')));
     return { employeeId: entry.employeeId, name: entry.name, plans, count: plans.length, counts, proposingUnits };
   });
 
