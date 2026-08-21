@@ -10,6 +10,8 @@ const STATE = {
   filters: { orgLevel: 'divisionName', orgValue: '', courseType: '', inputFactor: '', deliveryType: '', status: '', search: '' },
   openDeptKeys: new Set(),
   openDupCourseKeys: new Set(),
+  openPersonKeys: new Set(),
+  personnelFilters: { search: '', sort: 'count_desc' },
   selectedId: null,
   noteDraft: null, // in-progress text in the review note field, kept across re-renders
 
@@ -756,6 +758,204 @@ function downloadCsv(filename, cols, rows, cellFmt) {
 }
 
 /* ==================================================================== */
+/* TAB: PERSONNEL IN THE DEVELOPMENT PLAN (บุคลากรในแผนพัฒนา) — a pure    */
+/* frontend roll-up of targetGroupNames, no new data/schema of any kind. */
+/* ==================================================================== */
+
+/**
+ * Splits a "กลุ่มเป้าหมาย" text blob into one segment per person, each
+ * segment starting at a 6-digit เลขประจำตัว (the format this field uses).
+ * Independent of formatDetailValue's own 'people' display mode on purpose —
+ * that one is already working in the drawer and isn't touched here.
+ */
+function splitPeopleText(text) {
+  if (!text) return [];
+  const normalized = String(text).replace(/\s+/g, ' ').trim();
+  if (!normalized) return [];
+  return normalized.split(/\s+(?=\d{6}(?:\s|$))/).map((s) => s.trim()).filter(Boolean);
+}
+
+/**
+ * Extracts { employeeId, name } from one segment, or null if the segment
+ * doesn't start with a 6-digit id — a name with no id can't be reliably
+ * tied to a person, so it's dropped rather than guessed at.
+ */
+function parsePersonSegment(segment) {
+  const m = String(segment || '').match(/^(\d{6})\s*(.*)$/);
+  if (!m) return null;
+  const name = m[2].trim();
+  return { employeeId: m[1], name: name || '(ไม่ระบุชื่อ)' };
+}
+
+/**
+ * One pass over `records` building Map<employeeId, { employeeId, name,
+ * plans: Map<planId, record> }>. The inner plan map both dedupes (the same
+ * id repeated within one plan's text) and keeps each person's actual plan
+ * objects for the count/detail view.
+ */
+function buildPersonnelIndex(records) {
+  const byId = new Map();
+  records.forEach((r) => {
+    const segments = splitPeopleText(r.targetGroupNames);
+    if (!segments.length) return;
+    const seenInThisPlan = new Set();
+    segments.forEach((seg) => {
+      const person = parsePersonSegment(seg);
+      if (!person || seenInThisPlan.has(person.employeeId)) return;
+      seenInThisPlan.add(person.employeeId);
+      let entry = byId.get(person.employeeId);
+      if (!entry) {
+        entry = { employeeId: person.employeeId, name: person.name, plans: new Map() };
+        byId.set(person.employeeId, entry);
+      }
+      if (!entry.plans.has(r.id)) entry.plans.set(r.id, r);
+    });
+  });
+  return byId;
+}
+
+function renderPersonnelTab() {
+  const root = document.getElementById('panel-personnel');
+  if (!root) return;
+  // Same reasoning as renderDeptSummaryTab() — this view breaks each person
+  // down BY status, so the "สถานะ" filter (incl. the review tab's chips)
+  // must not collapse it to one status.
+  const data = getFilteredExcept('status');
+  const byId = buildPersonnelIndex(data);
+
+  const people = Array.from(byId.values()).map((entry) => {
+    const plans = Array.from(entry.plans.values());
+    const counts = { pending: 0, approved: 0, revise: 0, rejected: 0 };
+    plans.forEach((p) => { counts[p.reviewStatus] = (counts[p.reviewStatus] || 0) + 1; });
+    return { employeeId: entry.employeeId, name: entry.name, plans, count: plans.length, counts };
+  });
+
+  const totalPeople = people.length;
+  const totalRelations = people.reduce((s, p) => s + p.count, 0);
+  const distinctPlanIds = new Set();
+  people.forEach((p) => p.plans.forEach((pl) => distinctPlanIds.add(pl.id)));
+  const totalCourses = distinctPlanIds.size;
+  const avgPerPerson = totalPeople ? totalRelations / totalPeople : 0;
+
+  const f = STATE.personnelFilters;
+  let filtered = people;
+  if (f.search) {
+    const q = f.search.toLowerCase();
+    filtered = filtered.filter((p) => p.employeeId.includes(q) || p.name.toLowerCase().includes(q));
+  }
+  const sorters = {
+    count_desc: (a, b) => b.count - a.count || a.name.localeCompare(b.name, 'th'),
+    count_asc: (a, b) => a.count - b.count || a.name.localeCompare(b.name, 'th'),
+    name_asc: (a, b) => a.name.localeCompare(b.name, 'th'),
+    name_desc: (a, b) => b.name.localeCompare(a.name, 'th'),
+  };
+  filtered = filtered.slice().sort(sorters[f.sort] || sorters.count_desc);
+
+  root.innerHTML = `
+    <div class="subheading-label" style="font-size:15px;margin-bottom:14px;">บุคลากรในแผนพัฒนา ปี 2570</div>
+    <div class="mini-kpi-grid mini-kpi-grid-3" style="margin-bottom:16px;">
+      <div class="mini-kpi-card"><div class="mini-kpi-label">บุคลากรในแผนทั้งหมด</div><div class="mini-kpi-value">${fmtNum(totalPeople)}</div><div class="mini-kpi-sub">คนไม่ซ้ำ</div></div>
+      <div class="mini-kpi-card"><div class="mini-kpi-label">จำนวนหลักสูตรที่เกี่ยวข้อง</div><div class="mini-kpi-value">${fmtNum(totalCourses)}</div><div class="mini-kpi-sub">แผนที่มีรายชื่อบุคลากร</div></div>
+      <div class="mini-kpi-card"><div class="mini-kpi-label">เฉลี่ยหลักสูตรต่อคน</div><div class="mini-kpi-value">${avgPerPerson.toFixed(1)}</div><div class="mini-kpi-sub">หลักสูตร/คน</div></div>
+    </div>
+    <div class="filter-bar" style="margin-bottom:14px;">
+      <div class="filter-field filter-search">
+        <label>ค้นหา</label>
+        <input type="search" id="pp-search" placeholder="เลขประจำตัว หรือ ชื่อ-นามสกุล..." value="${escapeAttr(f.search)}" />
+      </div>
+      <div class="filter-field">
+        <label>เรียงลำดับ</label>
+        <select id="pp-sort">
+          <option value="count_desc" ${f.sort === 'count_desc' ? 'selected' : ''}>จำนวนหลักสูตร มาก → น้อย</option>
+          <option value="count_asc" ${f.sort === 'count_asc' ? 'selected' : ''}>จำนวนหลักสูตร น้อย → มาก</option>
+          <option value="name_asc" ${f.sort === 'name_asc' ? 'selected' : ''}>ชื่อ ก → ฮ</option>
+          <option value="name_desc" ${f.sort === 'name_desc' ? 'selected' : ''}>ชื่อ ฮ → ก</option>
+        </select>
+      </div>
+    </div>
+    <div class="filter-count" style="margin-bottom:10px;">พบ ${fmtNum(filtered.length)} คน จากทั้งหมด ${fmtNum(totalPeople)} คน</div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>เลขประจำตัว</th><th>ชื่อ-นามสกุล</th><th>หน่วยงาน</th><th class="num">จำนวนหลักสูตร</th>
+          <th class="num">รอพิจารณา</th><th class="num">เห็นชอบ</th><th class="num">เห็นชอบแต่ให้ทบทวน</th><th class="num">ไม่เห็นชอบ</th><th></th>
+        </tr></thead>
+        <tbody>
+          ${filtered.length ? filtered.map((p) => `
+            <tr class="dept-row-toggle" data-key="${p.employeeId}">
+              <td>${escapeHtml(p.employeeId)}</td>
+              <td class="cell-name"><span class="chev">▸</span>${escapeHtml(p.name)}</td>
+              <td><span class="cell-muted">ไม่สามารถระบุได้</span></td>
+              <td class="num">${fmtNum(p.count)}</td>
+              <td class="num">${fmtNum(p.counts.pending || 0)}</td>
+              <td class="num">${fmtNum(p.counts.approved || 0)}</td>
+              <td class="num">${fmtNum(p.counts.revise || 0)}</td>
+              <td class="num">${fmtNum(p.counts.rejected || 0)}</td>
+              <td></td>
+            </tr>
+            <tr class="dept-detail-row" data-key="${p.employeeId}"><td colspan="9"><div class="dept-detail-inner">
+              <div class="subheading-label" style="margin-bottom:2px;">${escapeHtml(p.employeeId)} ${escapeHtml(p.name)}</div>
+              <div class="cell-muted" style="font-size:12.5px;margin-bottom:10px;">อยู่ในแผนพัฒนา ${fmtNum(p.count)} หลักสูตร</div>
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead><tr>
+                    <th>ชื่อหลักสูตร</th><th>หน่วยงานที่เสนอ</th><th>ประเภทหลักสูตร</th><th>ปัจจัยนำเข้าหลัก</th>
+                    <th>ประเภทการอบรม</th><th class="num">จำนวนวัน</th><th class="num">งบประมาณ</th><th>สถานะ</th>
+                  </tr></thead>
+                  <tbody>
+                    ${p.plans.map((pl) => `
+                      <tr class="clickable person-plan-row${pl.reviewStatus !== 'pending' ? ` row-status-${pl.reviewStatus}` : ''}" data-id="${pl.id}">
+                        <td class="cell-name">${escapeHtml(pl.nameTh)}</td>
+                        <td>${escapeHtml(pl.sectionName || pl.divisionName || pl.deptName || '-')}</td>
+                        <td>${escapeHtml(pl.courseType || '-')}</td>
+                        <td>${escapeHtml(pl.inputFactor || '-')}</td>
+                        <td>${deliveryTypeOf(pl) ? escapeHtml(deliveryTypeOf(pl)) : '<span class="cell-muted">—</span>'}</td>
+                        <td class="num">${pl.days ? fmtNum(pl.days) : '<span class="cell-muted">-</span>'}</td>
+                        <td class="num">${pl.budgetTotal ? fmtBaht(pl.budgetTotal) : '<span class="cell-muted">-</span>'}</td>
+                        <td>${statusBadge(pl.reviewStatus)}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div></td></tr>
+          `).join('') : `<tr><td colspan="9"><div class="empty-state"><div class="big">🔍</div>ไม่พบบุคลากรที่ตรงกับการค้นหา</div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  root.querySelectorAll('.person-plan-row').forEach((tr) => {
+    tr.addEventListener('click', (e) => { e.stopPropagation(); openDrawer(tr.dataset.id); });
+  });
+  root.querySelectorAll('.dept-row-toggle').forEach((tr) => {
+    tr.addEventListener('click', () => {
+      const key = tr.dataset.key;
+      const detail = root.querySelector(`.dept-detail-row[data-key="${cssEscape(key)}"]`);
+      const isOpen = STATE.openPersonKeys.has(key);
+      if (isOpen) STATE.openPersonKeys.delete(key); else STATE.openPersonKeys.add(key);
+      tr.classList.toggle('open', !isOpen);
+      if (detail) detail.classList.toggle('open', !isOpen);
+    });
+    if (STATE.openPersonKeys.has(tr.dataset.key)) {
+      tr.classList.add('open');
+      const detail = root.querySelector(`.dept-detail-row[data-key="${cssEscape(tr.dataset.key)}"]`);
+      if (detail) detail.classList.add('open');
+    }
+  });
+  const ppSearch = document.getElementById('pp-search');
+  if (ppSearch) ppSearch.addEventListener('input', (e) => {
+    STATE.personnelFilters.search = e.target.value;
+    renderPersonnelTab();
+  });
+  const ppSort = document.getElementById('pp-sort');
+  if (ppSort) ppSort.addEventListener('change', (e) => {
+    STATE.personnelFilters.sort = e.target.value;
+    renderPersonnelTab();
+  });
+}
+
+/* ==================================================================== */
 /* TAB: ADMIN — LOGIN HISTORY (ประวัติการเข้าใช้งาน) — Admin-only, RLS-   */
 /* enforced on login_events; the isAdmin() checks here are UI convenience */
 /* only, loaded lazily the first time the tab is opened.                 */
@@ -1373,6 +1573,7 @@ function renderAll() {
   renderReviewTab();
   renderDeptSummaryTab();
   renderDupCoursesTab();
+  renderPersonnelTab();
 }
 
 function applyTheme(mode) {

@@ -286,6 +286,7 @@ svg text { font-family: inherit; fill: var(--text-secondary); font-weight: 300; 
 .budget-section { display: grid; grid-template-columns: minmax(0, 7fr) minmax(280px, 3fr); gap: 20px; align-items: stretch; margin-bottom: 16px; }
 .budget-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .mini-kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.mini-kpi-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .mini-kpi-card {
   background: var(--surface-1); border: 1px solid var(--border); border-radius: 15px;
   padding: 12px 14px; box-shadow: var(--shadow-card);
@@ -489,6 +490,7 @@ tr.row-status-rejected { background: color-mix(in srgb, var(--status-critical) 7
   .charts-grid, .charts-grid.split-even { grid-template-columns: 1fr 1fr; }
   .budget-section { grid-template-columns: 1fr; }
   .mini-kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .mini-kpi-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 900px) {
   .app-shell { padding: 0 16px 48px; }
@@ -499,6 +501,7 @@ tr.row-status-rejected { background: color-mix(in srgb, var(--status-critical) 7
   .analytics-grid-top { grid-template-columns: 1fr; }
   .charts-grid, .charts-grid.split-even { grid-template-columns: 1fr; }
   .mini-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .mini-kpi-grid-3 { grid-template-columns: 1fr; }
   .detail-grid { grid-template-columns: 1fr; }
   .action-row { grid-template-columns: 1fr; }
 }
