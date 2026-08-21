@@ -246,10 +246,13 @@ select:focus, input:focus, textarea:focus {
 .kpi-card {
   background: var(--kpi-color, var(--series-1)); border: none; border-radius: var(--radius-lg);
   padding: 16px 18px; position: relative; overflow: hidden; color: #fff;
-  box-shadow: 0 8px 20px -4px color-mix(in srgb, var(--kpi-color, var(--series-1)) 55%, transparent), var(--shadow-card);
+  /* Shadow stays tight and strictly below the card (no negative/upward
+     spread) so it can't bleed onto the card's own face or the neighboring
+     card across the grid gap and dull it down. */
+  box-shadow: 0 4px 8px -1px color-mix(in srgb, var(--kpi-color, var(--series-1)) 35%, transparent);
   transition: transform .15s, box-shadow .15s;
 }
-.kpi-card:hover { transform: translateY(-2px); box-shadow: 0 12px 26px -4px color-mix(in srgb, var(--kpi-color, var(--series-1)) 65%, transparent), var(--shadow-card); }
+.kpi-card:hover { transform: translateY(-2px); box-shadow: 0 6px 12px -1px color-mix(in srgb, var(--kpi-color, var(--series-1)) 42%, transparent); }
 .kpi-card.kpi-dark-text { color: #2E2935; }
 .kpi-label { font-size: 12.5px; color: inherit; opacity: .85; font-weight: 500; margin-bottom: 8px; }
 .kpi-value { font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; color: inherit; }
