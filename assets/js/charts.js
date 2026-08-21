@@ -178,7 +178,11 @@ function renderHBar(container, items, opts) {
   container.innerHTML = '';
   opts = opts || {};
   const max = Math.max(1, ...items.map((d) => d.value));
-  const rowH = 26, gap = 12, labelW = opts.labelW || 168;
+  const rowH = opts.rowH || 26, gap = opts.gap || 12, radius = opts.radius != null ? opts.radius : 4;
+  // Auto-size the label column from the longest label so full names never
+  // get clipped against the SVG's left edge (no ellipsis truncation).
+  const longestLabel = items.reduce((m, d) => Math.max(m, String(d.label).length), 0);
+  const labelW = opts.labelW || Math.min(260, Math.max(90, longestLabel * 7.2 + 16));
   const width = opts.width || 640;
   const trackW = width - labelW - 80;
   const height = items.length * (rowH + gap);
@@ -186,16 +190,16 @@ function renderHBar(container, items, opts) {
 
   items.forEach((d, i) => {
     const y = i * (rowH + gap);
-    const label = el('text', { x: labelW - 10, y: y + rowH / 2 + 4, 'text-anchor': 'end', 'font-size': 12.5 });
+    const label = el('text', { x: labelW - 10, y: y + rowH / 2 + 4, 'text-anchor': 'end', 'font-size': 12.5, class: 'hbar-label' });
     label.textContent = d.label;
     svg.appendChild(label);
     const w = Math.max((d.value / max) * trackW, d.value > 0 ? 3 : 0);
-    const rect = el('rect', { x: labelW, y, width: w, height: rowH, rx: 4, ry: 4, fill: d.color || 'var(--seq-450)', class: 'chart-bar-magnitude', style: 'cursor:pointer;' });
+    const rect = el('rect', { x: labelW, y, width: w, height: rowH, rx: radius, ry: radius, fill: d.color || 'var(--seq-450)', class: 'chart-bar-magnitude', style: 'cursor:pointer;' });
     rect.addEventListener('mousemove', (evt) => showTooltip(evt, `<b>${d.label}</b><br>${opts.formatValue ? opts.formatValue(d.value) : fmtNum(d.value)}`));
     rect.addEventListener('mousemove', moveTooltip);
     rect.addEventListener('mouseleave', hideTooltip);
     svg.appendChild(rect);
-    const valLabel = el('text', { x: labelW + w + 8, y: y + rowH / 2 + 4, class: 'bar-total-label', 'font-size': 12.5 });
+    const valLabel = el('text', { x: labelW + w + 8, y: y + rowH / 2 + 4, class: 'bar-total-label', 'font-size': 13, 'font-weight': 600 });
     valLabel.textContent = opts.formatValue ? opts.formatValue(d.value) : fmtNum(d.value);
     svg.appendChild(valLabel);
   });
