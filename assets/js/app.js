@@ -203,7 +203,14 @@ function renderOverview() {
           <div id="org-exec-summary" class="chart-summary-panel"></div>
         </div>
       </div>
-      <div class="card"><div class="card-title">สัดส่วนตามประเภทการอบรม</div><div class="card-sub">นับเฉพาะหลักสูตรเสนอเพิ่มเติม — หลักสูตรกลาง อศค. ดำเนินการ ไม่มีข้อมูลนี้</div><div id="chart-deliverytype"></div></div>
+      <div class="card wide chart-summary-card">
+        <div class="card-title">สัดส่วนตามประเภทการอบรม</div>
+        <div class="card-sub">นับเฉพาะหลักสูตรเสนอเพิ่มเติม — หลักสูตรกลาง อศค. ดำเนินการ ไม่มีข้อมูลนี้</div>
+        <div class="chart-summary-split">
+          <div id="chart-deliverytype" class="chart-summary-chart"></div>
+          <div id="deliverytype-exec-summary" class="chart-summary-panel"></div>
+        </div>
+      </div>
     </div>
     <div class="budget-section">
       <div class="budget-main">
@@ -235,7 +242,11 @@ function renderOverview() {
   renderDonut(document.getElementById('chart-inputfactor'), categoricalDonutData(data, 'inputFactor'), { centerLabel: 'แผน' });
 
   // delivery type donut (ภายใน/ภายนอก) — ช่องว่างถูกจัดเป็น "ไม่ระบุ" แทนการตัดทิ้ง
-  renderDonut(document.getElementById('chart-deliverytype'), categoricalDonutData(data, deliveryTypeOf), { centerLabel: 'แผน' });
+  const deliveryTypeData = categoricalDonutData(data, deliveryTypeOf);
+  renderDonut(document.getElementById('chart-deliverytype'), deliveryTypeData, { centerLabel: 'แผน' });
+  renderCategoricalExecSummary(document.getElementById('deliverytype-exec-summary'), deliveryTypeData, {
+    top1Label: 'ประเภทการอบรมที่ใช้มากที่สุด', top3Label: 'TOP 3 ประเภทการอบรม', unitLabel: 'แผน', totalLabel: 'แผนทั้งหมด', groupLabel: 'ประเภท',
+  });
 
   // Courses-per-department: same underlying grouping/count/sort as before
   // (label + total, sorted by total descending) — only the rendering below
@@ -276,37 +287,53 @@ function renderOrgCourseChartWithSummary(groups) {
   const items = groups.map((g, i) => ({ label: g.label, value: g.total, color: TOP_SHADES[i] || 'var(--seq-300)' }));
   renderHBar(chartEl, items, { width: 640, rowH: 28, gap: 10, radius: 7 });
 
-  const totalCourses = groups.reduce((s, g) => s + g.total, 0);
-  const orgCount = groups.length;
-  const top1 = groups[0];
-  const top3 = groups.slice(0, 3);
-  const top3Sum = top3.reduce((s, g) => s + g.total, 0);
-  const top3Pct = totalCourses ? (top3Sum / totalCourses) * 100 : 0;
+  renderCategoricalExecSummary(summaryEl, items, {
+    top1Label: 'เสนอหลักสูตรสูงสุด', top3Label: 'TOP 3 หน่วยงาน', unitLabel: 'หลักสูตร', totalLabel: 'หลักสูตรทั้งหมด', groupLabel: 'หน่วยงาน',
+  });
+}
 
-  let insight = `${escapeHtml(top1.label)} มีจำนวนหลักสูตรที่เสนอสูงสุด ${fmtNum(top1.total)} หลักสูตร`;
-  if (top3.length === 3 && totalCourses > 0) {
-    insight += ` — 3 หน่วยงานแรกคิดเป็น ${top3Pct.toFixed(0)}% ของหลักสูตรทั้งหมด`;
+/**
+ * Generic "executive summary" side panel shared by every chart+summary
+ * card on the overview page: top-1 with an icon, a compact top-3 list, two
+ * KPIs (total + item count), and a one-line auto insight — built purely
+ * from an already-computed, already value-sorted-descending
+ * {label, value}[] array (bar/donut data), no aggregation of its own.
+ */
+function renderCategoricalExecSummary(el, items, opts) {
+  if (!el) return;
+  opts = opts || {};
+  if (!items.length) { el.innerHTML = ''; return; }
+  const total = items.reduce((s, d) => s + d.value, 0);
+  const top1 = items[0];
+  const top3 = items.slice(0, 3);
+  const top3Sum = top3.reduce((s, d) => s + d.value, 0);
+  const top3Pct = total ? (top3Sum / total) * 100 : 0;
+  const unit = opts.unitLabel || 'รายการ';
+
+  let insight = `${escapeHtml(top1.label)} มีจำนวนมากที่สุด ${fmtNum(top1.value)} ${unit}`;
+  if (top3.length === 3 && total > 0) {
+    insight += ` — 3 อันดับแรกคิดเป็น ${top3Pct.toFixed(0)}% ของทั้งหมด`;
   }
 
-  summaryEl.innerHTML = `
+  el.innerHTML = `
     <div class="exec-top1">
-      <div class="exec-top1-icon">🏆</div>
-      <div class="exec-top1-label">เสนอหลักสูตรสูงสุด</div>
+      <div class="exec-top1-icon">${opts.icon || '🏆'}</div>
+      <div class="exec-top1-label">${escapeHtml(opts.top1Label || 'สูงสุด')}</div>
       <div class="exec-top1-name">${escapeHtml(top1.label)}</div>
-      <div class="exec-top1-value">${fmtNum(top1.total)} หลักสูตร</div>
+      <div class="exec-top1-value">${fmtNum(top1.value)} ${unit}</div>
     </div>
     <div class="exec-top3">
-      <div class="exec-top3-label">TOP 3 หน่วยงาน</div>
-      ${top3.map((g, i) => `
+      <div class="exec-top3-label">${escapeHtml(opts.top3Label || 'TOP 3')}</div>
+      ${top3.map((d, i) => `
         <div class="exec-top3-row">
           <span class="exec-top3-rank">${String(i + 1).padStart(2, '0')}</span>
-          <span class="exec-top3-name">${escapeHtml(g.label)}</span>
-          <span class="exec-top3-value">${fmtNum(g.total)}</span>
+          <span class="exec-top3-name">${escapeHtml(d.label)}</span>
+          <span class="exec-top3-value">${fmtNum(d.value)}</span>
         </div>`).join('')}
     </div>
     <div class="exec-kpis">
-      <div class="exec-kpi"><div class="exec-kpi-value">${fmtNum(totalCourses)}</div><div class="exec-kpi-label">หลักสูตรทั้งหมด</div></div>
-      <div class="exec-kpi"><div class="exec-kpi-value">${fmtNum(orgCount)}</div><div class="exec-kpi-label">หน่วยงาน</div></div>
+      <div class="exec-kpi"><div class="exec-kpi-value">${fmtNum(total)}</div><div class="exec-kpi-label">${escapeHtml(opts.totalLabel || 'ทั้งหมด')}</div></div>
+      <div class="exec-kpi"><div class="exec-kpi-value">${fmtNum(items.length)}</div><div class="exec-kpi-label">${escapeHtml(opts.groupLabel || 'กลุ่ม')}</div></div>
     </div>
     <div class="exec-insight">${insight}</div>
   `;
