@@ -294,6 +294,8 @@ select:focus, input:focus, textarea:focus {
 .donut-svg { filter: var(--shadow-donut); }
 .chart-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; font-size: 12px; }
 .legend-item { display: flex; align-items: center; gap: 6px; color: var(--text-secondary); font-weight: 300; }
+.legend-item-clickable { cursor: pointer; border-radius: 999px; padding: 2px 8px; margin: -2px -8px; transition: background .12s; }
+.legend-item-clickable:hover { background: color-mix(in srgb, var(--series-1) 10%, transparent); }
 .legend-swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; }
 .legend-item b { color: var(--text-primary); font-weight: 500; font-variant-numeric: tabular-nums; }
 

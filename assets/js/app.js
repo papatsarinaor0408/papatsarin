@@ -146,10 +146,16 @@ function readableTextOn(hex) {
 // เกินกว่านั้นให้รวมหมวดที่เล็กที่สุดเป็น "อื่นๆ" เพื่อไม่ให้สีวนซ้ำจนแยกหมวดหมู่ไม่ออก
 function topNWithOther(items, n) {
   const sorted = items.slice().sort((a, b) => b.value - a.value);
-  if (sorted.length <= n) return sorted;
-  const head = sorted.slice(0, n - 1);
-  const restTotal = sorted.slice(n - 1).reduce((s, d) => s + d.value, 0);
-  head.push({ label: 'อื่นๆ', value: restTotal });
+  // rawLabels: the original category label(s) folded into each returned
+  // bucket — a plain bucket is just itself, "อื่นๆ" is everything past the
+  // cutoff. Purely additive (doesn't change any value/order/bucketing
+  // already computed above) — lets a click on a slice filter the real
+  // records back out, "อื่นๆ" included, without guessing from its label text.
+  if (sorted.length <= n) return sorted.map((d) => ({ ...d, rawLabels: [d.label] }));
+  const head = sorted.slice(0, n - 1).map((d) => ({ ...d, rawLabels: [d.label] }));
+  const rest = sorted.slice(n - 1);
+  const restTotal = rest.reduce((s, d) => s + d.value, 0);
+  head.push({ label: 'อื่นๆ', value: restTotal, rawLabels: rest.map((d) => d.label) });
   return head;
 }
 function categoricalDonutData(records, keyOrFn) {
@@ -227,23 +233,35 @@ function renderOverview() {
 
   document.getElementById('org-level-label').textContent = ORG_LEVELS.find((o) => o.key === STATE.filters.orgLevel).label;
 
-  // status donut
+  // status donut — click a slice/legend item to see the matching plans
   renderDonut(document.getElementById('chart-status'), [
-    { label: REVIEW_STATUS.pending.label, value: counts.pending, color: 'var(--status-pending)' },
-    { label: REVIEW_STATUS.approved.label, value: counts.approved, color: 'var(--status-good)' },
-    { label: REVIEW_STATUS.revise.label, value: counts.revise, color: 'var(--status-warning)' },
-    { label: REVIEW_STATUS.rejected.label, value: counts.rejected, color: 'var(--status-critical)' },
-  ], { centerLabel: 'แผน' });
+    { label: REVIEW_STATUS.pending.label, value: counts.pending, color: 'var(--status-pending)', statusKey: 'pending' },
+    { label: REVIEW_STATUS.approved.label, value: counts.approved, color: 'var(--status-good)', statusKey: 'approved' },
+    { label: REVIEW_STATUS.revise.label, value: counts.revise, color: 'var(--status-warning)', statusKey: 'revise' },
+    { label: REVIEW_STATUS.rejected.label, value: counts.rejected, color: 'var(--status-critical)', statusKey: 'rejected' },
+  ], {
+    centerLabel: 'แผน',
+    onClick: (d) => openChartDetailModal(`สถานะ: ${d.label}`, data.filter((r) => r.reviewStatus === d.statusKey)),
+  });
 
   // course type donut
-  renderDonut(document.getElementById('chart-coursetype'), categoricalDonutData(data, 'courseType'), { centerLabel: 'แผน' });
+  renderDonut(document.getElementById('chart-coursetype'), categoricalDonutData(data, 'courseType'), {
+    centerLabel: 'แผน',
+    onClick: (d) => openChartDetailModal(`ประเภทหลักสูตร: ${d.label}`, data.filter((r) => d.rawLabels.includes(r.courseType))),
+  });
 
   // input factor donut
-  renderDonut(document.getElementById('chart-inputfactor'), categoricalDonutData(data, 'inputFactor'), { centerLabel: 'แผน' });
+  renderDonut(document.getElementById('chart-inputfactor'), categoricalDonutData(data, 'inputFactor'), {
+    centerLabel: 'แผน',
+    onClick: (d) => openChartDetailModal(`ปัจจัยนำเข้าหลัก: ${d.label}`, data.filter((r) => d.rawLabels.includes(r.inputFactor))),
+  });
 
   // delivery type donut (ภายใน/ภายนอก) — ช่องว่างถูกจัดเป็น "ไม่ระบุ" แทนการตัดทิ้ง
   const deliveryTypeData = categoricalDonutData(data, deliveryTypeOf);
-  renderDonut(document.getElementById('chart-deliverytype'), deliveryTypeData, { centerLabel: 'แผน' });
+  renderDonut(document.getElementById('chart-deliverytype'), deliveryTypeData, {
+    centerLabel: 'แผน',
+    onClick: (d) => openChartDetailModal(`ประเภทการอบรม: ${d.label}`, data.filter((r) => d.rawLabels.includes(deliveryTypeOf(r)))),
+  });
   renderCategoricalExecSummary(document.getElementById('deliverytype-exec-summary'), deliveryTypeData, {
     top1Label: 'ประเภทการอบรมที่ใช้มากที่สุด', top3Label: 'TOP 3 ประเภทการอบรม', unitLabel: 'แผน', totalLabel: 'แผนทั้งหมด', groupLabel: 'ประเภท',
   });
@@ -258,7 +276,7 @@ function renderOverview() {
     const rows = data.filter((r) => r[orgLevel] === name);
     const values = { pending: 0, approved: 0, revise: 0, rejected: 0 };
     rows.forEach((r) => { values[r.reviewStatus]++; });
-    return { label: name, values, total: rows.length };
+    return { label: name, values, total: rows.length, records: rows };
   }).sort((a, b) => b.total - a.total);
   renderOrgCourseChartWithSummary(groups);
 
@@ -284,8 +302,11 @@ function renderOrgCourseChartWithSummary(groups) {
   }
 
   const TOP_SHADES = ['var(--seq-700)', 'var(--seq-600)', 'var(--seq-500)'];
-  const items = groups.map((g, i) => ({ label: g.label, value: g.total, color: TOP_SHADES[i] || 'var(--seq-300)' }));
-  renderHBar(chartEl, items, { width: 640, rowH: 28, gap: 10, radius: 7 });
+  const items = groups.map((g, i) => ({ label: g.label, value: g.total, color: TOP_SHADES[i] || 'var(--seq-300)', records: g.records }));
+  renderHBar(chartEl, items, {
+    width: 640, rowH: 28, gap: 10, radius: 7,
+    onClick: (d) => openChartDetailModal(`หน่วยงาน: ${d.label}`, d.records),
+  });
 
   renderCategoricalExecSummary(summaryEl, items, {
     top1Label: 'เสนอหลักสูตรสูงสุด', top3Label: 'TOP 3 หน่วยงาน', unitLabel: 'หลักสูตร', totalLabel: 'หลักสูตรทั้งหมด', groupLabel: 'หน่วยงาน',
@@ -1308,6 +1329,45 @@ function closeDrawer() {
   STATE.noteDraft = null;
 }
 
+/**
+ * A second, independent modal (separate DOM ids, same .modal-backdrop/
+ * .drawer CSS as the plan-detail one) for "here's the underlying list of
+ * plans behind that chart click" — kept fully separate from openDrawer()/
+ * closeDrawer() so this never risks the single-plan decision flow. Rows
+ * inside it re-open the real plan drawer via the existing openDrawer(id).
+ */
+function openChartDetailModal(title, records) {
+  document.getElementById('chart-detail-title').textContent = title;
+  const body = document.getElementById('chart-detail-body');
+  body.innerHTML = `
+    <div class="filter-count" style="margin-bottom:10px;">พบ ${fmtNum(records.length)} รายการ</div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>ชื่อหลักสูตร / แผน</th><th>หน่วยงานที่เสนอ</th><th>ประเภทหลักสูตร</th><th>สถานะ</th></tr></thead>
+        <tbody>
+          ${records.length ? records.map((r) => `
+            <tr class="clickable chart-detail-row${r.reviewStatus !== 'pending' ? ` row-status-${r.reviewStatus}` : ''}" data-id="${r.id}">
+              <td class="cell-name">${escapeHtml(r.nameTh)}</td>
+              <td>${escapeHtml(r.sectionName || r.divisionName || r.deptName || '-')}</td>
+              <td>${escapeHtml(r.courseType || '-')}</td>
+              <td>${statusBadge(r.reviewStatus)}</td>
+            </tr>`).join('') : `<tr><td colspan="4"><div class="empty-state"><div class="big">🔍</div>ไม่พบข้อมูล</div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+  body.querySelectorAll('.chart-detail-row').forEach((tr) => {
+    tr.addEventListener('click', () => {
+      closeChartDetailModal();
+      openDrawer(tr.dataset.id);
+    });
+  });
+  document.getElementById('chart-detail-backdrop').classList.add('show');
+}
+function closeChartDetailModal() {
+  document.getElementById('chart-detail-backdrop').classList.remove('show');
+}
+
 const DECISION_META = {
   pending: { label: REVIEW_STATUS.pending.label, btnClass: 'btn-pending', icon: '↩' },
   approved: { label: REVIEW_STATUS.approved.label, btnClass: 'btn-good', icon: '✓' },
@@ -1706,6 +1766,8 @@ async function init() {
   document.querySelectorAll('.tab-btn').forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
   document.getElementById('modal-backdrop').addEventListener('click', (e) => { if (e.target.id === 'modal-backdrop') closeDrawer(); });
   document.getElementById('drawer-close').addEventListener('click', closeDrawer);
+  document.getElementById('chart-detail-backdrop').addEventListener('click', (e) => { if (e.target.id === 'chart-detail-backdrop') closeChartDetailModal(); });
+  document.getElementById('chart-detail-close').addEventListener('click', closeChartDetailModal);
 
   document.getElementById('import-file-input').addEventListener('change', (e) => {
     if (e.target.files && e.target.files[0]) handleFileImport(e.target.files[0]);

@@ -43,14 +43,15 @@ function hideTooltip() {
 function fmtNum(n) { return Number(n || 0).toLocaleString('th-TH'); }
 function fmtBaht(n) { return '฿' + Number(n || 0).toLocaleString('th-TH'); }
 
-function renderLegend(container, items, formatValue) {
+function renderLegend(container, items, formatValue, onClick) {
   const fmt = formatValue || fmtNum;
   const wrap = document.createElement('div');
   wrap.className = 'chart-legend';
   items.forEach((it) => {
     const row = document.createElement('span');
-    row.className = 'legend-item';
+    row.className = 'legend-item' + (onClick ? ' legend-item-clickable' : '');
     row.innerHTML = `<span class="legend-swatch" style="background:${it.color}"></span>${it.label} <b>${fmt(it.value)}</b>`;
+    if (onClick) row.addEventListener('click', () => onClick(it));
     wrap.appendChild(row);
   });
   container.appendChild(wrap);
@@ -91,6 +92,7 @@ function renderDonut(container, data, opts) {
         showTooltip(evt, `<div class="tt-row"><span class="tt-dot" style="background:${d.color}"></span>${d.label}: <b>${fmtNum(d.value)}</b> (${(frac * 100).toFixed(1)}%)</div>`);
       });
       circle.addEventListener('mouseleave', hideTooltip);
+      if (opts.onClick) circle.addEventListener('click', () => opts.onClick(d));
       g.appendChild(circle);
       offsetDeg += segDeg;
     });
@@ -110,7 +112,7 @@ function renderDonut(container, data, opts) {
   wrap.appendChild(svg);
   container.appendChild(wrap);
   if (opts.legend !== false) {
-    renderLegend(container, data.map((d) => ({ label: d.label, value: d.value, color: d.color })));
+    renderLegend(container, data, undefined, opts.onClick);
   }
 }
 
@@ -156,6 +158,7 @@ function renderStackedBar(container, groups, series, opts) {
       });
       rect.addEventListener('mousemove', moveTooltip);
       rect.addEventListener('mouseleave', hideTooltip);
+      if (opts.onClick) rect.addEventListener('click', () => opts.onClick(g, sr, v));
       svg.appendChild(rect);
       x += segW + 2;
     });
@@ -198,6 +201,7 @@ function renderHBar(container, items, opts) {
     rect.addEventListener('mousemove', (evt) => showTooltip(evt, `<b>${d.label}</b><br>${opts.formatValue ? opts.formatValue(d.value) : fmtNum(d.value)}`));
     rect.addEventListener('mousemove', moveTooltip);
     rect.addEventListener('mouseleave', hideTooltip);
+    if (opts.onClick) rect.addEventListener('click', () => opts.onClick(d));
     svg.appendChild(rect);
     const valLabel = el('text', { x: labelW + w + 8, y: y + rowH / 2 + 4, class: 'bar-total-label', 'font-size': 13, 'font-weight': 600 });
     valLabel.textContent = opts.formatValue ? opts.formatValue(d.value) : fmtNum(d.value);
