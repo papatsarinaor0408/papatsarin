@@ -1540,6 +1540,7 @@ function renderDrawer() {
   const titleEl = document.getElementById('drawer-title');
   if (!r) { body.innerHTML = ''; return; }
   titleEl.textContent = r.nameTh;
+  document.getElementById('drawer-title-pill').textContent = r.courseType || 'ไม่ระบุ';
 
   const actorLine = [
     r.reviewedByName || r.reviewedBy || '-',
