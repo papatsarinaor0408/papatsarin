@@ -489,7 +489,11 @@ tr.row-status-rejected { background: color-mix(in srgb, var(--status-critical) 7
   border-bottom: 1px solid var(--grid); padding: 18px 22px; display: flex; gap: 12px; align-items: flex-start;
 }
 .drawer-title-row { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
-.drawer-title-icon { font-size: 20px; line-height: 1; flex-shrink: 0; }
+.drawer-title-icon {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 30px; height: 30px; border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--series-1) 14%, var(--surface-1)); font-size: 15px;
+}
 .drawer-header h2 { font-size: 17px; font-weight: 700; }
 .drawer-body { padding: 20px 22px 26px; flex: 1; }
 .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 22px; margin-bottom: 20px; }
