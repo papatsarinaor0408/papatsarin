@@ -171,9 +171,13 @@ function normalizeOrgKey(name) {
   return String(name || '').replace(/[\s.\-]/g, '').toLowerCase();
 }
 
+// Explicit colors for the YoY comparison chart's two series, per request.
+const YOY_COLOR_2569 = '#64748B'; // Slate Blue-Gray
+const YOY_COLOR_2570 = '#8B5CF6'; // Purple
+
 function makeYoyGroup(label, v1, v2, courses2569) {
   let kind, pct = null, color;
-  if (v1 === 0 && v2 > 0) { kind = 'new'; color = 'var(--series-1)'; }
+  if (v1 === 0 && v2 > 0) { kind = 'new'; color = YOY_COLOR_2570; }
   else if (v1 > 0 && v2 === 0) { kind = 'gone'; color = 'var(--status-critical)'; }
   else {
     kind = 'pct';
@@ -182,6 +186,13 @@ function makeYoyGroup(label, v1, v2, courses2569) {
   }
   return { label, v1, v2, diff: v2 - v1, kind, pct, color, courses2569 };
 }
+
+// Known label variants for the SAME real unit, written differently between
+// the 2569 export and the live 2570 system (confirmed by the user) — applied
+// to the raw label before normalizeOrgKey() so both sides collapse into one
+// group instead of appearing as two unrelated categories.
+const YOY_ORG_ALIASES = { 'กบส-ห.': 'กบหก-ฟ.' };
+function resolveYoyOrgAlias(label) { return YOY_ORG_ALIASES[label] || label; }
 
 /**
  * Full-dataset comparison (deliberately NOT run through getFilteredExcept —
@@ -195,24 +206,33 @@ function buildYoyComparison() {
   // differently-formatted 2570 labels for the same กอง must collapse into
   // one group, otherwise each would separately (and wrongly) get matched
   // against the full 2569 count for that org.
+  //
+  // "อฟก." is the ฝ่าย-level code, never a real กอง name — when a plan's
+  // divisionName resolves to exactly that (importer.js's org-hierarchy
+  // fallback only had the ฝ่าย level to fall back to), it means the more
+  // specific กอง/แผนก was left blank on that record, per the user's own
+  // observation that data entry sometimes only fills ฝ่าย and sometimes
+  // fills แผนก for what is really the same unit. Falling back to sectionName
+  // (แผนก) here — the same idea already used for the 2569 "-" case below —
+  // lets it correctly re-merge with a matching แผนก-level 2569 group
+  // (e.g. หรปก-ฟ./หปอก-ฟ./หสลก-ฟ.) instead of sitting alone as "อฟก.".
   const by2570 = {}; // normalizedKey -> { label, count }
   STATE.records.forEach((r) => {
-    const label = r.divisionName || 'ไม่ระบุ';
+    const rawLabel = r.divisionName === 'อฟก.' ? (r.sectionName || r.divisionName) : (r.divisionName || 'ไม่ระบุ');
+    const label = resolveYoyOrgAlias(rawLabel);
     const key = normalizeOrgKey(label);
     if (!by2570[key]) by2570[key] = { label, count: 0 };
     by2570[key].count++;
   });
 
   // Records whose divisionGroup is "-" (not yet mapped to a กอง) are grouped
-  // by their own unit (department_current + organization_current) instead —
-  // each becomes its own X-axis point (e.g. "หรปก-ฟ. อฟก."), rather than one
-  // combined "ยังไม่ Mapping ระดับกอง" bucket. None of these labels can
-  // legitimately match a real 2570 กอง-level divisionName, so they'll
-  // naturally show as "ไม่มีการเสนอในปี 2570" — which is correct.
+  // by their own unit (department_current, แผนก level) instead — each
+  // becomes its own X-axis point (e.g. "หรปก-ฟ."), rather than one combined
+  // "ยังไม่ Mapping ระดับกอง" bucket.
   const by2569 = {}; // normalizedKey -> { label, count, courses }
   HISTORICAL_2569.records.forEach((r) => {
     const isUnmapped = r.divisionGroup === '-';
-    const groupLabel = isUnmapped ? r.unit : r.divisionGroup;
+    const groupLabel = resolveYoyOrgAlias(isUnmapped ? r.unit : r.divisionGroup);
     const key = normalizeOrgKey(groupLabel);
     if (!by2569[key]) by2569[key] = { label: groupLabel, count: 0, courses: [] };
     by2569[key].count++;
@@ -285,8 +305,8 @@ function openHistoricalDetailModal(divisionLabel, courses) {
 }
 
 const YOY_SERIES = [
-  { key: 'v1', label: 'ปี 2569 (ปีที่แล้ว)', color: 'var(--series-1)' },
-  { key: 'v2', label: 'ปี 2570 (ปีปัจจุบัน)', color: 'var(--series-7)' },
+  { key: 'v1', label: 'ปี 2569 (ปีที่แล้ว)', color: YOY_COLOR_2569 },
+  { key: 'v2', label: 'ปี 2570 (ปีปัจจุบัน)', color: YOY_COLOR_2570 },
 ];
 
 function renderYoyComparisonCard() {
@@ -302,7 +322,7 @@ function renderYoyComparisonCard() {
   renderDualLineChart(chartEl, allGroups, YOY_SERIES, {
     tooltipHtml: (g) => {
       const changeLine = g.kind === 'new'
-        ? '<div style="color:var(--series-1);font-weight:600;">ใหม่ในปี 2570</div>'
+        ? `<div style="color:${YOY_COLOR_2570};font-weight:600;">ใหม่ในปี 2570</div>`
         : g.kind === 'gone'
         ? '<div style="color:var(--status-critical);font-weight:600;">ไม่มีการเสนอในปี 2570</div>'
         : `<div style="color:${g.color};font-weight:600;">${g.diff >= 0 ? '+' : ''}${fmtNum(g.diff)} หลักสูตร (${g.pct >= 0 ? '+' : ''}${g.pct.toFixed(1)}%)</div>`;
@@ -322,11 +342,11 @@ function renderYoyComparisonCard() {
   miniKpisEl.innerHTML = `
     <div class="mini-kpi-card">
       <div class="mini-kpi-label">ปี 2569 (ปีที่แล้ว)</div>
-      <div class="mini-kpi-value" style="color:var(--series-1);">${fmtNum(total2569)} หลักสูตร</div>
+      <div class="mini-kpi-value" style="color:${YOY_COLOR_2569};">${fmtNum(total2569)} หลักสูตร</div>
     </div>
     <div class="mini-kpi-card">
       <div class="mini-kpi-label">ปี 2570 (ปีปัจจุบัน)</div>
-      <div class="mini-kpi-value" style="color:var(--series-7);">${fmtNum(total2570)} หลักสูตร</div>
+      <div class="mini-kpi-value" style="color:${YOY_COLOR_2570};">${fmtNum(total2570)} หลักสูตร</div>
     </div>
     <div class="mini-kpi-card">
       <div class="mini-kpi-label">ผลต่างรวม</div>
