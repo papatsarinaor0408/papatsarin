@@ -232,7 +232,7 @@ function renderDualLineChart(container, categories, series, opts) {
   const containerWidth = container.clientWidth || contentWidth;
   const width = Math.max(contentWidth, containerWidth);
   const fillsContainer = width <= containerWidth;
-  const padLeft = 40, padRight = 16, padTop = 24, padBottom = 44;
+  const padLeft = 28, padRight = 8, padTop = 24, padBottom = 44;
   const plotW = width - padLeft - padRight;
   const plotH = height - padTop - padBottom;
 
