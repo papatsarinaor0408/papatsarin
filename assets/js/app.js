@@ -175,7 +175,7 @@ function normalizeOrgKey(name) {
 const YOY_COLOR_2569 = '#64748B'; // Slate Blue-Gray
 const YOY_COLOR_2570 = '#8B5CF6'; // Purple
 
-function makeYoyGroup(label, v1, v2, courses2569) {
+function makeYoyGroup(label, v1, v2, courses2569, isDeptLevel) {
   let kind, pct = null, color;
   if (v1 === 0 && v2 > 0) { kind = 'new'; color = YOY_COLOR_2570; }
   else if (v1 > 0 && v2 === 0) { kind = 'gone'; color = 'var(--status-critical)'; }
@@ -184,7 +184,7 @@ function makeYoyGroup(label, v1, v2, courses2569) {
     pct = v1 > 0 ? ((v2 - v1) / v1) * 100 : 0;
     color = v2 > v1 ? 'var(--status-good)' : (v2 < v1 ? 'var(--status-critical)' : 'var(--text-muted)');
   }
-  return { label, v1, v2, diff: v2 - v1, kind, pct, color, courses2569 };
+  return { label, v1, v2, diff: v2 - v1, kind, pct, color, courses2569, isDeptLevel: !!isDeptLevel };
 }
 
 // Known label variants for the SAME real unit, written differently between
@@ -216,12 +216,13 @@ function buildYoyComparison() {
   // (แผนก) here — the same idea already used for the 2569 "-" case below —
   // lets it correctly re-merge with a matching แผนก-level 2569 group
   // (e.g. หรปก-ฟ./หปอก-ฟ./หสลก-ฟ.) instead of sitting alone as "อฟก.".
-  const by2570 = {}; // normalizedKey -> { label, count }
+  const by2570 = {}; // normalizedKey -> { label, count, isDeptLevel }
   STATE.records.forEach((r) => {
+    const isDeptFallback = r.divisionName === 'อฟก.' && !!r.sectionName;
     const rawLabel = r.divisionName === 'อฟก.' ? (r.sectionName || r.divisionName) : (r.divisionName || 'ไม่ระบุ');
     const label = resolveYoyOrgAlias(rawLabel);
     const key = normalizeOrgKey(label);
-    if (!by2570[key]) by2570[key] = { label, count: 0 };
+    if (!by2570[key]) by2570[key] = { label, count: 0, isDeptLevel: isDeptFallback };
     by2570[key].count++;
   });
 
@@ -229,12 +230,12 @@ function buildYoyComparison() {
   // by their own unit (department_current, แผนก level) instead — each
   // becomes its own X-axis point (e.g. "หรปก-ฟ."), rather than one combined
   // "ยังไม่ Mapping ระดับกอง" bucket.
-  const by2569 = {}; // normalizedKey -> { label, count, courses }
+  const by2569 = {}; // normalizedKey -> { label, count, courses, isDeptLevel }
   HISTORICAL_2569.records.forEach((r) => {
     const isUnmapped = r.divisionGroup === '-';
     const groupLabel = resolveYoyOrgAlias(isUnmapped ? r.unit : r.divisionGroup);
     const key = normalizeOrgKey(groupLabel);
-    if (!by2569[key]) by2569[key] = { label: groupLabel, count: 0, courses: [] };
+    if (!by2569[key]) by2569[key] = { label: groupLabel, count: 0, courses: [], isDeptLevel: isUnmapped };
     by2569[key].count++;
     by2569[key].courses.push(r);
   });
@@ -244,16 +245,22 @@ function buildYoyComparison() {
     const g2570 = by2570[key];
     const match = by2569[key];
     if (match) matchedKeys.add(key);
-    return makeYoyGroup(g2570.label, match ? match.count : 0, g2570.count, match ? match.courses : []);
+    return makeYoyGroup(g2570.label, match ? match.count : 0, g2570.count, match ? match.courses : [], g2570.isDeptLevel || (match && match.isDeptLevel));
   });
 
   Object.keys(by2569).forEach((key) => {
     if (matchedKeys.has(key)) return;
     const g = by2569[key];
-    groups.push(makeYoyGroup(g.label, g.count, 0, g.courses));
+    groups.push(makeYoyGroup(g.label, g.count, 0, g.courses, g.isDeptLevel));
   });
 
-  return groups.sort((a, b) => b.v2 - a.v2);
+  // อฟก. first, then every แผนก-level group (from either fallback path),
+  // then real กอง groups — each tier still sorted by v2 descending, per request.
+  const rankOf = (g) => (g.label === 'อฟก.' ? 0 : g.isDeptLevel ? 1 : 2);
+  return groups.sort((a, b) => {
+    const ra = rankOf(a), rb = rankOf(b);
+    return ra !== rb ? ra - rb : b.v2 - a.v2;
+  });
 }
 
 function openHistoricalDetailModal(divisionLabel, courses) {
