@@ -1343,9 +1343,9 @@ function parseThaiShortDate(s) {
  * schedule card instead of one long stacked list.
  */
 function renderPlanSummarySection(r, isCentral, hasConsiderationSection) {
-  const infoRow = (icon, label, value, mode) => `
+  const infoRow = (icon, label, value, mode, highlight) => `
     <div class="psum-row"><span class="psum-row-icon">${icon}</span>
-      <div><div class="psum-row-label">${label}</div><div class="psum-row-value">${formatDetailValue(value, mode || 'plain')}</div></div>
+      <div><div class="psum-row-label">${label}</div><div class="psum-row-value${highlight ? ' cell-danger' : ''}">${formatDetailValue(value, mode || 'plain')}</div></div>
     </div>`;
 
   const startParsed = parseThaiShortDate(r.startDate);
@@ -1385,7 +1385,7 @@ function renderPlanSummarySection(r, isCentral, hasConsiderationSection) {
       <div class="psum-info-card">
         <div class="psum-info-title"><span class="psum-info-icon">📖</span>ข้อมูลหลักสูตร</div>
         ${infoRow('🔑', 'ปัจจัยนำเข้าหลัก', r.inputFactor)}
-        ${infoRow('📄', 'ประเภทหลักสูตร', r.courseType)}
+        ${infoRow('📄', 'ประเภทหลักสูตร', r.courseType, 'plain', isCentral)}
         ${infoRow('🏫', 'รูปแบบการเรียนรู้', r.learningFormat)}
         ${!isCentral ? infoRow('✈️', 'ประเภทการส่งอบรม', r.deliveryType) : ''}
         ${infoRow('👤', 'ค่าจ้างเหมา/วิทยากรภายนอก', r.budgetOutsource ? fmtBaht(r.budgetOutsource) : '')}
