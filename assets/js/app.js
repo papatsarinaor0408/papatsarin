@@ -336,7 +336,10 @@ function renderYoyComparisonCard() {
   ]);
   const diff = total2570 - total2569;
   const pct = total2569 > 0 ? (diff / total2569) * 100 : 0;
-  const diffColor = diff > 0 ? 'var(--status-good)' : diff < 0 ? 'var(--status-critical)' : 'var(--text-muted)';
+  // Increase shown in red (status-critical), decrease in status-good —
+  // inverted from the usual green-up/red-down convention, per request:
+  // a rise in course count here reads as more workload, not "good news".
+  const diffColor = diff > 0 ? 'var(--status-critical)' : diff < 0 ? 'var(--status-good)' : 'var(--text-muted)';
   const diffIcon = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
 
   miniKpisEl.innerHTML = `
