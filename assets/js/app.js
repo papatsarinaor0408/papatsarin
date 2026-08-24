@@ -23,7 +23,7 @@ const STATE = {
 
   // "เปรียบเทียบการเสนอหลักสูตร ปี 2569–2570" card — Top-5/all toggle only,
   // not a filter (never narrows STATE.records, never affects any other card).
-  yoyShowAll: false,
+  yoyShowAll: true,
 
   // Admin-only history tabs — loaded lazily (only when the tab is first
   // opened) since a Reviewer never triggers this fetch and it would return
@@ -311,7 +311,7 @@ function renderYoyComparisonCard() {
   const total2570 = allGroups.reduce((s, g) => s + g.v2, 0);
 
   renderDualLineChart(chartEl, shown, YOY_SERIES, {
-    width: 640,
+    width: Math.max(640, shown.length * 90),
     tooltipHtml: (g) => {
       const changeLine = g.kind === 'new'
         ? '<div style="color:var(--series-1);font-weight:600;">ใหม่ในปี 2570</div>'
