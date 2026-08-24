@@ -611,7 +611,7 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
     <div class="mini-kpi-card">
       <div class="mini-kpi-label">งบที่ได้รับอนุมัติ เทียบกับปี 2569</div>
       <div class="mini-kpi-value">${fmtBaht(approvedBudget2570)}</div>
-      <div class="mini-kpi-sub" style="color:${budgetDiffColor};">${budgetDiffIcon} ${budgetDiff >= 0 ? '+' : '-'}${fmtBaht(Math.abs(budgetDiff))} (${budgetPctChange >= 0 ? '+' : ''}${budgetPctChange.toFixed(1)}%)</div>
+      <div class="mini-kpi-sub" style="color:${budgetDiffColor};font-weight:700;">${budgetDiffIcon} ${budgetDiff >= 0 ? '+' : '-'}${fmtBaht(Math.abs(budgetDiff))} (${budgetPctChange >= 0 ? '+' : ''}${budgetPctChange.toFixed(1)}%)</div>
     </div>
     <div class="mini-kpi-card">
       <div class="mini-kpi-label">หน่วยงานที่ใช้งบสูงสุด</div>
