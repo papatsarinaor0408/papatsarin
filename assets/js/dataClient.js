@@ -16,6 +16,11 @@ function dbRowToRecord(planRow, decisionRow) {
     const v = planRow[camelToSnake(f.key)];
     rec[f.key] = f.numeric ? Number(v || 0) : (v === undefined || v === null ? '' : v);
   });
+  // Full original row (every DB column, including ones not in FIELDS —
+  // stable_key, is_active, batch ids, timestamps, etc.) kept for possible
+  // future use. Nothing currently reads this; it's pure retention so a
+  // fetched column is never silently discarded.
+  rec._raw = planRow;
 
   if (decisionRow) {
     rec.reviewStatus = decisionRow.decision;
