@@ -219,7 +219,10 @@ function renderDualLineChart(container, categories, series, opts) {
   opts = opts || {};
   if (!categories.length) { container.innerHTML = '<div class="empty-state">ไม่มีข้อมูลตรงตัวกรอง</div>'; return; }
 
-  const height = opts.height || 320;
+  // Taller than a typical chart so each gridline step (0-10-20-...) gets
+  // more vertical room — otherwise small/zero values all bunch up flat
+  // near the bottom instead of reading as a chart with real depth.
+  const height = opts.height || 440;
   const n = categories.length;
   // Always compress to the card's actual width — never wider — so there's
   // no horizontal overflow/scroll to manage regardless of category count.
@@ -241,7 +244,11 @@ function renderDualLineChart(container, categories, series, opts) {
   const yMax = stepMult * step;
   const yTicks = 5;
   const yOf = (v) => padTop + plotH - (v / yMax) * plotH;
-  const xOf = (i) => padLeft + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
+  // Inset the first/last point off the axis lines a bit, so the leftmost
+  // category doesn't sit flush against the y-axis (and the rightmost stays
+  // symmetric) instead of the points spanning the full plot edge-to-edge.
+  const xInset = Math.min(36, plotW * 0.08);
+  const xOf = (i) => padLeft + xInset + (n === 1 ? (plotW - 2 * xInset) / 2 : (i / (n - 1)) * (plotW - 2 * xInset));
 
   const svg = el('svg', { viewBox: `0 0 ${width} ${height}`, width: '100%', height, class: 'viz-root' });
 
