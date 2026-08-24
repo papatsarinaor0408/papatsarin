@@ -501,6 +501,60 @@ tr.row-status-rejected { background: color-mix(in srgb, var(--status-critical) 7
    data below them. Gray stays reserved for genuine helper/caption text. */
 .subheading-label { font-size: 12px; font-weight: 700; color: var(--accent-2); text-transform: uppercase; letter-spacing: .03em; }
 
+/* ---------- "ข้อมูลสำหรับพิจารณา" card (plan detail drawer) ---------- */
+.consider-card {
+  margin: 22px 0 10px; padding-top: 16px; border-top: 1px solid var(--grid);
+}
+.consider-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.consider-header-icon {
+  display: flex; align-items: center; justify-content: center; width: 34px; height: 34px;
+  border-radius: var(--radius-sm); background: color-mix(in srgb, var(--accent-2) 14%, var(--surface-1)); font-size: 16px; flex: none;
+}
+.consider-header-title { font-size: 15.5px; font-weight: 700; color: var(--accent-2); }
+.consider-rationale {
+  background: var(--surface-0); border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 13px 15px; margin-bottom: 14px;
+}
+.consider-rationale-text { font-size: 13px; line-height: 1.6; margin-top: 4px; }
+.consider-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+.consider-box {
+  background: var(--surface-1); border: 1px solid var(--border); border-radius: var(--radius-md);
+  padding: 13px 15px; box-shadow: var(--shadow-card);
+}
+.consider-box-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+.consider-box-icon { font-size: 15px; }
+.consider-box-title.consider-purple { color: var(--series-1); }
+.consider-box-title.consider-indigo { color: var(--accent-2); }
+.consider-box-title.consider-pink { color: var(--accent-3); }
+.consider-box-title.consider-amber { color: color-mix(in srgb, var(--accent-5) 75%, black 10%); }
+/* --consider-accent (a custom property, inherited independently of `color`)
+   tints just the bullet/number badge below — the item TEXT stays the
+   normal readable text color regardless of which box it's in. */
+.consider-list.consider-purple { --consider-accent: var(--series-1); }
+.consider-list.consider-indigo { --consider-accent: var(--accent-2); }
+.consider-list.consider-pink { --consider-accent: var(--accent-3); }
+.consider-list.consider-amber { --consider-accent: color-mix(in srgb, var(--accent-5) 75%, black 10%); }
+.consider-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px; line-height: 1.5; color: var(--text-primary); }
+.consider-list li { padding-left: 24px; position: relative; }
+.consider-list:not(.consider-list-numbered) li::before {
+  content: ""; position: absolute; left: 4px; top: 7px; width: 6px; height: 6px; border-radius: 50%; background: var(--consider-accent, var(--series-1));
+}
+.consider-list-numbered { counter-reset: consider-num; }
+.consider-list-numbered li::before {
+  counter-increment: consider-num; content: counter(consider-num);
+  position: absolute; left: 0; top: 0; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--consider-accent, var(--series-1)); color: #fff; font-size: 10.5px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.consider-remark {
+  display: flex; gap: 10px; align-items: flex-start; background: var(--surface-0); border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 12px 14px; font-size: 12.5px;
+}
+.consider-remark-icon { font-size: 15px; flex: none; }
+@media (max-width: 640px) {
+  .consider-grid { grid-template-columns: 1fr; }
+}
+
 .review-history { background: var(--surface-0); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 13px 15px; margin-bottom: 18px; font-size: 13px; font-weight: 300; }
 .action-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
 .note-field { width: 100%; min-height: 72px; resize: vertical; }

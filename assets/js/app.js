@@ -1317,6 +1317,63 @@ function budgetFieldRow(label, amount, warnIfMissing) {
   return fieldRow(label, '');
 }
 
+/**
+ * Splits a "1. ... 2. ... 3. ..." (or plain multi-line) text blob into
+ * individual item strings, stripping the leading number — same splitting
+ * convention formatDetailValue's 'numbered' mode already uses for display,
+ * just returned as an array instead of joined with <br> so each item can
+ * become its own <li>. A field with no numbering just becomes one item.
+ */
+function splitNumberedItems(text) {
+  if (!text || !String(text).trim()) return [];
+  const normalized = String(text).trim().replace(/\s+(?=\d{1,2}\.\s)/g, '\n');
+  return normalized.split(/\n+/).map((s) => s.replace(/^\d{1,2}\.\s*/, '').trim()).filter(Boolean);
+}
+
+/**
+ * Card-based "ข้อมูลสำหรับพิจารณา" layout — same underlying fields as
+ * before (rationale/objective/skillsGained/outcome/kpi/remark), just
+ * presented as icon-labeled boxes with numbered/bulleted items instead of
+ * plain stacked text blocks.
+ */
+function renderConsiderationCard(r) {
+  const box = (title, icon, colorClass, items, ordered) => {
+    const tag = ordered ? 'ol' : 'ul';
+    // colorClass on the list too (not just the title) — the numbered/bullet
+    // markers use currentColor, which only inherits down the DOM, not across
+    // the title/list sibling boundary.
+    const listClass = `consider-list ${colorClass}${ordered ? ' consider-list-numbered' : ''}`;
+    return `
+      <div class="consider-box">
+        <div class="consider-box-title ${colorClass}"><span class="consider-box-icon">${icon}</span>${title}</div>
+        ${items.length
+          ? `<${tag} class="${listClass}">${items.map((t) => `<li>${escapeHtml(t)}</li>`).join('')}</${tag}>`
+          : '<div class="cell-muted" style="font-size:12.5px;">ไม่ระบุ</div>'}
+      </div>`;
+  };
+
+  return `
+    <div class="consider-card">
+      <div class="consider-header"><span class="consider-header-icon">📋</span><span class="consider-header-title">ข้อมูลสำหรับพิจารณา</span></div>
+      <div class="consider-rationale">
+        <div class="consider-subtitle">ความจำเป็น/หลักการและเหตุผล</div>
+        <div class="consider-rationale-text">${formatDetailValue(r.rationale, 'numbered')}</div>
+      </div>
+      <div class="consider-grid">
+        ${box('วัตถุประสงค์', '🎯', 'consider-purple', splitNumberedItems(r.objective), true)}
+        ${box('ทักษะ/ความรู้ที่จะได้รับ', '🎓', 'consider-indigo', splitNumberedItems(r.skillsGained), false)}
+        ${box('ผลลัพธ์ที่คาดหวัง', '📈', 'consider-pink', splitNumberedItems(r.outcome), true)}
+        ${box('ตัวชี้วัด (KPI)', '📊', 'consider-amber', splitNumberedItems(r.kpi), false)}
+      </div>
+      ${r.remark && String(r.remark).trim() ? `
+      <div class="consider-remark">
+        <span class="consider-remark-icon">ℹ️</span>
+        <div><div class="consider-subtitle">หมายเหตุ</div><div>${formatDetailValue(r.remark, 'numbered')}</div></div>
+      </div>` : ''}
+    </div>
+  `;
+}
+
 function openDrawer(id) {
   STATE.selectedId = id;
   STATE.noteDraft = null;
@@ -1397,17 +1454,7 @@ function renderDrawer() {
 
   // หลักสูตรกลาง อศค. ดำเนินการ ไม่มีประเภทการอบรม/วัตถุประสงค์/ผลลัพธ์ ฯลฯ กรอกไว้ตั้งแต่ต้น
   // ตามคำขอผู้ใช้จึงซ่อนหัวข้อนี้ไปทั้งหมด (ไม่ต้องมีแม้แต่ข้อความอธิบาย) แทนที่จะโชว์ "ไม่ระบุ" ทุกช่อง
-  const considerationSection = isCentral ? '' : `
-    <div class="section-heading">ข้อมูลสำหรับพิจารณา</div>
-    <dl class="detail-grid">
-      <div class="detail-item full">${fieldRow('ความจำเป็น/หลักการและเหตุผล', r.rationale, 'numbered')}</div>
-      <div class="detail-item full">${fieldRow('วัตถุประสงค์', r.objective, 'numbered')}</div>
-      <div class="detail-item full">${fieldRow('ทักษะ/ความรู้ที่จะได้รับ', r.skillsGained, 'numbered')}</div>
-      <div class="detail-item full">${fieldRow('ผลลัพธ์ที่คาดหวัง', r.outcome, 'numbered')}</div>
-      <div class="detail-item full">${fieldRow('ตัวชี้วัด (KPI)', r.kpi, 'numbered')}</div>
-      <div class="detail-item full">${fieldRow('หมายเหตุ', r.remark, 'numbered')}</div>
-    </dl>
-  `;
+  const considerationSection = isCentral ? '' : renderConsiderationCard(r);
 
   body.innerHTML = `
     ${history}
