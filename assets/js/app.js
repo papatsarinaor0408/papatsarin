@@ -207,10 +207,18 @@ function buildYoyComparison() {
     by2570[key].count++;
   });
 
+  // Records whose divisionGroup is "-" (not yet mapped to a กอง) are kept
+  // as ONE distinct bucket under a fixed key that can never collide with a
+  // real normalizeOrgKey() result — they must never silently merge into an
+  // actual กอง just because a course's own department happens to normalize
+  // the same as something else. The friendly label is applied here (render
+  // time), not written back into the source data.
   const by2569 = {}; // normalizedKey -> { label, count, courses }
   HISTORICAL_2569.records.forEach((r) => {
-    const key = normalizeOrgKey(r.divisionGroup);
-    if (!by2569[key]) by2569[key] = { label: r.divisionGroup, count: 0, courses: [] };
+    const isUnmapped = r.divisionGroup === '-';
+    const key = isUnmapped ? '__unmapped__' : normalizeOrgKey(r.divisionGroup);
+    const label = isUnmapped ? 'ยังไม่ Mapping ระดับกอง' : r.divisionGroup;
+    if (!by2569[key]) by2569[key] = { label, count: 0, courses: [] };
     by2569[key].count++;
     by2569[key].courses.push(r);
   });
@@ -235,8 +243,34 @@ function buildYoyComparison() {
 function openHistoricalDetailModal(divisionLabel, courses) {
   document.getElementById('chart-detail-title').textContent = `ข้อมูลการเสนอ ปี 2569 — ${divisionLabel}`;
   const body = document.getElementById('chart-detail-body');
+
+  // Per-unit (แผนก/หน่วยงานจริง) subtotal — dynamically computed from the
+  // records passed in, never hard-coded. Only shown when the group actually
+  // contains more than one distinct unit (e.g. the "ยังไม่ Mapping ระดับกอง"
+  // bucket), so a normal single-unit กอง doesn't get a redundant 1-row table.
+  const byUnit = {};
+  courses.forEach((c) => {
+    const u = c.unit || 'ไม่ระบุ';
+    if (!byUnit[u]) byUnit[u] = { count: 0, budget: 0 };
+    byUnit[u].count++;
+    byUnit[u].budget += c.budgetBaht || 0;
+  });
+  const units = Object.keys(byUnit).sort((a, b) => byUnit[b].count - byUnit[a].count);
+  const totalBudget = courses.reduce((s, c) => s + (c.budgetBaht || 0), 0);
+  const unitSummaryHtml = units.length > 1 ? `
+    <div class="table-wrap" style="margin-bottom:14px;">
+      <table class="data-table">
+        <thead><tr><th>หน่วยงาน</th><th>จำนวนหลักสูตร</th><th>งบประมาณรวม</th></tr></thead>
+        <tbody>
+          ${units.map((u) => `<tr><td>${escapeHtml(u)}</td><td>${fmtNum(byUnit[u].count)}</td><td>${fmtBaht(byUnit[u].budget)}</td></tr>`).join('')}
+          <tr style="font-weight:700;"><td>รวม</td><td>${fmtNum(courses.length)}</td><td>${fmtBaht(totalBudget)}</td></tr>
+        </tbody>
+      </table>
+    </div>` : '';
+
   body.innerHTML = `
     <div class="filter-count" style="margin-bottom:10px;">พบ ${fmtNum(courses.length)} หลักสูตร</div>
+    ${unitSummaryHtml}
     <div class="table-wrap">
       <table class="data-table">
         <thead><tr><th>ชื่อหลักสูตร</th><th>งบประมาณ</th><th>หน่วยงานที่เสนอ</th></tr></thead>
@@ -245,7 +279,7 @@ function openHistoricalDetailModal(divisionLabel, courses) {
             <tr>
               <td class="cell-name">${escapeHtml(c.courseName)}</td>
               <td>${c.budgetBaht != null ? fmtBaht(c.budgetBaht) : '<span class="cell-muted">ไม่ระบุ</span>'}</td>
-              <td>${escapeHtml(c.divisionGroup)}</td>
+              <td>${escapeHtml(c.unit || 'ไม่ระบุ')}</td>
             </tr>`).join('') : `<tr><td colspan="3"><div class="empty-state"><div class="big">🔍</div>ไม่พบข้อมูล</div></td></tr>`}
         </tbody>
       </table>
