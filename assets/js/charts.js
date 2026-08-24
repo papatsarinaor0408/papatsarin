@@ -219,12 +219,22 @@ function renderDualLineChart(container, categories, series, opts) {
   opts = opts || {};
   if (!categories.length) { container.innerHTML = '<div class="empty-state">ไม่มีข้อมูลตรงตัวกรอง</div>'; return; }
 
-  const width = opts.width || 640;
   const height = opts.height || 320;
+  const n = categories.length;
+  // Match the SVG's viewBox width to whichever is larger: the card's real
+  // available width (so it fills edge-to-edge with no dead margins when
+  // everything fits) or the content-driven minimum (so the container's
+  // overflow-x:auto scrolls instead of squeezing labels when there are too
+  // many categories to fit legibly). Either way the rendered pixel width
+  // matches the viewBox 1:1, so there's no letterboxing or stretching.
+  const minCategoryW = opts.minCategoryW || 90;
+  const contentWidth = opts.width || Math.max(320, n * minCategoryW);
+  const containerWidth = container.clientWidth || contentWidth;
+  const width = Math.max(contentWidth, containerWidth);
+  const fillsContainer = width <= containerWidth;
   const padLeft = 40, padRight = 16, padTop = 24, padBottom = 44;
   const plotW = width - padLeft - padRight;
   const plotH = height - padTop - padBottom;
-  const n = categories.length;
 
   const maxRaw = Math.max(1, ...categories.flatMap((c) => series.map((s) => c[s.key] || 0)));
   const step = Math.pow(10, Math.floor(Math.log10(Math.max(maxRaw, 1))));
@@ -234,7 +244,11 @@ function renderDualLineChart(container, categories, series, opts) {
   const yOf = (v) => padTop + plotH - (v / yMax) * plotH;
   const xOf = (i) => padLeft + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
 
-  const svg = el('svg', { viewBox: `0 0 ${width} ${height}`, width: '100%', height, class: 'viz-root' });
+  // width matches the viewBox 1:1 in both branches above, so there's
+  // nothing to scale — '100%' when it fills the container (typical case),
+  // or the literal overflow width when there are too many categories to
+  // fit (the container's overflow-x:auto then scrolls, per the markup).
+  const svg = el('svg', { viewBox: `0 0 ${width} ${height}`, width: fillsContainer ? '100%' : width, height, class: 'viz-root' });
 
   for (let t = 0; t <= yTicks; t++) {
     const v = (yMax / yTicks) * t;

@@ -207,18 +207,18 @@ function buildYoyComparison() {
     by2570[key].count++;
   });
 
-  // Records whose divisionGroup is "-" (not yet mapped to a กอง) are kept
-  // as ONE distinct bucket under a fixed key that can never collide with a
-  // real normalizeOrgKey() result — they must never silently merge into an
-  // actual กอง just because a course's own department happens to normalize
-  // the same as something else. The friendly label is applied here (render
-  // time), not written back into the source data.
+  // Records whose divisionGroup is "-" (not yet mapped to a กอง) are grouped
+  // by their own unit (department_current + organization_current) instead —
+  // each becomes its own X-axis point (e.g. "หรปก-ฟ. อฟก."), rather than one
+  // combined "ยังไม่ Mapping ระดับกอง" bucket. None of these labels can
+  // legitimately match a real 2570 กอง-level divisionName, so they'll
+  // naturally show as "ไม่มีการเสนอในปี 2570" — which is correct.
   const by2569 = {}; // normalizedKey -> { label, count, courses }
   HISTORICAL_2569.records.forEach((r) => {
     const isUnmapped = r.divisionGroup === '-';
-    const key = isUnmapped ? '__unmapped__' : normalizeOrgKey(r.divisionGroup);
-    const label = isUnmapped ? 'ยังไม่ Mapping ระดับกอง' : r.divisionGroup;
-    if (!by2569[key]) by2569[key] = { label, count: 0, courses: [] };
+    const groupLabel = isUnmapped ? r.unit : r.divisionGroup;
+    const key = normalizeOrgKey(groupLabel);
+    if (!by2569[key]) by2569[key] = { label: groupLabel, count: 0, courses: [] };
     by2569[key].count++;
     by2569[key].courses.push(r);
   });
@@ -296,9 +296,8 @@ const YOY_SERIES = [
 function renderYoyComparisonCard() {
   const chartEl = document.getElementById('chart-yoy');
   const miniKpisEl = document.getElementById('yoy-mini-kpis');
-  const footnoteEl = document.getElementById('yoy-footnote');
   const toggleBtn = document.getElementById('yoy-toggle-btn');
-  if (!chartEl || !miniKpisEl || !footnoteEl || !toggleBtn) return;
+  if (!chartEl || !miniKpisEl || !toggleBtn) return;
 
   const allGroups = buildYoyComparison();
   const TOP_N = 5;
@@ -311,7 +310,6 @@ function renderYoyComparisonCard() {
   const total2570 = allGroups.reduce((s, g) => s + g.v2, 0);
 
   renderDualLineChart(chartEl, shown, YOY_SERIES, {
-    width: Math.max(640, shown.length * 90),
     tooltipHtml: (g) => {
       const changeLine = g.kind === 'new'
         ? '<div style="color:var(--series-1);font-weight:600;">ใหม่ในปี 2570</div>'
@@ -350,11 +348,6 @@ function renderYoyComparisonCard() {
       <div class="mini-kpi-sub">${diff > 0 ? 'เพิ่มขึ้น' : diff < 0 ? 'ลดลง' : 'ไม่เปลี่ยนแปลง'}</div>
     </div>
   `;
-
-  const hasUnmapped = allGroups.some((g) => g.label === 'ยังไม่ Mapping ระดับกอง');
-  footnoteEl.textContent = hasUnmapped
-    ? 'หมายเหตุ: กลุ่ม "ยังไม่ Mapping ระดับกอง" คือหน่วยงานที่ระบุระดับแผนก/ฝ่าย แต่ยังไม่สามารถระบุกองได้'
-    : '';
 }
 
 /* ==================================================================== */
@@ -409,7 +402,6 @@ function renderOverview() {
         </div>
         <div id="chart-yoy" style="overflow-x:auto;"></div>
         <div class="mini-kpi-grid" id="yoy-mini-kpis" style="margin-top:14px;"></div>
-        <div class="exec-insight" id="yoy-footnote" style="margin-top:10px;"></div>
       </div>
       <div class="card wide chart-summary-card">
         <div class="card-title">สัดส่วนตามประเภทการอบรม</div>
