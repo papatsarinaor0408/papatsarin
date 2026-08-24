@@ -130,6 +130,16 @@ async function fetchActivityLog() {
 }
 
 /**
+ * Everyone (not just Admin) — exposes only the last import's timestamp/file
+ * name via the get_last_import_info RPC, not the full audit trail.
+ */
+async function fetchLastImportInfo() {
+  const { data, error } = await SB.rpc('get_last_import_info');
+  if (error) throw error;
+  return (data && data[0]) || null;
+}
+
+/**
  * Plan-specific decision history for the drawer's "ประวัติการพิจารณา"
  * section. Readable by any active user who can see the plan (RLS scopes
  * audit_logs SELECT to target_type='plan' decision rows for non-admins),

@@ -1796,6 +1796,7 @@ function handleFileImport(file) {
     try {
       const counts = await importDatasetRemote(result.records, file.name);
       await loadAllRecords();
+      STATE.lastImportInfo = await fetchLastImportInfo();
       STATE.filters.orgValue = '';
       renderImportBanner();
       renderAll();
@@ -1835,7 +1836,11 @@ function exportCsv() {
 function renderImportBanner() {
   const el = document.getElementById('import-banner');
   el.style.display = 'flex';
-  el.innerHTML = `<span class="icon">📄</span><div class="grow"><div class="title">ข้อมูลส่วนกลาง</div><div>แผนที่ใช้งานอยู่ในระบบขณะนี้: ${fmtNum(STATE.records.length)} รายการ</div></div>`;
+  const info = STATE.lastImportInfo;
+  const updatedLine = info
+    ? `<div>ข้อมูลอัปเดตล่าสุด: <b>${fmtThaiDateTime(info.imported_at)}</b> <span style="color:var(--text-muted);">(ข้อมูลจากไฟล์ที่นำเข้าปัจจุบัน)</span></div>`
+    : '';
+  el.innerHTML = `<span class="icon">📄</span><div class="grow"><div class="title">ข้อมูลส่วนกลาง</div><div>แผนที่ใช้งานอยู่ในระบบขณะนี้: ${fmtNum(STATE.records.length)} รายการ</div>${updatedLine}</div>`;
 }
 
 /* ==================================================================== */
@@ -1892,6 +1897,7 @@ async function init() {
   });
 
   await loadAllRecords();
+  STATE.lastImportInfo = await fetchLastImportInfo();
   initTheme();
 
   document.querySelectorAll('.tab-btn').forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
