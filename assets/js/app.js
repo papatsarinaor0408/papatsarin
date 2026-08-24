@@ -585,9 +585,17 @@ function maxOrgBy(orgs, getValue) {
 function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
   const { orgs, grandTotal } = computeOrgBudgetStats(data, orgLevel, orgNames);
   const planCount = data.length;
-  const avgPerPlan = planCount ? grandTotal / planCount : 0;
   const topOrg = orgs.slice().sort((a, b) => b.total - a.total)[0] || null;
   const pctOf = (v) => (grandTotal > 0 ? ((v / grandTotal) * 100).toFixed(1) : '0.0');
+
+  // งบที่ได้รับอนุมัติ (2570, ตามตัวกรองปัจจุบัน) เทียบกับงบรวมปี 2569 ทั้งหมด
+  // 36 หลักสูตร (ไม่กรองตามหน่วยงาน — เป็นค่าฐานอ้างอิงคงที่ ตามที่ผู้ใช้ยืนยัน)
+  const approvedBudget2570 = data.filter((r) => r.reviewStatus === 'approved').reduce((s, r) => s + (r.budgetTotal || 0), 0);
+  const budget2569Total = HISTORICAL_2569.records.reduce((s, r) => s + (r.budgetBaht || 0), 0);
+  const budgetDiff = approvedBudget2570 - budget2569Total;
+  const budgetPctChange = budget2569Total > 0 ? (budgetDiff / budget2569Total) * 100 : 0;
+  const budgetDiffColor = budgetDiff > 0 ? 'var(--status-good)' : budgetDiff < 0 ? 'var(--status-critical)' : 'var(--text-muted)';
+  const budgetDiffIcon = budgetDiff > 0 ? '↑' : budgetDiff < 0 ? '↓' : '→';
 
   // A. Mini KPIs — dynamic, ห้าม hard-code
   const miniKpis = document.getElementById('budget-mini-kpis');
@@ -601,8 +609,9 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
       <div class="mini-kpi-value">${fmtNum(planCount)} แผน</div>
     </div>
     <div class="mini-kpi-card">
-      <div class="mini-kpi-label">งบเฉลี่ยต่อแผน</div>
-      <div class="mini-kpi-value">${planCount ? fmtBaht(avgPerPlan) : '—'}</div>
+      <div class="mini-kpi-label">งบที่ได้รับอนุมัติ เทียบกับปี 2569</div>
+      <div class="mini-kpi-value">${fmtBaht(approvedBudget2570)}</div>
+      <div class="mini-kpi-sub" style="color:${budgetDiffColor};">${budgetDiffIcon} ${budgetDiff >= 0 ? '+' : '-'}${fmtBaht(Math.abs(budgetDiff))} (${budgetPctChange >= 0 ? '+' : ''}${budgetPctChange.toFixed(1)}%)</div>
     </div>
     <div class="mini-kpi-card">
       <div class="mini-kpi-label">หน่วยงานที่ใช้งบสูงสุด</div>
