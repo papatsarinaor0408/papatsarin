@@ -288,11 +288,17 @@ function openHistoricalDetailModal(divisionLabel, courses) {
   document.getElementById('chart-detail-backdrop').classList.add('show');
 }
 
+const YOY_SERIES = [
+  { key: 'v1', label: 'ปี 2569 (ปีที่แล้ว)', color: 'var(--series-1)' },
+  { key: 'v2', label: 'ปี 2570 (ปีปัจจุบัน)', color: 'var(--series-7)' },
+];
+
 function renderYoyComparisonCard() {
   const chartEl = document.getElementById('chart-yoy');
-  const summaryEl = document.getElementById('yoy-exec-summary');
+  const miniKpisEl = document.getElementById('yoy-mini-kpis');
+  const footnoteEl = document.getElementById('yoy-footnote');
   const toggleBtn = document.getElementById('yoy-toggle-btn');
-  if (!chartEl || !summaryEl || !toggleBtn) return;
+  if (!chartEl || !miniKpisEl || !footnoteEl || !toggleBtn) return;
 
   const allGroups = buildYoyComparison();
   const TOP_N = 5;
@@ -301,8 +307,11 @@ function renderYoyComparisonCard() {
   toggleBtn.textContent = STATE.yoyShowAll ? 'แสดงเฉพาะ Top 5' : `ดูทั้งหมด (${allGroups.length} หน่วยงาน)`;
   toggleBtn.onclick = () => { STATE.yoyShowAll = !STATE.yoyShowAll; renderYoyComparisonCard(); };
 
-  renderSlopeChart(chartEl, shown, {
-    width: 640, leftAxisLabel: 'ปี 2569', rightAxisLabel: 'ปี 2570',
+  const total2569 = allGroups.reduce((s, g) => s + g.v1, 0);
+  const total2570 = allGroups.reduce((s, g) => s + g.v2, 0);
+
+  renderDualLineChart(chartEl, shown, YOY_SERIES, {
+    width: 640,
     tooltipHtml: (g) => {
       const changeLine = g.kind === 'new'
         ? '<div style="color:var(--series-1);font-weight:600;">ใหม่ในปี 2570</div>'
@@ -313,35 +322,39 @@ function renderYoyComparisonCard() {
     },
     onClick: (g) => openHistoricalDetailModal(g.label, g.courses2569),
   });
+  renderLegend(chartEl, [
+    { label: YOY_SERIES[0].label, color: YOY_SERIES[0].color, value: total2569 },
+    { label: YOY_SERIES[1].label, color: YOY_SERIES[1].color, value: total2570 },
+  ]);
+  const diff = total2570 - total2569;
+  const pct = total2569 > 0 ? (diff / total2569) * 100 : 0;
+  const diffColor = diff > 0 ? 'var(--status-good)' : diff < 0 ? 'var(--status-critical)' : 'var(--text-muted)';
+  const diffIcon = diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
 
-  const increases = allGroups.filter((g) => g.kind === 'pct' && g.diff > 0).sort((a, b) => b.diff - a.diff);
-  const decreases = allGroups.filter((g) => (g.kind === 'pct' && g.diff < 0) || g.kind === 'gone').sort((a, b) => a.diff - b.diff);
-  const newGroups = allGroups.filter((g) => g.kind === 'new');
-  const total2569 = allGroups.reduce((s, g) => s + g.v1, 0);
-  const total2570 = allGroups.reduce((s, g) => s + g.v2, 0);
-
-  summaryEl.innerHTML = `
-    <div class="exec-top1">
-      <div class="exec-top1-icon">📈</div>
-      <div class="exec-top1-label">เพิ่มขึ้นมากที่สุด</div>
-      <div class="exec-top1-name">${increases[0] ? escapeHtml(increases[0].label) : '—'}</div>
-      <div class="exec-top1-value">${increases[0] ? `+${fmtNum(increases[0].diff)} หลักสูตร` : '—'}</div>
+  miniKpisEl.innerHTML = `
+    <div class="mini-kpi-card">
+      <div class="mini-kpi-label">ปี 2569 (ปีที่แล้ว)</div>
+      <div class="mini-kpi-value" style="color:var(--series-1);">${fmtNum(total2569)} หลักสูตร</div>
     </div>
-    <div class="exec-top3">
-      <div class="exec-top3-label">ลดลงมากที่สุด</div>
-      ${decreases.length ? decreases.slice(0, 3).map((g, i) => `
-        <div class="exec-top3-row">
-          <span class="exec-top3-rank">${String(i + 1).padStart(2, '0')}</span>
-          <span class="exec-top3-name">${escapeHtml(g.label)}</span>
-          <span class="exec-top3-value">${g.kind === 'gone' ? 'ไม่มีในปี 2570' : fmtNum(g.diff)}</span>
-        </div>`).join('') : '<div style="color:var(--text-muted);font-size:12.5px;">ไม่มีหน่วยงานที่ลดลง</div>'}
+    <div class="mini-kpi-card">
+      <div class="mini-kpi-label">ปี 2570 (ปีปัจจุบัน)</div>
+      <div class="mini-kpi-value" style="color:var(--series-7);">${fmtNum(total2570)} หลักสูตร</div>
     </div>
-    <div class="exec-kpis">
-      <div class="exec-kpi"><div class="exec-kpi-value">${fmtNum(total2569)}</div><div class="exec-kpi-label">หลักสูตรรวม 2569</div></div>
-      <div class="exec-kpi"><div class="exec-kpi-value">${fmtNum(total2570)}</div><div class="exec-kpi-label">หลักสูตรรวม 2570</div></div>
+    <div class="mini-kpi-card">
+      <div class="mini-kpi-label">ผลต่างรวม</div>
+      <div class="mini-kpi-value" style="color:${diffColor};">${diffIcon} ${diff >= 0 ? '+' : ''}${fmtNum(diff)} หลักสูตร</div>
     </div>
-    ${newGroups.length ? `<div class="exec-insight">มี ${newGroups.length} หน่วยงานที่เสนอหลักสูตรใหม่ในปี 2570 (ไม่มีข้อมูลปี 2569)</div>` : ''}
+    <div class="mini-kpi-card">
+      <div class="mini-kpi-label">เปลี่ยนแปลงรวม</div>
+      <div class="mini-kpi-value" style="color:${diffColor};">${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%</div>
+      <div class="mini-kpi-sub">${diff > 0 ? 'เพิ่มขึ้น' : diff < 0 ? 'ลดลง' : 'ไม่เปลี่ยนแปลง'}</div>
+    </div>
   `;
+
+  const hasUnmapped = allGroups.some((g) => g.label === 'ยังไม่ Mapping ระดับกอง');
+  footnoteEl.textContent = hasUnmapped
+    ? 'หมายเหตุ: กลุ่ม "ยังไม่ Mapping ระดับกอง" คือหน่วยงานที่ระบุระดับแผนก/ฝ่าย แต่ยังไม่สามารถระบุกองได้'
+    : '';
 }
 
 /* ==================================================================== */
@@ -394,10 +407,9 @@ function renderOverview() {
           ข้อมูลปี 2569 เป็นข้อมูลอ้างอิงย้อนหลัง (Read-only) ไม่นับรวมในผลพิจารณาหรือ KPI ปี 2570
           <button class="btn btn-sm btn-ghost" id="yoy-toggle-btn" style="margin-left:10px;"></button>
         </div>
-        <div class="chart-summary-split">
-          <div id="chart-yoy" class="chart-summary-chart" style="overflow-x:auto;"></div>
-          <div id="yoy-exec-summary" class="chart-summary-panel"></div>
-        </div>
+        <div id="chart-yoy" style="overflow-x:auto;"></div>
+        <div class="mini-kpi-grid" id="yoy-mini-kpis" style="margin-top:14px;"></div>
+        <div class="exec-insight" id="yoy-footnote" style="margin-top:10px;"></div>
       </div>
       <div class="card wide chart-summary-card">
         <div class="card-title">สัดส่วนตามประเภทการอบรม</div>

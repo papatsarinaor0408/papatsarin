@@ -210,73 +210,78 @@ function renderHBar(container, items, opts) {
   container.appendChild(svg);
 }
 
-/* ---------------- Slope chart (two-point year-over-year comparison) ---------------- */
-// groups: [{ label, v1, v2, kind: 'new'|'gone'|'pct', pct, color }]
-// opts.leftAxisLabel/rightAxisLabel: e.g. "2569"/"2570". opts.tooltipHtml(g) for a full override.
-function renderSlopeChart(container, groups, opts) {
+/* ---------------- Dual-line chart (category axis, one line per series) ---------------- */
+// categories: [{ label, v1, v2, ... }] — one x-position per entry, in given order.
+// series: [{ key: 'v1'|'v2'|..., label, color }] — one polyline per entry.
+// opts.tooltipHtml(category) for a full tooltip override, opts.onClick(category).
+function renderDualLineChart(container, categories, series, opts) {
   container.innerHTML = '';
   opts = opts || {};
-  if (!groups.length) { container.innerHTML = '<div class="empty-state">ไม่มีข้อมูลตรงตัวกรอง</div>'; return; }
+  if (!categories.length) { container.innerHTML = '<div class="empty-state">ไม่มีข้อมูลตรงตัวกรอง</div>'; return; }
 
   const width = opts.width || 640;
-  const height = opts.height || Math.max(220, groups.length * 34 + 60);
-  const longestLabel = groups.reduce((m, g) => Math.max(m, String(g.label).length), 0);
-  const sideW = Math.min(190, Math.max(80, longestLabel * 6.6 + 30));
-  const padTop = 34, padBottom = 20;
-  const x0 = sideW, x1 = width - sideW;
-  const maxVal = Math.max(1, ...groups.map((g) => Math.max(g.v1, g.v2)));
-  const yOf = (v) => height - padBottom - (v / maxVal) * (height - padTop - padBottom);
+  const height = opts.height || 320;
+  const padLeft = 40, padRight = 16, padTop = 24, padBottom = 44;
+  const plotW = width - padLeft - padRight;
+  const plotH = height - padTop - padBottom;
+  const n = categories.length;
 
-  // Nudge overlapping endpoint labels apart (small group counts, so a
-  // simple sequential min-gap pass by ascending y is enough — no need for
-  // a general-purpose label-placement algorithm here).
-  const spreadY = (items, minGap) => {
-    const sorted = items.slice().sort((a, b) => a.y - b.y);
-    for (let i = 1; i < sorted.length; i++) {
-      if (sorted[i].y - sorted[i - 1].y < minGap) sorted[i].y = sorted[i - 1].y + minGap;
-    }
-    return sorted;
-  };
-  const left = spreadY(groups.map((g) => ({ g, y: yOf(g.v1) })), 16);
-  const right = spreadY(groups.map((g) => ({ g, y: yOf(g.v2) })), 16);
-  const leftYOf = new Map(left.map((d) => [d.g, d.y]));
-  const rightYOf = new Map(right.map((d) => [d.g, d.y]));
+  const maxRaw = Math.max(1, ...categories.flatMap((c) => series.map((s) => c[s.key] || 0)));
+  const step = Math.pow(10, Math.floor(Math.log10(Math.max(maxRaw, 1))));
+  const stepMult = maxRaw / step <= 2 ? 2 : maxRaw / step <= 5 ? 5 : 10;
+  const yMax = stepMult * step;
+  const yTicks = 5;
+  const yOf = (v) => padTop + plotH - (v / yMax) * plotH;
+  const xOf = (i) => padLeft + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
 
   const svg = el('svg', { viewBox: `0 0 ${width} ${height}`, width: '100%', height, class: 'viz-root' });
 
-  [[x0, opts.leftAxisLabel || ''], [x1, opts.rightAxisLabel || '']].forEach(([x, label]) => {
-    svg.appendChild(el('line', { x1: x, y1: padTop - 10, x2: x, y2: height - padBottom, stroke: 'var(--grid)', 'stroke-width': 1 }));
-    const t = el('text', { x, y: padTop - 18, 'text-anchor': 'middle', 'font-size': 12.5, 'font-weight': 700, fill: 'var(--text-secondary)' });
-    t.textContent = label;
-    svg.appendChild(t);
+  for (let t = 0; t <= yTicks; t++) {
+    const v = (yMax / yTicks) * t;
+    const y = yOf(v);
+    svg.appendChild(el('line', { x1: padLeft, y1: y, x2: width - padRight, y2: y, stroke: 'var(--grid)', 'stroke-width': 1 }));
+    const label = el('text', { x: padLeft - 8, y: y + 4, 'text-anchor': 'end', class: 'axis-label' });
+    label.textContent = fmtNum(Math.round(v));
+    svg.appendChild(label);
+  }
+
+  categories.forEach((c, i) => {
+    const label = el('text', { x: xOf(i), y: height - padBottom + 20, 'text-anchor': 'middle', 'font-size': 11.5, class: 'hbar-label' });
+    label.textContent = c.label;
+    svg.appendChild(label);
   });
 
-  groups.forEach((g) => {
-    const y1 = leftYOf.get(g), y2 = rightYOf.get(g);
-    const color = g.color || 'var(--text-muted)';
-    const line = el('line', { x1: x0, y1, x2: x1, y2, stroke: color, 'stroke-width': 2.5, 'stroke-linecap': 'round', class: 'chart-arc', style: 'cursor:pointer;' });
-    const hitArea = el('line', { x1: x0, y1, x2: x1, y2, stroke: 'transparent', 'stroke-width': 14, style: 'cursor:pointer;' });
+  series.forEach((s) => {
+    const points = categories.map((c, i) => `${xOf(i)},${yOf(c[s.key] || 0)}`).join(' ');
+    svg.appendChild(el('polyline', { points, fill: 'none', stroke: s.color, 'stroke-width': 2.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+  });
 
-    const tt = () => (opts.tooltipHtml ? opts.tooltipHtml(g) : `<div><b>${g.label}</b></div><div class="tt-row"><span class="tt-dot" style="background:${color}"></span>${opts.leftAxisLabel || ''}: <b>${fmtNum(g.v1)}</b> · ${opts.rightAxisLabel || ''}: <b>${fmtNum(g.v2)}</b></div>`);
-    [line, hitArea].forEach((elem) => {
-      elem.addEventListener('mousemove', (evt) => showTooltip(evt, tt()));
-      elem.addEventListener('mousemove', moveTooltip);
-      elem.addEventListener('mouseleave', hideTooltip);
-      if (opts.onClick) elem.addEventListener('click', () => opts.onClick(g));
+  categories.forEach((c, i) => {
+    series.forEach((s, si) => {
+      const v = c[s.key] || 0;
+      const y = yOf(v);
+      svg.appendChild(el('circle', { cx: xOf(i), cy: y, r: 4.5, fill: s.color }));
+      const valLabel = el('text', { x: xOf(i), y: si === 0 ? y - 10 : y + 18, 'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 700, fill: s.color });
+      valLabel.textContent = fmtNum(v);
+      svg.appendChild(valLabel);
     });
-    svg.appendChild(line);
-    svg.appendChild(hitArea);
+  });
 
-    [[x0, y1, g.v1, 'end', x0 - 10], [x1, y2, g.v2, 'start', x1 + 10]].forEach(([cx, cy, v, anchor, labelX]) => {
-      svg.appendChild(el('circle', { cx, cy, r: 4.5, fill: color }));
-    });
-    const leftLabel = el('text', { x: x0 - 10, y: y1 + 4, 'text-anchor': 'end', 'font-size': 12, fill: 'var(--text-secondary)' });
-    leftLabel.textContent = `${g.label} (${fmtNum(g.v1)})`;
-    svg.appendChild(leftLabel);
-    const rightLabel = el('text', { x: x1 + 10, y: y2 + 4, 'text-anchor': 'start', 'font-size': 12, 'font-weight': 600, fill: 'var(--text-primary)' });
-    rightLabel.textContent = fmtNum(g.v2);
-    svg.appendChild(rightLabel);
+  // Hit areas drawn last (topmost) so hovering/clicking a column works even
+  // where a line/point from an earlier draw pass would otherwise intercept it.
+  const colW = n > 1 ? plotW / (n - 1) : plotW;
+  categories.forEach((c, i) => {
+    const hit = el('rect', { x: xOf(i) - colW / 2, y: padTop, width: colW, height: plotH, fill: 'transparent', style: 'cursor:pointer;' });
+    const tt = () => (opts.tooltipHtml ? opts.tooltipHtml(c) : `<b>${escapeHtmlChart(c.label)}</b>`);
+    hit.addEventListener('mousemove', (evt) => showTooltip(evt, tt()));
+    hit.addEventListener('mousemove', moveTooltip);
+    hit.addEventListener('mouseleave', hideTooltip);
+    if (opts.onClick) hit.addEventListener('click', () => opts.onClick(c));
+    svg.appendChild(hit);
   });
 
   container.appendChild(svg);
+}
+function escapeHtmlChart(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
