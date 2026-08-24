@@ -229,14 +229,14 @@ function renderDualLineChart(container, categories, series, opts) {
   // Label font size shrinks a bit once categories get crowded, so labels
   // stay separated instead of colliding.
   const width = opts.width || container.clientWidth || 640;
-  // Cap the requested 10cm margin proportionally on narrower cards so the
-  // plot area can never shrink to nothing/negative — full margin applies
-  // whenever there's room, smaller cards just get a scaled-down version.
-  const sidePad = Math.min(378, width * 0.3);
-  const padLeft = sidePad, padRight = sidePad, padTop = 24, padBottom = 68;
+  // Modest fixed gutter for the y-axis labels — the chart's overall size
+  // relative to the card is now controlled by the container's own CSS
+  // width (see the .yoy-chart-frame wrapper in app.js), not by inflating
+  // this internal padding.
+  const padLeft = 48, padRight = 24, padTop = 24, padBottom = 68;
   const plotW = width - padLeft - padRight;
   const plotH = height - padTop - padBottom;
-  const labelFontSize = n > 10 ? 15 : n > 6 ? 16 : 17;
+  const labelFontSize = n > 10 ? 12 : n > 6 ? 13 : 14;
 
   const maxRaw = Math.max(1, ...categories.flatMap((c) => series.map((s) => c[s.key] || 0)));
   const step = Math.pow(10, Math.floor(Math.log10(Math.max(maxRaw, 1))));
@@ -247,16 +247,10 @@ function renderDualLineChart(container, categories, series, opts) {
   // Inset the first/last point off the axis lines a bit, so the leftmost
   // category doesn't sit flush against the y-axis (and the rightmost stays
   // symmetric) instead of the points spanning the full plot edge-to-edge.
-  const xInset = Math.min(36, plotW * 0.08);
+  const xInset = Math.min(20, plotW * 0.06);
   const xOf = (i) => padLeft + xInset + (n === 1 ? (plotW - 2 * xInset) / 2 : (i / (n - 1)) * (plotW - 2 * xInset));
 
   const svg = el('svg', { viewBox: `0 0 ${width} ${height}`, width: '100%', height, class: 'viz-root' });
-
-  // Small caption in the wide left margin, near the start of the plotted
-  // lines, marking that this chart begins with reference (2569) data.
-  const startCaption = el('text', { x: padLeft / 2, y: padTop + 14, 'text-anchor': 'middle', 'font-size': 10, fill: 'var(--text-muted)' });
-  startCaption.textContent = 'ข้อมูลอ้างอิง';
-  svg.appendChild(startCaption);
 
   for (let t = 0; t <= yTicks; t++) {
     const v = (yMax / yTicks) * t;

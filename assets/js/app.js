@@ -407,7 +407,7 @@ function renderOverview() {
       <div class="card wide chart-summary-card">
         <div class="card-title">เปรียบเทียบการเสนอหลักสูตร ปี 2569–2570</div>
         <div class="card-sub">ข้อมูลปี 2569 เป็นข้อมูลอ้างอิงย้อนหลัง (Read-only) ไม่นับรวมในผลพิจารณาหรือ KPI ปี 2570</div>
-        <div id="chart-yoy"></div>
+        <div class="yoy-chart-frame"><div id="chart-yoy"></div></div>
         <div class="mini-kpi-grid" id="yoy-mini-kpis" style="margin-top:14px;"></div>
       </div>
       <div class="card wide chart-summary-card">

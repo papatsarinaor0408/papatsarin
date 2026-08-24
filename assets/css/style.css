@@ -272,6 +272,10 @@ select:focus, input:focus, textarea:focus {
   border: 1px solid color-mix(in srgb, var(--series-1) 16%, var(--border));
   border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 16px;
 }
+.yoy-chart-frame { max-width: 70%; margin: 0 auto; }
+@media (max-width: 900px) {
+  .yoy-chart-frame { max-width: 100%; }
+}
 .exec-top1 { text-align: center; padding-bottom: 14px; border-bottom: 1px solid color-mix(in srgb, var(--series-1) 16%, var(--border)); }
 .exec-top1-icon { font-size: 20px; margin-bottom: 4px; }
 .exec-top1-label { font-size: 11px; font-weight: 600; color: var(--series-1); text-transform: uppercase; letter-spacing: .03em; margin-bottom: 6px; }
