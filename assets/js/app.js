@@ -1378,7 +1378,7 @@ function renderLoginHistoryTab() {
     STATE.loginHistoryFilters[key] = e.target.value;
     renderLoginHistoryTab();
   });
-  bind('lh-search', 'search', 'input');
+  bindSearchInput('lh-search', (v) => { STATE.loginHistoryFilters.search = v; renderLoginHistoryTab(); });
   bind('lh-department', 'department');
   bind('lh-datefrom', 'dateFrom');
   bind('lh-dateto', 'dateTo');
@@ -1488,7 +1488,7 @@ function renderActivityLogTab() {
     STATE.activityLogFilters[key] = e.target.value;
     renderActivityLogTab();
   });
-  bind('al-search', 'search', 'input');
+  bindSearchInput('al-search', (v) => { STATE.activityLogFilters.search = v; renderActivityLogTab(); });
   bind('al-action', 'action');
   bind('al-datefrom', 'dateFrom');
   bind('al-dateto', 'dateTo');
@@ -1901,6 +1901,21 @@ function renderDecisionArea() {
 /* ==================================================================== */
 /* FILTER BAR + TABS                                                    */
 /* ==================================================================== */
+// Full re-renders on every keystroke (renderAll/renderLoginHistoryTab/
+// renderActivityLogTab all rebuild their container via innerHTML) destroy
+// and recreate the search <input>, which silently drops focus after each
+// character. Restore focus + cursor position right after the re-render
+// (synchronous, since innerHTML updates are synchronous) so typing isn't
+// interrupted.
+function bindSearchInput(id, onInput) {
+  document.getElementById(id).addEventListener('input', (e) => {
+    const pos = e.target.selectionStart;
+    onInput(e.target.value);
+    const el = document.getElementById(id);
+    if (el) { el.focus(); el.setSelectionRange(pos, pos); }
+  });
+}
+
 function renderFilterBar() {
   const bar = document.getElementById('filter-bar');
 
@@ -1972,7 +1987,7 @@ function renderFilterBar() {
   bind('f-inputfactor', 'inputFactor');
   bind('f-deliverytype', 'deliveryType');
   bind('f-status', 'status');
-  bind('f-search', 'search', 'input');
+  bindSearchInput('f-search', (v) => { STATE.filters.search = v; renderAll(); });
   document.getElementById('f-clear').addEventListener('click', () => {
     STATE.filters = { orgLevel: STATE.filters.orgLevel, orgValue: '', courseType: '', inputFactor: '', deliveryType: '', status: '', search: '' };
     renderAll();
