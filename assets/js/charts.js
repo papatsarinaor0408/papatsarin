@@ -252,6 +252,12 @@ function renderDualLineChart(container, categories, series, opts) {
 
   const svg = el('svg', { viewBox: `0 0 ${width} ${height}`, width: '100%', height, class: 'viz-root' });
 
+  // Small caption in the wide left margin, near the start of the plotted
+  // lines, marking that this chart begins with reference (2569) data.
+  const startCaption = el('text', { x: padLeft / 2, y: padTop + 14, 'text-anchor': 'middle', 'font-size': 10, fill: 'var(--text-muted)' });
+  startCaption.textContent = 'ข้อมูลอ้างอิง';
+  svg.appendChild(startCaption);
+
   for (let t = 0; t <= yTicks; t++) {
     const v = (yMax / yTicks) * t;
     const y = yOf(v);
