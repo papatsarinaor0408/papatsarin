@@ -226,7 +226,7 @@ function renderDualLineChart(container, categories, series, opts) {
   // Label font size shrinks a bit once categories get crowded, so labels
   // stay separated instead of colliding.
   const width = opts.width || container.clientWidth || 640;
-  const padLeft = 28, padRight = 8, padTop = 24, padBottom = 44;
+  const padLeft = 28, padRight = 8, padTop = 24, padBottom = 60;
   const plotW = width - padLeft - padRight;
   const plotH = height - padTop - padBottom;
   const labelFontSize = n > 10 ? 9.5 : n > 6 ? 10.5 : 11.5;
@@ -251,7 +251,11 @@ function renderDualLineChart(container, categories, series, opts) {
   }
 
   categories.forEach((c, i) => {
-    const label = el('text', { x: xOf(i), y: height - padBottom + 20, 'text-anchor': 'middle', 'font-size': labelFontSize, class: 'hbar-label' });
+    const lx = xOf(i), ly = height - padBottom + 16;
+    const label = el('text', {
+      x: lx, y: ly, 'text-anchor': 'end', 'font-size': labelFontSize, class: 'hbar-label',
+      transform: `rotate(-30 ${lx} ${ly})`,
+    });
     label.textContent = c.label;
     svg.appendChild(label);
   });
