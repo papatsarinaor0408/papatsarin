@@ -209,3 +209,74 @@ function renderHBar(container, items, opts) {
   });
   container.appendChild(svg);
 }
+
+/* ---------------- Slope chart (two-point year-over-year comparison) ---------------- */
+// groups: [{ label, v1, v2, kind: 'new'|'gone'|'pct', pct, color }]
+// opts.leftAxisLabel/rightAxisLabel: e.g. "2569"/"2570". opts.tooltipHtml(g) for a full override.
+function renderSlopeChart(container, groups, opts) {
+  container.innerHTML = '';
+  opts = opts || {};
+  if (!groups.length) { container.innerHTML = '<div class="empty-state">ไม่มีข้อมูลตรงตัวกรอง</div>'; return; }
+
+  const width = opts.width || 640;
+  const height = opts.height || Math.max(220, groups.length * 34 + 60);
+  const longestLabel = groups.reduce((m, g) => Math.max(m, String(g.label).length), 0);
+  const sideW = Math.min(190, Math.max(80, longestLabel * 6.6 + 30));
+  const padTop = 34, padBottom = 20;
+  const x0 = sideW, x1 = width - sideW;
+  const maxVal = Math.max(1, ...groups.map((g) => Math.max(g.v1, g.v2)));
+  const yOf = (v) => height - padBottom - (v / maxVal) * (height - padTop - padBottom);
+
+  // Nudge overlapping endpoint labels apart (small group counts, so a
+  // simple sequential min-gap pass by ascending y is enough — no need for
+  // a general-purpose label-placement algorithm here).
+  const spreadY = (items, minGap) => {
+    const sorted = items.slice().sort((a, b) => a.y - b.y);
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i].y - sorted[i - 1].y < minGap) sorted[i].y = sorted[i - 1].y + minGap;
+    }
+    return sorted;
+  };
+  const left = spreadY(groups.map((g) => ({ g, y: yOf(g.v1) })), 16);
+  const right = spreadY(groups.map((g) => ({ g, y: yOf(g.v2) })), 16);
+  const leftYOf = new Map(left.map((d) => [d.g, d.y]));
+  const rightYOf = new Map(right.map((d) => [d.g, d.y]));
+
+  const svg = el('svg', { viewBox: `0 0 ${width} ${height}`, width: '100%', height, class: 'viz-root' });
+
+  [[x0, opts.leftAxisLabel || ''], [x1, opts.rightAxisLabel || '']].forEach(([x, label]) => {
+    svg.appendChild(el('line', { x1: x, y1: padTop - 10, x2: x, y2: height - padBottom, stroke: 'var(--grid)', 'stroke-width': 1 }));
+    const t = el('text', { x, y: padTop - 18, 'text-anchor': 'middle', 'font-size': 12.5, 'font-weight': 700, fill: 'var(--text-secondary)' });
+    t.textContent = label;
+    svg.appendChild(t);
+  });
+
+  groups.forEach((g) => {
+    const y1 = leftYOf.get(g), y2 = rightYOf.get(g);
+    const color = g.color || 'var(--text-muted)';
+    const line = el('line', { x1: x0, y1, x2: x1, y2, stroke: color, 'stroke-width': 2.5, 'stroke-linecap': 'round', class: 'chart-arc', style: 'cursor:pointer;' });
+    const hitArea = el('line', { x1: x0, y1, x2: x1, y2, stroke: 'transparent', 'stroke-width': 14, style: 'cursor:pointer;' });
+
+    const tt = () => (opts.tooltipHtml ? opts.tooltipHtml(g) : `<div><b>${g.label}</b></div><div class="tt-row"><span class="tt-dot" style="background:${color}"></span>${opts.leftAxisLabel || ''}: <b>${fmtNum(g.v1)}</b> · ${opts.rightAxisLabel || ''}: <b>${fmtNum(g.v2)}</b></div>`);
+    [line, hitArea].forEach((elem) => {
+      elem.addEventListener('mousemove', (evt) => showTooltip(evt, tt()));
+      elem.addEventListener('mousemove', moveTooltip);
+      elem.addEventListener('mouseleave', hideTooltip);
+      if (opts.onClick) elem.addEventListener('click', () => opts.onClick(g));
+    });
+    svg.appendChild(line);
+    svg.appendChild(hitArea);
+
+    [[x0, y1, g.v1, 'end', x0 - 10], [x1, y2, g.v2, 'start', x1 + 10]].forEach(([cx, cy, v, anchor, labelX]) => {
+      svg.appendChild(el('circle', { cx, cy, r: 4.5, fill: color }));
+    });
+    const leftLabel = el('text', { x: x0 - 10, y: y1 + 4, 'text-anchor': 'end', 'font-size': 12, fill: 'var(--text-secondary)' });
+    leftLabel.textContent = `${g.label} (${fmtNum(g.v1)})`;
+    svg.appendChild(leftLabel);
+    const rightLabel = el('text', { x: x1 + 10, y: y2 + 4, 'text-anchor': 'start', 'font-size': 12, 'font-weight': 600, fill: 'var(--text-primary)' });
+    rightLabel.textContent = fmtNum(g.v2);
+    svg.appendChild(rightLabel);
+  });
+
+  container.appendChild(svg);
+}

@@ -21,7 +21,9 @@ const STATE = {
   deptBreakdownSort: { courseType: 'count', inputFactor: 'count', deliveryType: 'count' }, // 'count' | 'az'
   deptCourseListFilter: {}, // { [deptName]: { field, value } } — narrows "รายชื่อหลักสูตร" when a breakdown chip is clicked
 
-
+  // "เปรียบเทียบการเสนอหลักสูตร ปี 2569–2570" card — Top-5/all toggle only,
+  // not a filter (never narrows STATE.records, never affects any other card).
+  yoyShowAll: false,
 
   // Admin-only history tabs — loaded lazily (only when the tab is first
   // opened) since a Reviewer never triggers this fetch and it would return
@@ -165,6 +167,149 @@ function categoricalDonutData(records, keyOrFn) {
   return topNWithOther(raw, 8).map((d, i) => ({ ...d, color: CATEGORICAL[i % CATEGORICAL.length] }));
 }
 
+/* ---------------- YoY comparison: ปี 2569 (static, read-only historical) vs ปี 2570 (live) ---------------- */
+// Used ONLY to pair a 2569 org label against a live 2570 divisionName —
+// never mutates or displays the normalized form, so source labels in
+// either dataset are never altered.
+function normalizeOrgKey(name) {
+  return String(name || '').replace(/[\s.\-]/g, '').toLowerCase();
+}
+
+function makeYoyGroup(label, v1, v2, courses2569) {
+  let kind, pct = null, color;
+  if (v1 === 0 && v2 > 0) { kind = 'new'; color = 'var(--series-1)'; }
+  else if (v1 > 0 && v2 === 0) { kind = 'gone'; color = 'var(--status-critical)'; }
+  else {
+    kind = 'pct';
+    pct = v1 > 0 ? ((v2 - v1) / v1) * 100 : 0;
+    color = v2 > v1 ? 'var(--status-good)' : (v2 < v1 ? 'var(--status-critical)' : 'var(--text-muted)');
+  }
+  return { label, v1, v2, diff: v2 - v1, kind, pct, color, courses2569 };
+}
+
+/**
+ * Full-dataset comparison (deliberately NOT run through getFilteredExcept —
+ * this card is independent of the existing filter bar in both directions).
+ * 2570 side: STATE.records grouped by divisionName (กอง). 2569 side:
+ * HISTORICAL_2569.records (static, read-only) grouped by divisionGroup.
+ * Outer-joined via normalizeOrgKey; sorted by 2570 count descending.
+ */
+function buildYoyComparison() {
+  // Grouped by normalizeOrgKey (not the raw label) on THIS side too — two
+  // differently-formatted 2570 labels for the same กอง must collapse into
+  // one group, otherwise each would separately (and wrongly) get matched
+  // against the full 2569 count for that org.
+  const by2570 = {}; // normalizedKey -> { label, count }
+  STATE.records.forEach((r) => {
+    const label = r.divisionName || 'ไม่ระบุ';
+    const key = normalizeOrgKey(label);
+    if (!by2570[key]) by2570[key] = { label, count: 0 };
+    by2570[key].count++;
+  });
+
+  const by2569 = {}; // normalizedKey -> { label, count, courses }
+  HISTORICAL_2569.records.forEach((r) => {
+    const key = normalizeOrgKey(r.divisionGroup);
+    if (!by2569[key]) by2569[key] = { label: r.divisionGroup, count: 0, courses: [] };
+    by2569[key].count++;
+    by2569[key].courses.push(r);
+  });
+
+  const matchedKeys = new Set();
+  const groups = Object.keys(by2570).map((key) => {
+    const g2570 = by2570[key];
+    const match = by2569[key];
+    if (match) matchedKeys.add(key);
+    return makeYoyGroup(g2570.label, match ? match.count : 0, g2570.count, match ? match.courses : []);
+  });
+
+  Object.keys(by2569).forEach((key) => {
+    if (matchedKeys.has(key)) return;
+    const g = by2569[key];
+    groups.push(makeYoyGroup(g.label, g.count, 0, g.courses));
+  });
+
+  return groups.sort((a, b) => b.v2 - a.v2);
+}
+
+function openHistoricalDetailModal(divisionLabel, courses) {
+  document.getElementById('chart-detail-title').textContent = `ข้อมูลการเสนอ ปี 2569 — ${divisionLabel}`;
+  const body = document.getElementById('chart-detail-body');
+  body.innerHTML = `
+    <div class="filter-count" style="margin-bottom:10px;">พบ ${fmtNum(courses.length)} หลักสูตร</div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>ชื่อหลักสูตร</th><th>งบประมาณ</th><th>หน่วยงานที่เสนอ</th></tr></thead>
+        <tbody>
+          ${courses.length ? courses.map((c) => `
+            <tr>
+              <td class="cell-name">${escapeHtml(c.courseName)}</td>
+              <td>${c.budgetBaht != null ? fmtBaht(c.budgetBaht) : '<span class="cell-muted">ไม่ระบุ</span>'}</td>
+              <td>${escapeHtml(c.divisionGroup)}</td>
+            </tr>`).join('') : `<tr><td colspan="3"><div class="empty-state"><div class="big">🔍</div>ไม่พบข้อมูล</div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+  document.getElementById('chart-detail-backdrop').classList.add('show');
+}
+
+function renderYoyComparisonCard() {
+  const chartEl = document.getElementById('chart-yoy');
+  const summaryEl = document.getElementById('yoy-exec-summary');
+  const toggleBtn = document.getElementById('yoy-toggle-btn');
+  if (!chartEl || !summaryEl || !toggleBtn) return;
+
+  const allGroups = buildYoyComparison();
+  const TOP_N = 5;
+  const shown = STATE.yoyShowAll ? allGroups : allGroups.slice(0, TOP_N);
+
+  toggleBtn.textContent = STATE.yoyShowAll ? 'แสดงเฉพาะ Top 5' : `ดูทั้งหมด (${allGroups.length} หน่วยงาน)`;
+  toggleBtn.onclick = () => { STATE.yoyShowAll = !STATE.yoyShowAll; renderYoyComparisonCard(); };
+
+  renderSlopeChart(chartEl, shown, {
+    width: 640, leftAxisLabel: 'ปี 2569', rightAxisLabel: 'ปี 2570',
+    tooltipHtml: (g) => {
+      const changeLine = g.kind === 'new'
+        ? '<div style="color:var(--series-1);font-weight:600;">ใหม่ในปี 2570</div>'
+        : g.kind === 'gone'
+        ? '<div style="color:var(--status-critical);font-weight:600;">ไม่มีการเสนอในปี 2570</div>'
+        : `<div style="color:${g.color};font-weight:600;">${g.diff >= 0 ? '+' : ''}${fmtNum(g.diff)} หลักสูตร (${g.pct >= 0 ? '+' : ''}${g.pct.toFixed(1)}%)</div>`;
+      return `<div><b>${escapeHtml(g.label)}</b></div><div class="tt-row">ปี 2569: <b>${fmtNum(g.v1)}</b> หลักสูตร</div><div class="tt-row">ปี 2570: <b>${fmtNum(g.v2)}</b> หลักสูตร</div>${changeLine}`;
+    },
+    onClick: (g) => openHistoricalDetailModal(g.label, g.courses2569),
+  });
+
+  const increases = allGroups.filter((g) => g.kind === 'pct' && g.diff > 0).sort((a, b) => b.diff - a.diff);
+  const decreases = allGroups.filter((g) => (g.kind === 'pct' && g.diff < 0) || g.kind === 'gone').sort((a, b) => a.diff - b.diff);
+  const newGroups = allGroups.filter((g) => g.kind === 'new');
+  const total2569 = allGroups.reduce((s, g) => s + g.v1, 0);
+  const total2570 = allGroups.reduce((s, g) => s + g.v2, 0);
+
+  summaryEl.innerHTML = `
+    <div class="exec-top1">
+      <div class="exec-top1-icon">📈</div>
+      <div class="exec-top1-label">เพิ่มขึ้นมากที่สุด</div>
+      <div class="exec-top1-name">${increases[0] ? escapeHtml(increases[0].label) : '—'}</div>
+      <div class="exec-top1-value">${increases[0] ? `+${fmtNum(increases[0].diff)} หลักสูตร` : '—'}</div>
+    </div>
+    <div class="exec-top3">
+      <div class="exec-top3-label">ลดลงมากที่สุด</div>
+      ${decreases.length ? decreases.slice(0, 3).map((g, i) => `
+        <div class="exec-top3-row">
+          <span class="exec-top3-rank">${String(i + 1).padStart(2, '0')}</span>
+          <span class="exec-top3-name">${escapeHtml(g.label)}</span>
+          <span class="exec-top3-value">${g.kind === 'gone' ? 'ไม่มีในปี 2570' : fmtNum(g.diff)}</span>
+        </div>`).join('') : '<div style="color:var(--text-muted);font-size:12.5px;">ไม่มีหน่วยงานที่ลดลง</div>'}
+    </div>
+    <div class="exec-kpis">
+      <div class="exec-kpi"><div class="exec-kpi-value">${fmtNum(total2569)}</div><div class="exec-kpi-label">หลักสูตรรวม 2569</div></div>
+      <div class="exec-kpi"><div class="exec-kpi-value">${fmtNum(total2570)}</div><div class="exec-kpi-label">หลักสูตรรวม 2570</div></div>
+    </div>
+    ${newGroups.length ? `<div class="exec-insight">มี ${newGroups.length} หน่วยงานที่เสนอหลักสูตรใหม่ในปี 2570 (ไม่มีข้อมูลปี 2569)</div>` : ''}
+  `;
+}
+
 /* ==================================================================== */
 /* TAB: OVERVIEW                                                        */
 /* ==================================================================== */
@@ -207,6 +352,17 @@ function renderOverview() {
         <div class="chart-summary-split">
           <div id="chart-org-status" class="chart-summary-chart" style="overflow-x:auto;"></div>
           <div id="org-exec-summary" class="chart-summary-panel"></div>
+        </div>
+      </div>
+      <div class="card wide chart-summary-card">
+        <div class="card-title">เปรียบเทียบการเสนอหลักสูตร ปี 2569–2570</div>
+        <div class="card-sub">
+          ข้อมูลปี 2569 เป็นข้อมูลอ้างอิงย้อนหลัง (Read-only) ไม่นับรวมในผลพิจารณาหรือ KPI ปี 2570
+          <button class="btn btn-sm btn-ghost" id="yoy-toggle-btn" style="margin-left:10px;"></button>
+        </div>
+        <div class="chart-summary-split">
+          <div id="chart-yoy" class="chart-summary-chart" style="overflow-x:auto;"></div>
+          <div id="yoy-exec-summary" class="chart-summary-panel"></div>
         </div>
       </div>
       <div class="card wide chart-summary-card">
@@ -279,6 +435,8 @@ function renderOverview() {
     return { label: name, values, total: rows.length, records: rows };
   }).sort((a, b) => b.total - a.total);
   renderOrgCourseChartWithSummary(groups);
+
+  renderYoyComparisonCard();
 
   renderBudgetExecutiveSection(data, orgLevel, orgNames);
 }
