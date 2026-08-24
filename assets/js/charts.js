@@ -226,10 +226,10 @@ function renderDualLineChart(container, categories, series, opts) {
   // Label font size shrinks a bit once categories get crowded, so labels
   // stay separated instead of colliding.
   const width = opts.width || container.clientWidth || 640;
-  const padLeft = 28, padRight = 8, padTop = 24, padBottom = 60;
+  const padLeft = 38, padRight = 38, padTop = 24, padBottom = 60;
   const plotW = width - padLeft - padRight;
   const plotH = height - padTop - padBottom;
-  const labelFontSize = n > 10 ? 9.5 : n > 6 ? 10.5 : 11.5;
+  const labelFontSize = n > 10 ? 11 : n > 6 ? 12 : 13;
 
   const maxRaw = Math.max(1, ...categories.flatMap((c) => series.map((s) => c[s.key] || 0)));
   const step = Math.pow(10, Math.floor(Math.log10(Math.max(maxRaw, 1))));
