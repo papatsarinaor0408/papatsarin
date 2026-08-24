@@ -1317,6 +1317,108 @@ function budgetFieldRow(label, amount, warnIfMissing) {
   return fieldRow(label, '');
 }
 
+const TH_SHORT_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+/**
+ * Best-effort parse of the "14 ต.ค. 2570" Thai-locale short-date strings
+ * this app displays (see importer.js's toDateLabel) into a comparable
+ * value — returns null on anything that doesn't match cleanly, so callers
+ * only ever compare when BOTH sides parsed successfully (no false
+ * positives from an unexpected format).
+ */
+function parseThaiShortDate(s) {
+  if (!s) return null;
+  const m = String(s).trim().match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
+  if (!m) return null;
+  const day = Number(m[1]);
+  const monthIdx = TH_SHORT_MONTHS.indexOf(m[2]);
+  const year = Number(m[3]);
+  if (monthIdx < 0 || !day || !year) return null;
+  return year * 372 + monthIdx * 31 + day; // relative ordering only, not a real timestamp
+}
+
+/**
+ * "รายละเอียดหลักสูตร" summary section at the top of the plan drawer —
+ * same fields as the old plain detail-grid (nothing new, nothing removed),
+ * just organized into a KPI-style summary row + two info cards + a
+ * schedule card instead of one long stacked list.
+ */
+function renderPlanSummarySection(r, isCentral, hasConsiderationSection) {
+  const infoRow = (icon, label, value, mode) => `
+    <div class="psum-row"><span class="psum-row-icon">${icon}</span>
+      <div><div class="psum-row-label">${label}</div><div class="psum-row-value">${formatDetailValue(value, mode || 'plain')}</div></div>
+    </div>`;
+
+  const startParsed = parseThaiShortDate(r.startDate);
+  const endParsed = parseThaiShortDate(r.endDate);
+  const dateWarning = (startParsed != null && endParsed != null && endParsed < startParsed)
+    ? '<div class="psum-warning">⚠️ วันที่สิ้นสุดไม่สอดคล้องกับวันที่เริ่มต้น กรุณาตรวจสอบข้อมูล</div>' : '';
+
+  return `
+    <div class="psum-cards">
+      <div class="psum-card psum-card-highlight">
+        <div class="psum-card-icon">💰</div>
+        <div class="psum-card-label">งบประมาณรวมทั้งสิ้น</div>
+        <div class="psum-card-value">${r.budgetTotal ? fmtBaht(r.budgetTotal) : '<span class="cell-muted">ไม่ระบุ</span>'}</div>
+        <div class="psum-card-sub">งบประมาณที่ใช้ในการอบรม</div>
+      </div>
+      <div class="psum-card">
+        <div class="psum-card-icon">👥</div>
+        <div class="psum-card-label">จำนวนผู้เข้าอบรม</div>
+        <div class="psum-card-value">${fmtNum(r.participants)} <span class="psum-card-unit">คน</span></div>
+        <div class="psum-card-sub">กลุ่มเป้าหมาย</div>
+      </div>
+      <div class="psum-card">
+        <div class="psum-card-icon">📅</div>
+        <div class="psum-card-label">ระยะเวลาอบรม</div>
+        <div class="psum-card-value">${fmtNum(r.days)} <span class="psum-card-unit">วัน</span></div>
+        <div class="psum-card-sub">ระยะเวลาในการอบรม</div>
+      </div>
+      ${!isCentral ? `
+      <div class="psum-card">
+        <div class="psum-card-icon">✈️</div>
+        <div class="psum-card-label">ประเภทการอบรม</div>
+        <div class="psum-card-value" style="font-size:15px;">${r.deliveryType ? escapeHtml(r.deliveryType) : '<span class="cell-muted">ไม่ระบุ</span>'}</div>
+        <div class="psum-card-sub">ประเภทการส่งอบรม</div>
+      </div>` : ''}
+    </div>
+    <div class="psum-info-grid">
+      <div class="psum-info-card">
+        <div class="psum-info-title"><span class="psum-info-icon">📖</span>ข้อมูลหลักสูตร</div>
+        ${infoRow('🔑', 'ปัจจัยนำเข้าหลัก', r.inputFactor)}
+        ${infoRow('📄', 'ประเภทหลักสูตร', r.courseType)}
+        ${infoRow('🏫', 'รูปแบบการเรียนรู้', r.learningFormat)}
+        ${!isCentral ? infoRow('✈️', 'ประเภทการส่งอบรม', r.deliveryType) : ''}
+        ${infoRow('👤', 'ค่าจ้างเหมา/วิทยากรภายนอก', r.budgetOutsource ? fmtBaht(r.budgetOutsource) : '')}
+      </div>
+      <div class="psum-info-card">
+        <div class="psum-info-title"><span class="psum-info-icon">🏢</span>หน่วยงานและผู้เสนอ</div>
+        ${infoRow('🏢', 'หน่วยงานที่เสนอ (ฝ่าย)', r.deptName)}
+        ${infoRow('🏢', 'หน่วยงานที่เสนอ (กอง)', r.divisionName)}
+        ${infoRow('🏢', 'หน่วยงานที่เสนอ (แผนก)', r.sectionName)}
+        ${infoRow('👤', 'ผู้เสนอ/ผู้ประสานงาน', r.creatorName)}
+        ${infoRow('🪪', 'ตำแหน่งผู้เสนอ', r.creatorPosition)}
+        ${infoRow('🏷️', 'สถานะต้นทาง', r.sourceStatus)}
+      </div>
+    </div>
+    <div class="psum-schedule-card">
+      <div class="psum-info-title"><span class="psum-info-icon">📅</span>กำหนดการและการจัดอบรม</div>
+      <div class="psum-schedule-grid">
+        <div class="psum-schedule-item"><span class="psum-row-icon">📅</span><div><div class="psum-row-label">วันเริ่มต้น</div><div class="psum-row-value">${formatDetailValue(r.startDate)}</div></div></div>
+        <div class="psum-schedule-item"><span class="psum-row-icon">📅</span><div><div class="psum-row-label">วันสิ้นสุด</div><div class="psum-row-value">${formatDetailValue(r.endDate)}</div></div></div>
+        <div class="psum-schedule-item"><span class="psum-row-icon">👤</span><div><div class="psum-row-label">วิทยากร/สถาบันผู้จัดอบรม</div><div class="psum-row-value">${formatDetailValue(r.externalInstructor)}</div></div></div>
+      </div>
+      ${dateWarning}
+      <div class="psum-schedule-item" style="margin-top:12px;"><span class="psum-row-icon">👥</span><div><div class="psum-row-label">กลุ่มเป้าหมาย</div><div class="psum-row-value">${formatDetailValue(r.targetGroupNames, 'people')}</div></div></div>
+    </div>
+    ${r.remark && String(r.remark).trim() ? `
+    <div class="consider-remark" style="margin-bottom:14px;">
+      <span class="consider-remark-icon">ℹ️</span>
+      <div><div class="consider-subtitle">หมายเหตุ</div><div>${formatDetailValue(r.remark, 'numbered')}</div></div>
+    </div>` : ''}
+    ${hasConsiderationSection ? '<a href="#plan-consideration-section" class="psum-jump-link">ดูข้อมูลสำหรับพิจารณา →</a>' : ''}
+  `;
+}
+
 /**
  * Splits a "1. ... 2. ... 3. ..." (or plain multi-line) text blob into
  * individual item strings, stripping the leading number — same splitting
@@ -1458,27 +1560,8 @@ function renderDrawer() {
 
   body.innerHTML = `
     ${history}
-    <dl class="detail-grid">
-      ${fieldRow('หน่วยงานที่เสนอ (ฝ่าย)', r.deptName)}
-      ${fieldRow('หน่วยงานที่เสนอ (กอง)', r.divisionName)}
-      ${fieldRow('หน่วยงานที่เสนอ (แผนก)', r.sectionName)}
-      ${fieldRow('ประเภทหลักสูตร', r.courseType)}
-      ${fieldRow('ปัจจัยนำเข้าหลัก', r.inputFactor)}
-      ${fieldRow('สถานะต้นทาง', r.sourceStatus)}
-      ${fieldRow('รูปแบบการเรียนรู้', r.learningFormat)}
-      ${isCentral ? '' : fieldRow('ประเภทการส่งอบรม', r.deliveryType)}
-      ${fieldRow('จำนวนผู้เข้าอบรม (คน)', r.participants)}
-      ${fieldRow('จำนวนวันอบรม (วัน)', r.days)}
-      ${budgetFieldRow('งบประมาณรวมทั้งหมด', r.budgetTotal, !isCentral)}
-      ${fieldRow('ค่าจ้างเหมา/วิทยากรภายนอก', r.budgetOutsource ? fmtBaht(r.budgetOutsource) : '')}
-      ${fieldRow('วันเริ่มต้น', r.startDate)}
-      ${fieldRow('วันสิ้นสุด', r.endDate)}
-      ${fieldRow('ผู้เสนอ/ผู้ประสานงาน', r.creatorName)}
-      ${fieldRow('ตำแหน่งผู้เสนอ', r.creatorPosition)}
-      <div class="detail-item full">${fieldRow('วิทยากรภายนอก (ชื่อ - เบอร์ติดต่อสถาบันผู้จัดอบรม)', r.externalInstructor)}</div>
-      <div class="detail-item full">${fieldRow('กลุ่มเป้าหมาย', r.targetGroupNames, 'people')}</div>
-    </dl>
-    ${considerationSection}
+    ${renderPlanSummarySection(r, isCentral, !isCentral)}
+    <div id="plan-consideration-section">${considerationSection}</div>
     <div class="section-heading">การพิจารณา</div>
     <div id="decision-area"></div>
     <div class="section-heading">ประวัติการพิจารณา</div>
