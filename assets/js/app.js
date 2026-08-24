@@ -1796,7 +1796,8 @@ function handleFileImport(file) {
     try {
       const counts = await importDatasetRemote(result.records, file.name);
       await loadAllRecords();
-      STATE.lastImportInfo = await fetchLastImportInfo();
+      try { STATE.lastImportInfo = await fetchLastImportInfo(); }
+      catch (e) { STATE.lastImportInfo = null; }
       STATE.filters.orgValue = '';
       renderImportBanner();
       renderAll();
@@ -1897,7 +1898,8 @@ async function init() {
   });
 
   await loadAllRecords();
-  STATE.lastImportInfo = await fetchLastImportInfo();
+  try { STATE.lastImportInfo = await fetchLastImportInfo(); }
+  catch (e) { STATE.lastImportInfo = null; }
   initTheme();
 
   document.querySelectorAll('.tab-btn').forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
