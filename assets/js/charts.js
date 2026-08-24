@@ -221,20 +221,15 @@ function renderDualLineChart(container, categories, series, opts) {
 
   const height = opts.height || 320;
   const n = categories.length;
-  // Match the SVG's viewBox width to whichever is larger: the card's real
-  // available width (so it fills edge-to-edge with no dead margins when
-  // everything fits) or the content-driven minimum (so the container's
-  // overflow-x:auto scrolls instead of squeezing labels when there are too
-  // many categories to fit legibly). Either way the rendered pixel width
-  // matches the viewBox 1:1, so there's no letterboxing or stretching.
-  const minCategoryW = opts.minCategoryW || 90;
-  const contentWidth = opts.width || Math.max(320, n * minCategoryW);
-  const containerWidth = container.clientWidth || contentWidth;
-  const width = Math.max(contentWidth, containerWidth);
-  const fillsContainer = width <= containerWidth;
+  // Always compress to the card's actual width — never wider — so there's
+  // no horizontal overflow/scroll to manage regardless of category count.
+  // Label font size shrinks a bit once categories get crowded, so labels
+  // stay separated instead of colliding.
+  const width = opts.width || container.clientWidth || 640;
   const padLeft = 28, padRight = 8, padTop = 24, padBottom = 44;
   const plotW = width - padLeft - padRight;
   const plotH = height - padTop - padBottom;
+  const labelFontSize = n > 10 ? 9.5 : n > 6 ? 10.5 : 11.5;
 
   const maxRaw = Math.max(1, ...categories.flatMap((c) => series.map((s) => c[s.key] || 0)));
   const step = Math.pow(10, Math.floor(Math.log10(Math.max(maxRaw, 1))));
@@ -244,11 +239,7 @@ function renderDualLineChart(container, categories, series, opts) {
   const yOf = (v) => padTop + plotH - (v / yMax) * plotH;
   const xOf = (i) => padLeft + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
 
-  // width matches the viewBox 1:1 in both branches above, so there's
-  // nothing to scale — '100%' when it fills the container (typical case),
-  // or the literal overflow width when there are too many categories to
-  // fit (the container's overflow-x:auto then scrolls, per the markup).
-  const svg = el('svg', { viewBox: `0 0 ${width} ${height}`, width: fillsContainer ? '100%' : width, height, class: 'viz-root' });
+  const svg = el('svg', { viewBox: `0 0 ${width} ${height}`, width: '100%', height, class: 'viz-root' });
 
   for (let t = 0; t <= yTicks; t++) {
     const v = (yMax / yTicks) * t;
@@ -260,7 +251,7 @@ function renderDualLineChart(container, categories, series, opts) {
   }
 
   categories.forEach((c, i) => {
-    const label = el('text', { x: xOf(i), y: height - padBottom + 20, 'text-anchor': 'middle', 'font-size': 11.5, class: 'hbar-label' });
+    const label = el('text', { x: xOf(i), y: height - padBottom + 20, 'text-anchor': 'middle', 'font-size': labelFontSize, class: 'hbar-label' });
     label.textContent = c.label;
     svg.appendChild(label);
   });
@@ -274,8 +265,8 @@ function renderDualLineChart(container, categories, series, opts) {
     series.forEach((s, si) => {
       const v = c[s.key] || 0;
       const y = yOf(v);
-      svg.appendChild(el('circle', { cx: xOf(i), cy: y, r: 4.5, fill: s.color }));
-      const valLabel = el('text', { x: xOf(i), y: si === 0 ? y - 10 : y + 18, 'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 700, fill: s.color });
+      svg.appendChild(el('circle', { cx: xOf(i), cy: y, r: n > 10 ? 3.5 : 4.5, fill: s.color }));
+      const valLabel = el('text', { x: xOf(i), y: si === 0 ? y - 10 : y + 18, 'text-anchor': 'middle', 'font-size': labelFontSize, 'font-weight': 700, fill: s.color });
       valLabel.textContent = fmtNum(v);
       svg.appendChild(valLabel);
     });

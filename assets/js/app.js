@@ -21,10 +21,6 @@ const STATE = {
   deptBreakdownSort: { courseType: 'count', inputFactor: 'count', deliveryType: 'count' }, // 'count' | 'az'
   deptCourseListFilter: {}, // { [deptName]: { field, value } } — narrows "รายชื่อหลักสูตร" when a breakdown chip is clicked
 
-  // "เปรียบเทียบการเสนอหลักสูตร ปี 2569–2570" card — Top-5/all toggle only,
-  // not a filter (never narrows STATE.records, never affects any other card).
-  yoyShowAll: true,
-
   // Admin-only history tabs — loaded lazily (only when the tab is first
   // opened) since a Reviewer never triggers this fetch and it would return
   // zero rows anyway (RLS is the real gate, this just avoids a wasted call).
@@ -296,20 +292,14 @@ const YOY_SERIES = [
 function renderYoyComparisonCard() {
   const chartEl = document.getElementById('chart-yoy');
   const miniKpisEl = document.getElementById('yoy-mini-kpis');
-  const toggleBtn = document.getElementById('yoy-toggle-btn');
-  if (!chartEl || !miniKpisEl || !toggleBtn) return;
+  if (!chartEl || !miniKpisEl) return;
 
   const allGroups = buildYoyComparison();
-  const TOP_N = 5;
-  const shown = STATE.yoyShowAll ? allGroups : allGroups.slice(0, TOP_N);
-
-  toggleBtn.textContent = STATE.yoyShowAll ? 'แสดงเฉพาะ Top 5' : `ดูทั้งหมด (${allGroups.length} หน่วยงาน)`;
-  toggleBtn.onclick = () => { STATE.yoyShowAll = !STATE.yoyShowAll; renderYoyComparisonCard(); };
 
   const total2569 = allGroups.reduce((s, g) => s + g.v1, 0);
   const total2570 = allGroups.reduce((s, g) => s + g.v2, 0);
 
-  renderDualLineChart(chartEl, shown, YOY_SERIES, {
+  renderDualLineChart(chartEl, allGroups, YOY_SERIES, {
     tooltipHtml: (g) => {
       const changeLine = g.kind === 'new'
         ? '<div style="color:var(--series-1);font-weight:600;">ใหม่ในปี 2570</div>'
@@ -396,11 +386,8 @@ function renderOverview() {
       </div>
       <div class="card wide chart-summary-card">
         <div class="card-title">เปรียบเทียบการเสนอหลักสูตร ปี 2569–2570</div>
-        <div class="card-sub">
-          ข้อมูลปี 2569 เป็นข้อมูลอ้างอิงย้อนหลัง (Read-only) ไม่นับรวมในผลพิจารณาหรือ KPI ปี 2570
-          <button class="btn btn-sm btn-ghost" id="yoy-toggle-btn" style="margin-left:10px;"></button>
-        </div>
-        <div id="chart-yoy" style="overflow-x:auto;"></div>
+        <div class="card-sub">ข้อมูลปี 2569 เป็นข้อมูลอ้างอิงย้อนหลัง (Read-only) ไม่นับรวมในผลพิจารณาหรือ KPI ปี 2570</div>
+        <div id="chart-yoy"></div>
         <div class="mini-kpi-grid" id="yoy-mini-kpis" style="margin-top:14px;"></div>
       </div>
       <div class="card wide chart-summary-card">
