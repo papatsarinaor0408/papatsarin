@@ -1901,18 +1901,24 @@ function renderDecisionArea() {
 /* ==================================================================== */
 /* FILTER BAR + TABS                                                    */
 /* ==================================================================== */
-// Full re-renders on every keystroke (renderAll/renderLoginHistoryTab/
-// renderActivityLogTab all rebuild their container via innerHTML) destroy
-// and recreate the search <input>, which silently drops focus after each
-// character. Restore focus + cursor position right after the re-render
-// (synchronous, since innerHTML updates are synchronous) so typing isn't
-// interrupted.
+// Full re-renders (renderAll/renderLoginHistoryTab/renderActivityLogTab
+// all rebuild their container via innerHTML) destroy and recreate the
+// search <input>, which drops focus and reflows everything below it —
+// jarring if it fired on every keystroke. Debounced so the actual
+// filter/render only runs once typing pauses; focus + cursor position are
+// restored right after that render (synchronous, since innerHTML updates
+// are synchronous), so a burst of typing never causes any layout jump.
 function bindSearchInput(id, onInput) {
+  let timer = null;
   document.getElementById(id).addEventListener('input', (e) => {
     const pos = e.target.selectionStart;
-    onInput(e.target.value);
-    const el = document.getElementById(id);
-    if (el) { el.focus(); el.setSelectionRange(pos, pos); }
+    const value = e.target.value;
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      onInput(value);
+      const el = document.getElementById(id);
+      if (el) { el.focus(); el.setSelectionRange(pos, pos); }
+    }, 300);
   });
 }
 
