@@ -134,12 +134,22 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
-  background: var(--surface-0);
+  background: var(--surface-0) url("../img/page-bg.webp") no-repeat center top / cover fixed;
   color: var(--text-primary);
   font-family: 'Kanit', 'Noto Sans Thai', Tahoma, sans-serif;
   font-weight: 400;
   font-size: 15px;
   line-height: 1.6;
+}
+/* The pale page-background image is a light-theme-only decorative choice —
+   dark mode keeps the plain surface color instead. */
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) body {
+    background: var(--surface-0);
+  }
+}
+:root[data-theme="dark"] body {
+  background: var(--surface-0);
 }
 h1, h2, h3, h4 { font-weight: 600; margin: 0; }
 button, input, select, textarea { font-family: inherit; }
