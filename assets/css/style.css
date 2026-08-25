@@ -248,7 +248,7 @@ button, input, select, textarea { font-family: inherit; }
   border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 18px;
   box-shadow: var(--shadow-card);
 }
-.filter-field { display: flex; flex-direction: column; gap: 4px; min-width: 148px; }
+.filter-field { display: flex; flex-direction: column; gap: 4px; width: 168px; flex-shrink: 0; }
 .filter-field label { font-size: 11px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; }
 select, input[type="text"], input[type="search"], textarea {
   font-size: 13.5px; font-weight: 400; color: var(--text-primary);
