@@ -7,7 +7,7 @@ const LS_KEYS = {
 const STATE = {
   records: [],
   activeTab: 'overview',
-  filters: { orgLevel: 'divisionName', orgValue: '', courseType: '', inputFactor: '', deliveryType: '', status: '', search: '', perPersonMin: '', perPersonMax: '' },
+  filters: { orgLevel: 'divisionName', orgValue: '', courseType: '', inputFactor: '', deliveryType: '', status: '', search: '', perPersonMin: '', perPersonMax: '', perCourseMin: '', perCourseMax: '' },
   openDeptKeys: new Set(),
   openDupCourseKeys: new Set(),
   openPersonKeys: new Set(),
@@ -112,6 +112,11 @@ function matchesFiltersExcept(r, exceptKey) {
     if (cost === null) return false;
     if (f.perPersonMin !== '' && cost < Number(f.perPersonMin)) return false;
     if (f.perPersonMax !== '' && cost > Number(f.perPersonMax)) return false;
+  }
+  if (exceptKey !== 'perCourse' && (f.perCourseMin !== '' || f.perCourseMax !== '')) {
+    const cost = r.budgetTotal || 0;
+    if (f.perCourseMin !== '' && cost < Number(f.perCourseMin)) return false;
+    if (f.perCourseMax !== '' && cost > Number(f.perCourseMax)) return false;
   }
   return true;
 }
@@ -2042,6 +2047,14 @@ function renderFilterBar() {
         <input type="text" inputmode="numeric" id="f-pp-max" placeholder="สูงสุด" value="${escapeAttr(STATE.filters.perPersonMax)}" />
       </div>
     </div>
+    <div class="filter-field">
+      <label>ค่าใช้จ่าย/หลักสูตร (บาท)</label>
+      <div class="filter-range-row">
+        <input type="text" inputmode="numeric" id="f-pc-min" placeholder="ต่ำสุด" value="${escapeAttr(STATE.filters.perCourseMin)}" />
+        <span class="filter-range-sep">–</span>
+        <input type="text" inputmode="numeric" id="f-pc-max" placeholder="สูงสุด" value="${escapeAttr(STATE.filters.perCourseMax)}" />
+      </div>
+    </div>
     <button class="btn btn-ghost btn-sm" id="f-clear" style="align-self:flex-end;">ล้างตัวกรอง</button>
   `;
   const bind = (id, key, evt) => document.getElementById(id).addEventListener(evt || 'change', (e) => {
@@ -2058,8 +2071,10 @@ function renderFilterBar() {
   bindSearchInput('f-search', (v) => { STATE.filters.search = v; renderAll(); });
   bindSearchInput('f-pp-min', (v) => { STATE.filters.perPersonMin = v.replace(/[^\d]/g, ''); renderAll(); });
   bindSearchInput('f-pp-max', (v) => { STATE.filters.perPersonMax = v.replace(/[^\d]/g, ''); renderAll(); });
+  bindSearchInput('f-pc-min', (v) => { STATE.filters.perCourseMin = v.replace(/[^\d]/g, ''); renderAll(); });
+  bindSearchInput('f-pc-max', (v) => { STATE.filters.perCourseMax = v.replace(/[^\d]/g, ''); renderAll(); });
   document.getElementById('f-clear').addEventListener('click', () => {
-    STATE.filters = { orgLevel: STATE.filters.orgLevel, orgValue: '', courseType: '', inputFactor: '', deliveryType: '', status: '', search: '', perPersonMin: '', perPersonMax: '' };
+    STATE.filters = { orgLevel: STATE.filters.orgLevel, orgValue: '', courseType: '', inputFactor: '', deliveryType: '', status: '', search: '', perPersonMin: '', perPersonMax: '', perCourseMin: '', perCourseMax: '' };
     renderAll();
   });
 }
