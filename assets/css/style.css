@@ -209,6 +209,8 @@ button, input, select, textarea { font-family: inherit; }
 .btn-pending { background: var(--surface-2); border-color: var(--status-pending); color: var(--status-pending-text); }
 .btn-pending:hover { background: color-mix(in srgb, var(--status-pending) 14%, var(--surface-2)); }
 .btn-ghost { background: transparent; }
+#logout-btn { background: #FFF0B2; border-color: #FFF0B2; color: #4A3B00; }
+#logout-btn:hover { filter: brightness(0.96); }
 .btn-sm { padding: 6px 11px; font-size: 12.5px; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
 .icon-btn { width: 34px; height: 34px; padding: 0; justify-content: center; border-radius: 999px; }
