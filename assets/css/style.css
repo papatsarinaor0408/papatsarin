@@ -261,7 +261,7 @@ select:focus, input:focus, textarea:focus {
   outline: none; border-color: var(--series-1);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--series-1) 16%, transparent);
 }
-.filter-search { flex: 1.6; min-width: 220px; }
+.filter-search { flex: 0 1 280px; min-width: 220px; }
 .filter-range-row { display: flex; align-items: center; gap: 6px; }
 .filter-range-row input { width: 84px; min-width: 0; }
 .filter-range-sep { color: var(--text-muted); font-size: 13px; }
