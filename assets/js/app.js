@@ -1323,11 +1323,9 @@ function renderPersonnelTab() {
       if (detail) detail.classList.add('open');
     }
   });
-  const ppSearch = document.getElementById('pp-search');
-  if (ppSearch) ppSearch.addEventListener('input', (e) => {
-    STATE.personnelFilters.search = e.target.value;
-    renderPersonnelTab();
-  });
+  if (document.getElementById('pp-search')) {
+    bindSearchInput('pp-search', (v) => { STATE.personnelFilters.search = v; renderPersonnelTab(); });
+  }
   const ppSort = document.getElementById('pp-sort');
   if (ppSort) ppSort.addEventListener('change', (e) => {
     STATE.personnelFilters.sort = e.target.value;
