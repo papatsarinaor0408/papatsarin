@@ -175,6 +175,10 @@ function normalizeOrgKey(name) {
 const YOY_COLOR_2569 = '#64748B'; // Slate Blue-Gray
 const YOY_COLOR_2570 = '#8B5CF6'; // Purple
 
+// กรอบงบประมาณพัฒนาบุคลากรที่โรงไฟฟ้าบางปะกงได้รับจัดสรรจาก รวฟ. ปีงบประมาณ 2570
+// (ส่วนแบ่งจากกรอบรวม 9,000,000 บาท) — ตัวเลขคงที่ ไม่ได้มาจากฐานข้อมูล
+const BUDGET_FRAME_2570 = 894231;
+
 function makeYoyGroup(label, v1, v2, courses2569, isDeptLevel) {
   let kind, pct = null, color;
   if (v1 === 0 && v2 > 0) { kind = 'new'; color = YOY_COLOR_2570; }
@@ -607,6 +611,14 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
   const budgetDiffColor = budgetDiff > 0 ? 'var(--status-good)' : budgetDiff < 0 ? 'var(--status-critical)' : 'var(--text-muted)';
   const budgetDiffIcon = budgetDiff > 0 ? '↑' : budgetDiff < 0 ? '↓' : '→';
 
+  // งบที่ใช้ไปแล้ว (เห็นชอบ) เทียบกับกรอบงบที่ได้รับจัดสรร — ทั้งโรง ไม่กรองตามตัวกรองที่เลือก
+  const approvedBudgetPlantWide = STATE.records.filter((r) => r.reviewStatus === 'approved').reduce((s, r) => s + (r.budgetTotal || 0), 0);
+  const frameDiff = approvedBudgetPlantWide - BUDGET_FRAME_2570;
+  const framePct = BUDGET_FRAME_2570 > 0 ? (frameDiff / BUDGET_FRAME_2570) * 100 : 0;
+  // เกินกรอบ = แย่ (แดง), ต่ำกว่า/เท่ากรอบ = ดี (เขียว)
+  const frameDiffColor = frameDiff > 0 ? 'var(--status-critical)' : frameDiff < 0 ? 'var(--status-good)' : 'var(--text-muted)';
+  const frameDiffIcon = frameDiff > 0 ? '↑' : frameDiff < 0 ? '↓' : '→';
+
   // A. Mini KPIs — dynamic, ห้าม hard-code
   const miniKpis = document.getElementById('budget-mini-kpis');
   miniKpis.innerHTML = `
@@ -627,6 +639,11 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
       <div class="mini-kpi-label">หน่วยงานที่ใช้งบสูงสุด</div>
       <div class="mini-kpi-value" style="font-size:15px;">${topOrg ? escapeHtml(topOrg.name) : '—'}</div>
       <div class="mini-kpi-sub">${topOrg ? `${fmtBaht(topOrg.total)} · ${pctOf(topOrg.total)}%` : ''}</div>
+    </div>
+    <div class="mini-kpi-card">
+      <div class="mini-kpi-label">กรอบงบประมาณที่ได้รับจัดสรร (2570)</div>
+      <div class="mini-kpi-value">${fmtBaht(BUDGET_FRAME_2570)}</div>
+      <div class="mini-kpi-sub" style="color:${frameDiffColor};font-weight:700;">ใช้ไปแล้ว (เห็นชอบ) ${fmtBaht(approvedBudgetPlantWide)} — ${frameDiffIcon} ${frameDiff >= 0 ? 'เกินกรอบ ' : 'ต่ำกว่ากรอบ '}${fmtBaht(Math.abs(frameDiff))} (${framePct >= 0 ? '+' : ''}${framePct.toFixed(1)}%)</div>
     </div>
   `;
 
