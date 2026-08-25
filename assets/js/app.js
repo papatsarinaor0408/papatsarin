@@ -617,7 +617,9 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
   const frameDiff = approvedBudgetPlantWide - BUDGET_FRAME_2570;
   const framePct = BUDGET_FRAME_2570 > 0 ? (frameDiff / BUDGET_FRAME_2570) * 100 : 0;
   // เกินกรอบ = แย่ (แดง), ต่ำกว่า/เท่ากรอบ = ดี (เขียว)
-  const frameDiffColor = frameDiff > 0 ? 'var(--status-critical)' : frameDiff < 0 ? 'var(--status-good)' : 'var(--text-muted)';
+  // Literal green/red per request — the app's usual --status-good/critical
+  // vars are purple/pink, not distinctly green/red.
+  const frameDiffColor = frameDiff > 0 ? '#DC2626' : frameDiff < 0 ? '#16A34A' : 'var(--text-muted)';
   const frameDiffIcon = frameDiff > 0 ? '↑' : frameDiff < 0 ? '↓' : '→';
 
   // A. Mini KPIs — dynamic, ห้าม hard-code
@@ -648,7 +650,7 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
   if (frameHero) {
     const usedPct = BUDGET_FRAME_2570 > 0 ? (approvedBudgetPlantWide / BUDGET_FRAME_2570) * 100 : 0;
     const barWidth = Math.min(Math.max(usedPct, 0), 100);
-    const barColor = frameDiff > 0 ? 'var(--status-critical)' : 'var(--status-good)';
+    const barColor = frameDiff > 0 ? '#DC2626' : '#16A34A';
     frameHero.innerHTML = `
       <div class="bfh-label">เปรียบเทียบงบประมาณพัฒนาบุคลากรที่ได้รับจัดสรร ปีงบประมาณ 2570</div>
       <div class="bfh-row">
