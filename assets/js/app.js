@@ -396,6 +396,7 @@ function renderOverview() {
   ];
 
   root.innerHTML = `
+    <div class="budget-frame-hero" id="budget-frame-hero"></div>
     <div class="kpi-grid">
       ${kpis.map((k) => `
         <div class="kpi-card${k.darkText ? ' kpi-dark-text' : ''}" style="--kpi-color:${k.color}">
@@ -640,12 +641,34 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
       <div class="mini-kpi-value" style="font-size:15px;">${topOrg ? escapeHtml(topOrg.name) : '—'}</div>
       <div class="mini-kpi-sub">${topOrg ? `${fmtBaht(topOrg.total)} · ${pctOf(topOrg.total)}%` : ''}</div>
     </div>
-    <div class="mini-kpi-card">
-      <div class="mini-kpi-label">กรอบงบประมาณที่ได้รับจัดสรร (2570)</div>
-      <div class="mini-kpi-value">${fmtBaht(BUDGET_FRAME_2570)}</div>
-      <div class="mini-kpi-sub" style="color:${frameDiffColor};font-weight:700;">ใช้ไปแล้ว (เห็นชอบ) ${fmtBaht(approvedBudgetPlantWide)} — ${frameDiffIcon} ${frameDiff >= 0 ? 'เกินกรอบ ' : 'ต่ำกว่ากรอบ '}${fmtBaht(Math.abs(frameDiff))} (${framePct >= 0 ? '+' : ''}${framePct.toFixed(1)}%)</div>
-    </div>
   `;
+
+  // A0. Budget-frame hero — prominent, at the top of the Overview tab
+  const frameHero = document.getElementById('budget-frame-hero');
+  if (frameHero) {
+    const usedPct = BUDGET_FRAME_2570 > 0 ? (approvedBudgetPlantWide / BUDGET_FRAME_2570) * 100 : 0;
+    const barWidth = Math.min(Math.max(usedPct, 0), 100);
+    const barColor = frameDiff > 0 ? 'var(--status-critical)' : 'var(--status-good)';
+    frameHero.innerHTML = `
+      <div class="bfh-label">เปรียบเทียบงบประมาณพัฒนาบุคลากรที่ได้รับจัดสรร ปีงบประมาณ 2570</div>
+      <div class="bfh-row">
+        <div class="bfh-stat">
+          <div class="bfh-stat-label">กรอบงบประมาณที่ได้รับจัดสรร</div>
+          <div class="bfh-stat-value">${fmtBaht(BUDGET_FRAME_2570)}</div>
+        </div>
+        <div class="bfh-vs">เทียบกับ</div>
+        <div class="bfh-stat">
+          <div class="bfh-stat-label">ใช้ไปแล้ว (หลักสูตรที่เห็นชอบ)</div>
+          <div class="bfh-stat-value">${fmtBaht(approvedBudgetPlantWide)}</div>
+        </div>
+        <div class="bfh-diff">
+          <div class="bfh-diff-label">ส่วนต่างจากกรอบ</div>
+          <div class="bfh-diff-value" style="color:${frameDiffColor};">${frameDiffIcon} ${frameDiff >= 0 ? 'เกินกรอบ ' : 'ต่ำกว่ากรอบ '}${fmtBaht(Math.abs(frameDiff))} (${framePct >= 0 ? '+' : ''}${framePct.toFixed(1)}%)</div>
+        </div>
+      </div>
+      <div class="bfh-bar-track"><div class="bfh-bar-fill" style="width:${barWidth}%;background:${barColor};"></div></div>
+    `;
+  }
 
   // B. Budget chart — horizontal stacked bar by status, top 10 by total budget desc
   const statusSeriesBudget = [
