@@ -2139,7 +2139,7 @@ function renderImportBanner() {
   const updatedLine = info
     ? `<div>ข้อมูลอัปเดตล่าสุด: <b>${fmtThaiDateTime(info.imported_at)}</b> <span style="color:var(--text-muted);">(ข้อมูลจากไฟล์ที่นำเข้าปัจจุบัน)</span></div>`
     : '';
-  el.innerHTML = `<span class="icon">📄</span><div class="grow"><div class="title">ข้อมูลส่วนกลาง</div><div>แผนที่ใช้งานอยู่ในระบบขณะนี้: ${fmtNum(STATE.records.length)} รายการ</div>${updatedLine}</div>`;
+  el.innerHTML = `<span class="icon">📄</span><div class="grow"><div class="title">ข้อมูลนำเข้า</div><div>แผนที่ใช้งานอยู่ในระบบขณะนี้: ${fmtNum(STATE.records.length)} รายการ</div>${updatedLine}</div>`;
 }
 
 /* ==================================================================== */
