@@ -506,13 +506,13 @@ tr.row-status-rejected { background: color-mix(in srgb, var(--status-critical) 7
   /* A bit over half the screen on desktop (60vw), full-width on mobile
      (the trailing 100% term), capped so it doesn't get absurdly wide on
      ultra-wide monitors. */
-  width: min(1100px, max(60vw, 600px), 100%); background: var(--surface-1); height: 100%;
+  width: min(1100px, max(60vw, 600px), 100%); background: #fff; height: 100%;
   box-shadow: var(--shadow-2); overflow-y: auto; animation: slidein .18s ease;
   display: flex; flex-direction: column;
 }
 @keyframes slidein { from { transform: translateX(24px); opacity: .6; } to { transform:none; opacity:1; } }
 .drawer-header {
-  position: sticky; top: 0; background: var(--surface-1); z-index: 2;
+  position: sticky; top: 0; background: #fff; z-index: 2;
   border-bottom: 1px solid var(--grid); padding: 18px 22px; display: flex; gap: 12px; align-items: flex-start;
 }
 .drawer-title-banner {
