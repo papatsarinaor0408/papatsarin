@@ -7,7 +7,7 @@ const LS_KEYS = {
 const STATE = {
   records: [],
   activeTab: 'overview',
-  filters: { orgLevel: 'divisionName', orgValue: '', courseType: '', inputFactor: '', deliveryType: '', status: '', search: '' },
+  filters: { orgLevel: 'divisionName', orgValue: '', courseType: '', inputFactor: '', deliveryType: '', status: '', search: '', perPersonMin: '', perPersonMax: '' },
   openDeptKeys: new Set(),
   openDupCourseKeys: new Set(),
   openPersonKeys: new Set(),
@@ -86,6 +86,12 @@ function getFiltered() { return STATE.records.filter(matchesFilters); }
  * only shows ประเภทการอบรม values that actually occur there, instead of
  * every possible value regardless of what's already selected.
  */
+/** ค่าใช้จ่ายเฉลี่ยต่อผู้เข้าอบรม 1 คน — null เมื่อไม่ทราบจำนวนผู้เข้าอบรม (หารไม่ได้). */
+function costPerPerson(r) {
+  const participants = Number(r.participants || 0);
+  if (!participants) return null;
+  return (r.budgetTotal || 0) / participants;
+}
 function matchesFiltersExcept(r, exceptKey) {
   const f = STATE.filters;
   if (exceptKey !== 'orgValue' && f.orgValue && r[f.orgLevel] !== f.orgValue) return false;
@@ -100,6 +106,12 @@ function matchesFiltersExcept(r, exceptKey) {
     const q = f.search.toLowerCase();
     const hay = [r.nameTh, r.creatorName, r.targetGroupNames, r.divisionName, r.sectionName].join(' ').toLowerCase();
     if (!hay.includes(q)) return false;
+  }
+  if (exceptKey !== 'perPerson' && (f.perPersonMin !== '' || f.perPersonMax !== '')) {
+    const cost = costPerPerson(r);
+    if (cost === null) return false;
+    if (f.perPersonMin !== '' && cost < Number(f.perPersonMin)) return false;
+    if (f.perPersonMax !== '' && cost > Number(f.perPersonMax)) return false;
   }
   return true;
 }
@@ -2022,6 +2034,14 @@ function renderFilterBar() {
       <input type="search" id="f-search" list="course-suggestions" placeholder="ชื่อแผน, ผู้เสนอ, กลุ่มเป้าหมาย..." value="${escapeAttr(STATE.filters.search)}" />
       <datalist id="course-suggestions">${courseNameOptions.map((n) => `<option value="${escapeAttr(n)}"></option>`).join('')}</datalist>
     </div>
+    <div class="filter-field">
+      <label>ค่าใช้จ่าย/คน (บาท)</label>
+      <div class="filter-range-row">
+        <input type="text" inputmode="numeric" id="f-pp-min" placeholder="ต่ำสุด" value="${escapeAttr(STATE.filters.perPersonMin)}" />
+        <span class="filter-range-sep">–</span>
+        <input type="text" inputmode="numeric" id="f-pp-max" placeholder="สูงสุด" value="${escapeAttr(STATE.filters.perPersonMax)}" />
+      </div>
+    </div>
     <button class="btn btn-ghost btn-sm" id="f-clear" style="align-self:flex-end;">ล้างตัวกรอง</button>
   `;
   const bind = (id, key, evt) => document.getElementById(id).addEventListener(evt || 'change', (e) => {
@@ -2036,8 +2056,10 @@ function renderFilterBar() {
   bind('f-deliverytype', 'deliveryType');
   bind('f-status', 'status');
   bindSearchInput('f-search', (v) => { STATE.filters.search = v; renderAll(); });
+  bindSearchInput('f-pp-min', (v) => { STATE.filters.perPersonMin = v.replace(/[^\d]/g, ''); renderAll(); });
+  bindSearchInput('f-pp-max', (v) => { STATE.filters.perPersonMax = v.replace(/[^\d]/g, ''); renderAll(); });
   document.getElementById('f-clear').addEventListener('click', () => {
-    STATE.filters = { orgLevel: STATE.filters.orgLevel, orgValue: '', courseType: '', inputFactor: '', deliveryType: '', status: '', search: '' };
+    STATE.filters = { orgLevel: STATE.filters.orgLevel, orgValue: '', courseType: '', inputFactor: '', deliveryType: '', status: '', search: '', perPersonMin: '', perPersonMax: '' };
     renderAll();
   });
 }
