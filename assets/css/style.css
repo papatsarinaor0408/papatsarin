@@ -397,7 +397,7 @@ svg text { font-family: inherit; fill: var(--text-secondary); font-weight: 300; 
 .insight-rank-value { font-weight: 500; color: var(--text-secondary); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 /* ---------- Table ---------- */
-.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-md); }
+.table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-1); }
 table.data-table { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 760px; }
 table.data-table th {
   text-align: left; font-size: 11.5px; font-weight: 500; color: var(--table-header-text);
