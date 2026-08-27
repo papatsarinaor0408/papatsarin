@@ -1356,8 +1356,8 @@ async function loadLoginHistoryTab() {
 function matchesLoginHistoryFilters(e) {
   const f = STATE.loginHistoryFilters;
   if (f.department && (e.department || '') !== f.department) return false;
-  if (f.dateFrom && e.created_at < f.dateFrom + 'T00:00:00') return false;
-  if (f.dateTo && e.created_at > f.dateTo + 'T23:59:59.999') return false;
+  if (f.dateFrom && new Date(e.created_at) < new Date(f.dateFrom + 'T00:00:00')) return false;
+  if (f.dateTo && new Date(e.created_at) > new Date(f.dateTo + 'T23:59:59.999')) return false;
   if (f.search) {
     const q = f.search.toLowerCase();
     const hay = [e.employee_id, e.full_name, e.position, e.department].join(' ').toLowerCase();
@@ -1463,8 +1463,8 @@ async function loadActivityLogTab() {
 function matchesActivityLogFilters(e) {
   const f = STATE.activityLogFilters;
   if (f.action && e.action !== f.action) return false;
-  if (f.dateFrom && e.created_at < f.dateFrom + 'T00:00:00') return false;
-  if (f.dateTo && e.created_at > f.dateTo + 'T23:59:59.999') return false;
+  if (f.dateFrom && new Date(e.created_at) < new Date(f.dateFrom + 'T00:00:00')) return false;
+  if (f.dateTo && new Date(e.created_at) > new Date(f.dateTo + 'T23:59:59.999')) return false;
   if (f.search) {
     const q = f.search.toLowerCase();
     const hay = [e.employee_id, e.actor_full_name, e.actor_position, e.action, e.target_type, e.target_id, e.note].join(' ').toLowerCase();
