@@ -695,16 +695,22 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
   const budgetEl = document.getElementById('chart-budget');
   if (budgetGroups.some((g) => g.count > 0)) {
     const orgTotal = (g) => (g.values.pending || 0) + (g.values.approved || 0) + (g.values.revise || 0) + (g.values.rejected || 0) + (g.values.central || 0);
+    const statusCols = [
+      { key: 'pending', label: REVIEW_STATUS.pending.label, color: 'var(--status-pending)', text: 'var(--status-pending-text)' },
+      { key: 'approved', label: REVIEW_STATUS.approved.label, color: 'var(--status-good)', text: 'var(--status-good-text)' },
+      { key: 'revise', label: REVIEW_STATUS.revise.label, color: 'var(--status-warning)', text: 'var(--status-warning-text)' },
+      { key: 'rejected', label: REVIEW_STATUS.rejected.label, color: 'var(--status-critical)', text: 'var(--status-critical-text)' },
+      { key: 'central', label: REVIEW_STATUS.central.label, color: 'var(--status-central)', text: 'var(--status-central-text)' },
+    ];
+    const totalsByStatus = {};
+    statusCols.forEach((c) => { totalsByStatus[c.key] = budgetGroups.reduce((s, g) => s + (g.values[c.key] || 0), 0); });
+    const grandShown = statusCols.reduce((s, c) => s + totalsByStatus[c.key], 0);
     budgetEl.innerHTML = `
       <div class="table-wrap">
         <table class="data-table">
           <thead><tr>
             <th>หน่วยงาน</th>
-            <th class="num" style="color:var(--status-pending-text);">${REVIEW_STATUS.pending.label}</th>
-            <th class="num" style="color:var(--status-good-text);">${REVIEW_STATUS.approved.label}</th>
-            <th class="num" style="color:var(--status-warning-text);">${REVIEW_STATUS.revise.label}</th>
-            <th class="num" style="color:var(--status-critical-text);">${REVIEW_STATUS.rejected.label}</th>
-            <th class="num" style="color:var(--status-central-text);">${REVIEW_STATUS.central.label}</th>
+            ${statusCols.map((c) => `<th class="num" style="background:color-mix(in srgb, ${c.color} 22%, var(--surface-1));color:${c.text};">${c.label}</th>`).join('')}
             <th class="num">รวม</th>
             <th class="num">% ของงบรวม</th>
           </tr></thead>
@@ -712,15 +718,17 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
             ${budgetGroups.map((g) => `
               <tr>
                 <td class="cell-name">${escapeHtml(g.label)}</td>
-                <td class="num">${g.values.pending ? fmtBaht(g.values.pending) : '<span class="cell-muted">-</span>'}</td>
-                <td class="num">${g.values.approved ? fmtBaht(g.values.approved) : '<span class="cell-muted">-</span>'}</td>
-                <td class="num">${g.values.revise ? fmtBaht(g.values.revise) : '<span class="cell-muted">-</span>'}</td>
-                <td class="num">${g.values.rejected ? fmtBaht(g.values.rejected) : '<span class="cell-muted">-</span>'}</td>
-                <td class="num">${g.values.central ? fmtBaht(g.values.central) : '<span class="cell-muted">-</span>'}</td>
+                ${statusCols.map((c) => `<td class="num" style="background:color-mix(in srgb, ${c.color} 8%, transparent);">${g.values[c.key] ? fmtBaht(g.values[c.key]) : '<span class="cell-muted">-</span>'}</td>`).join('')}
                 <td class="num" style="font-weight:600;">${fmtBaht(orgTotal(g))}</td>
                 <td class="num">${pctOf(orgTotal(g))}%</td>
               </tr>
             `).join('')}
+            <tr style="border-top:2px solid var(--border);font-weight:700;">
+              <td class="cell-name">รวม</td>
+              ${statusCols.map((c) => `<td class="num" style="background:color-mix(in srgb, ${c.color} 8%, transparent);">${totalsByStatus[c.key] ? fmtBaht(totalsByStatus[c.key]) : '<span class="cell-muted">-</span>'}</td>`).join('')}
+              <td class="num">${fmtBaht(grandShown)}</td>
+              <td class="num">${pctOf(grandShown)}%</td>
+            </tr>
           </tbody>
         </table>
       </div>`;
