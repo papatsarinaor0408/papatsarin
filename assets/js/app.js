@@ -1128,8 +1128,9 @@ function renderDupCoursesTab() {
   const totalParticipants = (records) => records.reduce((s, r) => s + (Number(r.participants) || 0), 0);
 
   root.innerHTML = `
-    <div class="filter-count" style="margin-bottom:10px;">
-      พบหลักสูตรที่มากกว่า 1 หน่วยงานเสนอเหมือนกัน ${fmtNum(dupGroups.length)} หลักสูตร (จากทั้งหมด ${fmtNum(data.length)} แผนที่ตรงตัวกรอง) — คลิกแถวเพื่อดูรายละเอียดแต่ละหน่วยงาน
+    <div class="filter-count" style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+      <span>พบหลักสูตรที่มากกว่า 1 หน่วยงานเสนอเหมือนกัน ${fmtNum(dupGroups.length)} หลักสูตร (จากทั้งหมด ${fmtNum(data.length)} แผนที่ตรงตัวกรอง) — คลิกแถวเพื่อดูรายละเอียดแต่ละหน่วยงาน</span>
+      <button class="btn" id="export-dupcourses-btn"${dupGroups.length ? '' : ' disabled'}>⬇ ส่งออกรายการซ้ำ (CSV)</button>
     </div>
     <div class="table-wrap">
       <table class="data-table">
@@ -1196,6 +1197,46 @@ function renderDupCoursesTab() {
       if (detail) detail.classList.add('open');
     }
   });
+
+  const exportBtn = root.querySelector('#export-dupcourses-btn');
+  if (exportBtn) exportBtn.addEventListener('click', () => exportDupCoursesCsv(dupGroups, unitOf));
+}
+
+/**
+ * Flattens every duplicate-course group into one row per org's proposal,
+ * grouped together in the file (course name, then org) so the person doing
+ * the merge in the external HR system can work through it top-to-bottom
+ * without missing a duplicate — one CSV row per record, with the review
+ * status included since some duplicates end up "revise" and others
+ * "approved", which decides which record they keep and edit.
+ */
+function exportDupCoursesCsv(dupGroups, unitOf) {
+  const rows = [];
+  dupGroups.forEach((g) => {
+    g.records.slice().sort((a, b) => unitOf(a).localeCompare(unitOf(b), 'th')).forEach((r) => {
+      rows.push({ ...r, groupUnitCount: g.units.length, reviewStatusLabel: REVIEW_STATUS[r.reviewStatus].label });
+    });
+  });
+  const cols = [
+    ['nameTh', 'ชื่อหลักสูตร'],
+    ['groupUnitCount', 'จำนวนหน่วยงานที่ซ้ำ'],
+    ['courseType', 'ประเภทหลักสูตร'],
+    ['deliveryType', 'ประเภทการอบรม'],
+    ['deptName', 'ฝ่ายผู้สร้างหลักสูตร'],
+    ['divisionName', 'กองผู้สร้างหลักสูตร'],
+    ['sectionName', 'แผนกผู้สร้างหลักสูตร'],
+    ['creatorName', 'ผู้สร้างหลักสูตร'],
+    ['creatorId', 'เลขประจำตัวผู้สร้างหลักสูตร'],
+    ['targetGroupNames', 'กลุ่มเป้าหมาย (รายชื่อ)'],
+    ['participants', 'จำนวนผู้เข้าอบรม (คน)'],
+    ['budgetTotal', 'งบประมาณที่เสนอ (บาท)'],
+    ['approvedBudget', 'วงเงินที่ อฟก. อนุมัติ (บาท)'],
+    ['reviewStatusLabel', 'สถานะการพิจารณา'],
+    ['remark', 'หมายเหตุ (จากไฟล์นำเข้า)'],
+    ['reviewNote', 'หมายเหตุการพิจารณา'],
+    ['id', 'รหัสแผน'],
+  ];
+  downloadCsv('หลักสูตรที่ซ้ำกัน_2570.csv', cols, rows, (row, key) => row[key]);
 }
 
 /** Shared CSV builder — BOM + CRLF + quote-escaping, matching exportCsv(). */
