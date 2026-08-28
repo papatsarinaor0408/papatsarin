@@ -705,6 +705,11 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
     const totalsByStatus = {};
     statusCols.forEach((c) => { totalsByStatus[c.key] = budgetGroups.reduce((s, g) => s + (g.values[c.key] || 0), 0); });
     const grandShown = statusCols.reduce((s, c) => s + totalsByStatus[c.key], 0);
+    // data-org omitted (not data-org="") on the totals row/cells so the click
+    // handler below can tell "this org" apart from "all shown orgs" cleanly.
+    const cell = (value, color, org, statusKey) => value
+      ? `<td class="num cell-clickable" style="background:color-mix(in srgb, ${color} 8%, transparent);" data-status="${statusKey}"${org ? ` data-org="${escapeAttr(org)}"` : ''}>${fmtBaht(value)}</td>`
+      : `<td class="num" style="background:color-mix(in srgb, ${color} 8%, transparent);"><span class="cell-muted">-</span></td>`;
     budgetEl.innerHTML = `
       <div class="table-wrap">
         <table class="data-table">
@@ -718,20 +723,31 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
             ${budgetGroups.map((g) => `
               <tr>
                 <td class="cell-name">${escapeHtml(g.label)}</td>
-                ${statusCols.map((c) => `<td class="num" style="background:color-mix(in srgb, ${c.color} 8%, transparent);">${g.values[c.key] ? fmtBaht(g.values[c.key]) : '<span class="cell-muted">-</span>'}</td>`).join('')}
-                <td class="num" style="font-weight:600;">${fmtBaht(orgTotal(g))}</td>
+                ${statusCols.map((c) => cell(g.values[c.key] || 0, c.color, g.label, c.key)).join('')}
+                <td class="num cell-clickable" style="font-weight:600;" data-status="all" data-org="${escapeAttr(g.label)}">${fmtBaht(orgTotal(g))}</td>
                 <td class="num">${pctOf(orgTotal(g))}%</td>
               </tr>
             `).join('')}
             <tr style="border-top:2px solid var(--border);font-weight:700;">
               <td class="cell-name">รวม</td>
-              ${statusCols.map((c) => `<td class="num" style="background:color-mix(in srgb, ${c.color} 8%, transparent);">${totalsByStatus[c.key] ? fmtBaht(totalsByStatus[c.key]) : '<span class="cell-muted">-</span>'}</td>`).join('')}
-              <td class="num">${fmtBaht(grandShown)}</td>
+              ${statusCols.map((c) => cell(totalsByStatus[c.key], c.color, '', c.key)).join('')}
+              <td class="num cell-clickable" data-status="all">${fmtBaht(grandShown)}</td>
               <td class="num">${pctOf(grandShown)}%</td>
             </tr>
           </tbody>
         </table>
       </div>`;
+    const shownOrgNames = new Set(budgetGroups.map((g) => g.label));
+    budgetEl.querySelectorAll('td.cell-clickable').forEach((td) => {
+      td.addEventListener('click', () => {
+        const org = td.dataset.org || '';
+        const status = td.dataset.status;
+        const rows = data.filter((r) => (org ? r[orgLevel] === org : shownOrgNames.has(r[orgLevel])) && (status === 'all' || r.reviewStatus === status));
+        const statusLabel = status === 'all' ? 'ทุกสถานะ' : REVIEW_STATUS[status].label;
+        const title = org ? `${org} — ${statusLabel}` : `รวม 10 หน่วยงานสูงสุด — ${statusLabel}`;
+        openChartDetailModal(title, rows);
+      });
+    });
   } else {
     budgetEl.innerHTML = '<div class="empty-state">ไม่มีข้อมูลงบประมาณ</div>';
   }

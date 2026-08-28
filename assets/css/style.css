@@ -452,6 +452,12 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
 .cell-muted { color: var(--text-muted); }
 .num, table.data-table th.num { font-variant-numeric: tabular-nums; text-align: right; }
 tr.clickable { cursor: pointer; }
+td.cell-clickable { cursor: pointer; transition: filter .12s; }
+td.cell-clickable:hover { filter: brightness(0.93); }
+:root[data-theme="dark"] td.cell-clickable:hover { filter: brightness(1.25); }
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) td.cell-clickable:hover { filter: brightness(1.25); }
+}
 
 /* Thin background tint on already-decided rows in the review table, using
    the same status color as the decision buttons but much lighter — pending
