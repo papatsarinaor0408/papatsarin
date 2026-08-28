@@ -767,9 +767,14 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
   }
 
   // C. Executive Insight Panel — คำนวณจากข้อมูลที่ผ่าน filter ปัจจุบันทั้งหมด ไม่มีข้อมูลสมมติ
-  const top3 = orgs.slice().sort((a, b) => b.total - a.total).filter((o) => o.total > 0).slice(0, 3);
+  // "เห็นชอบ" ในแผงนี้หมายถึง เห็นชอบ + เห็นชอบแต่ให้ทบทวน รวมกัน — สัมพันธ์กับ
+  // ความหมายของคอลัมน์ "รวมงบที่เห็นชอบ" ในตารางด้านบน
+  const approvedSumOf = (o) => (o.byStatus.approved || 0) + (o.byStatus.revise || 0);
+  const grandApprovedAll = orgs.reduce((s, o) => s + approvedSumOf(o), 0);
+  const pctOfApprovedAll = (v) => (grandApprovedAll > 0 ? ((v / grandApprovedAll) * 100).toFixed(1) : '0.0');
+  const top3 = orgs.slice().sort((a, b) => approvedSumOf(b) - approvedSumOf(a)).filter((o) => approvedSumOf(o) > 0).slice(0, 3);
   const maxPending = maxOrgBy(orgs, (o) => o.byStatus.pending);
-  const maxApproved = maxOrgBy(orgs, (o) => o.byStatus.approved);
+  const maxApproved = maxOrgBy(orgs, approvedSumOf);
   const maxRejected = maxOrgBy(orgs, (o) => o.byStatus.rejected);
   const maxPlans = orgs.slice().sort((a, b) => b.count - a.count)[0] || null;
 
@@ -788,17 +793,17 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
         <div class="card-title">ข้อมูลเชิงลึก (Insight)</div>
         <div class="card-sub" style="margin-bottom:0;">อัปเดตตามตัวกรองปัจจุบัน</div>
       </div>
-      ${insightItem('🏆', 'var(--series-1)', '3 หน่วยงานที่ใช้งบสูงสุด',
+      ${insightItem('🏆', 'var(--series-1)', '3 หน่วยงานที่มีงบเห็นชอบสูงสุด',
         top3.length ? `<div class="insight-rank-list">${top3.map((o, i) => `
           <div class="insight-rank-row">
             <span class="insight-rank-num">${i + 1}</span>
             <span class="insight-rank-name">${escapeHtml(o.name)}</span>
-            <span class="insight-rank-value">${fmtBaht(o.total)} · ${pctOf(o.total)}%</span>
+            <span class="insight-rank-value">${fmtBaht(approvedSumOf(o))} · ${pctOfApprovedAll(approvedSumOf(o))}%</span>
           </div>`).join('')}</div>` : '<div class="insight-value">—</div>')}
       ${insightItem('📋', 'var(--series-1)', 'หน่วยงานที่มีจำนวนแผนมากที่สุด',
         maxPlans && maxPlans.count > 0 ? `<div class="insight-name">${escapeHtml(maxPlans.name)}</div><div class="insight-value">${fmtNum(maxPlans.count)} แผน</div>` : '<div class="insight-value">—</div>')}
       ${insightItem('✓', 'var(--status-good)', 'หน่วยงานที่มีงบเห็นชอบสูงสุด',
-        maxApproved ? `<div class="insight-name">${escapeHtml(maxApproved.name)}</div><div class="insight-value">${fmtBaht(maxApproved.byStatus.approved)}</div>` : '<div class="insight-value">—</div>')}
+        maxApproved ? `<div class="insight-name">${escapeHtml(maxApproved.name)}</div><div class="insight-value">${fmtBaht(approvedSumOf(maxApproved))}</div>` : '<div class="insight-value">—</div>')}
       ${insightItem('✕', 'var(--status-critical)', 'หน่วยงานที่มีงบไม่เห็นชอบสูงสุด',
         maxRejected ? `<div class="insight-name">${escapeHtml(maxRejected.name)}</div><div class="insight-value">${fmtBaht(maxRejected.byStatus.rejected)}</div>` : '<div class="insight-value">—</div>')}
       ${insightItem('⏳', 'var(--status-pending)', 'หน่วยงานที่มีงบรอพิจารณาสูงสุด',
