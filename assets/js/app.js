@@ -672,7 +672,7 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
     const domesticBarWidth = Math.max(domesticPctRaw * barScale, 0);
     const overseasBarWidth = Math.max(overseasPctRaw * barScale, 0);
     const domesticBarColor = frameDiff > 0 ? '#DC2626' : '#16A34A'; // เกินกรอบ = แดง, อยู่ในกรอบ = เขียว (เงื่อนไขเดิม)
-    const overseasBarColor = frameDiff > 0 ? '#EA580C' : '#2563EB'; // เกินกรอบ = ส้ม, อยู่ในกรอบ = ฟ้า
+    const overseasBarColor = frameDiff > 0 ? '#EAB308' : '#2563EB'; // เกินกรอบ = เหลือง, อยู่ในกรอบ = ฟ้า
     // หลักสูตรต่างประเทศไม่นับรวมในยอดนี้ — งบของหลักสูตรเหล่านี้ไปอยู่ในการพิจารณาของ อศค. แยกต่างหาก
     const totalProposedPlantWide = STATE.records
       .filter((r) => (deliveryTypeOf(r) || '').indexOf('ต่างประเทศ') === -1)
