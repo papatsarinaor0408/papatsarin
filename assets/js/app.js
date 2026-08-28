@@ -694,7 +694,9 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
     .map((o) => ({ label: o.name, values: o.byStatus, count: o.count, avg: o.avg }));
   const budgetEl = document.getElementById('chart-budget');
   if (budgetGroups.some((g) => g.count > 0)) {
-    const orgTotal = (g) => (g.values.pending || 0) + (g.values.approved || 0) + (g.values.revise || 0) + (g.values.rejected || 0) + (g.values.central || 0);
+    // "รวม" now means budget already given a positive decision — เห็นชอบ +
+    // เห็นชอบแต่ให้ทบทวน — not a sum across every status.
+    const approvedTotal = (g) => (g.values.approved || 0) + (g.values.revise || 0);
     const statusCols = [
       { key: 'pending', label: REVIEW_STATUS.pending.label, color: 'var(--status-pending)', text: 'var(--status-pending-text)' },
       { key: 'approved', label: REVIEW_STATUS.approved.label, color: 'var(--status-good)', text: 'var(--status-good-text)' },
@@ -704,7 +706,8 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
     ];
     const totalsByStatus = {};
     statusCols.forEach((c) => { totalsByStatus[c.key] = budgetGroups.reduce((s, g) => s + (g.values[c.key] || 0), 0); });
-    const grandShown = statusCols.reduce((s, c) => s + totalsByStatus[c.key], 0);
+    const approvedGrandShown = budgetGroups.reduce((s, g) => s + approvedTotal(g), 0);
+    const pctOfApproved = (v) => (approvedGrandShown > 0 ? ((v / approvedGrandShown) * 100).toFixed(1) : '0.0');
     // data-org omitted (not data-org="") on the totals row/cells so the click
     // handler below can tell "this org" apart from "all shown orgs" cleanly.
     const cell = (value, color, org, statusKey) => value
@@ -716,23 +719,23 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
           <thead><tr>
             <th>หน่วยงาน</th>
             ${statusCols.map((c) => `<th class="num" style="background:color-mix(in srgb, ${c.color} 22%, var(--surface-1));color:${c.text};">${c.label}</th>`).join('')}
-            <th class="num">รวม</th>
-            <th class="num">% ของงบรวม</th>
+            <th class="num">รวมงบที่เห็นชอบ</th>
+            <th class="num">% ของงบเห็นชอบ</th>
           </tr></thead>
           <tbody>
             ${budgetGroups.map((g) => `
               <tr>
                 <td class="cell-name">${escapeHtml(g.label)}</td>
                 ${statusCols.map((c) => cell(g.values[c.key] || 0, c.color, g.label, c.key)).join('')}
-                <td class="num cell-clickable" style="font-weight:600;" data-status="all" data-org="${escapeAttr(g.label)}">${fmtBaht(orgTotal(g))}</td>
-                <td class="num">${pctOf(orgTotal(g))}%</td>
+                <td class="num cell-clickable" style="font-weight:600;" data-status="approved_group" data-org="${escapeAttr(g.label)}">${fmtBaht(approvedTotal(g))}</td>
+                <td class="num">${pctOfApproved(approvedTotal(g))}%</td>
               </tr>
             `).join('')}
             <tr style="border-top:2px solid var(--border);font-weight:700;">
               <td class="cell-name">รวม</td>
               ${statusCols.map((c) => cell(totalsByStatus[c.key], c.color, '', c.key)).join('')}
-              <td class="num cell-clickable" data-status="all">${fmtBaht(grandShown)}</td>
-              <td class="num">${pctOf(grandShown)}%</td>
+              <td class="num cell-clickable" data-status="approved_group">${fmtBaht(approvedGrandShown)}</td>
+              <td class="num">${pctOfApproved(approvedGrandShown)}%</td>
             </tr>
           </tbody>
         </table>
@@ -742,8 +745,13 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
       td.addEventListener('click', () => {
         const org = td.dataset.org || '';
         const status = td.dataset.status;
-        const rows = data.filter((r) => (org ? r[orgLevel] === org : shownOrgNames.has(r[orgLevel])) && (status === 'all' || r.reviewStatus === status));
-        const statusLabel = status === 'all' ? 'ทุกสถานะ' : REVIEW_STATUS[status].label;
+        const matchesStatus = (r) => {
+          if (status === 'all') return true;
+          if (status === 'approved_group') return r.reviewStatus === 'approved' || r.reviewStatus === 'revise';
+          return r.reviewStatus === status;
+        };
+        const rows = data.filter((r) => (org ? r[orgLevel] === org : shownOrgNames.has(r[orgLevel])) && matchesStatus(r));
+        const statusLabel = status === 'all' ? 'ทุกสถานะ' : status === 'approved_group' ? 'งบที่เห็นชอบ (เห็นชอบ + เห็นชอบแต่ให้ทบทวน)' : REVIEW_STATUS[status].label;
         const title = org ? `${org} — ${statusLabel}` : `รวม 10 หน่วยงานสูงสุด — ${statusLabel}`;
         openChartDetailModal(title, rows);
       });
