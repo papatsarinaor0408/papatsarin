@@ -689,9 +689,12 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
     `;
   }
 
-  // B. Budget table — per-org breakdown by status, top 10 by total budget desc
+  // B. Budget table — per-org breakdown by status, top 10 by total budget
+  // desc, then อฟก. pinned first among those (stable sort keeps the rest in
+  // budget order).
   const budgetGroups = orgs.slice().sort((a, b) => b.total - a.total).slice(0, 10)
-    .map((o) => ({ label: o.name, values: o.byStatus, count: o.count, avg: o.avg }));
+    .map((o) => ({ label: o.name, values: o.byStatus, count: o.count, avg: o.avg }))
+    .sort((a, b) => (a.label === 'อฟก.' ? -1 : b.label === 'อฟก.' ? 1 : 0));
   const budgetEl = document.getElementById('chart-budget');
   if (budgetGroups.some((g) => g.count > 0)) {
     // "รวม" now means budget already given a positive decision — เห็นชอบ +
