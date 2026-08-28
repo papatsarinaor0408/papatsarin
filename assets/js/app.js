@@ -702,8 +702,8 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
         <div class="bfh-bar-fill" style="width:${domesticBarWidth}%;background:${domesticBarColor};"></div>
         <div class="bfh-bar-fill" style="width:${overseasBarWidth}%;background:${overseasBarColor};"></div>
       </div>
-      <div class="bfh-footnote">งบประมาณที่เสนอมาทั้งหมด (ทุกสถานะ ไม่รวมหลักสูตรต่างประเทศ): <b>${fmtBaht(totalProposedPlantWide)}</b></div>
-      <div class="bfh-footnote">งบหลักสูตรต่างประเทศ: <b>${fmtBaht(totalOverseasBudget)}</b></div>
+      <div class="bfh-footnote">งบประมาณที่เสนอมาทั้งหมด (ทุกสถานะ ไม่รวมหลักสูตรต่างประเทศ): <span class="bfh-value-badge" style="background:${domesticBarColor};">${fmtBaht(totalProposedPlantWide)}</span></div>
+      <div class="bfh-footnote">งบหลักสูตรต่างประเทศ: <span class="bfh-value-badge" style="background:${overseasBarColor};">${fmtBaht(totalOverseasBudget)}</span></div>
       <div class="bfh-footnote">งบที่ขอรวมทั้งหมด: <b>${fmtBaht(totalRequestedAll)}</b></div>
     `;
   }
