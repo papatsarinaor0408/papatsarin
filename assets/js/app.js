@@ -663,9 +663,6 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
     const totalProposedPlantWide = STATE.records
       .filter((r) => (deliveryTypeOf(r) || '').indexOf('ต่างประเทศ') === -1)
       .reduce((s, r) => s + (r.budgetTotal || 0), 0);
-    const totalOverseasBudget = STATE.records
-      .filter((r) => (deliveryTypeOf(r) || '').indexOf('ต่างประเทศ') !== -1)
-      .reduce((s, r) => s + (r.budgetTotal || 0), 0);
     frameHero.innerHTML = `
       <div class="bfh-label">เปรียบเทียบงบประมาณพัฒนาบุคลากรที่ได้รับจัดสรร ปีงบประมาณ 2570</div>
       <div class="bfh-row">
@@ -685,7 +682,6 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
       </div>
       <div class="bfh-bar-track"><div class="bfh-bar-fill" style="width:${barWidth}%;background:${barColor};"></div></div>
       <div class="bfh-footnote">งบประมาณที่เสนอมาทั้งหมด (ทุกสถานะ ไม่รวมหลักสูตรต่างประเทศ): <b>${fmtBaht(totalProposedPlantWide)}</b></div>
-      <div class="bfh-footnote">หลักสูตรต่างประเทศ ที่ส่งต่อ อศค. พิจารณา: <b>${fmtBaht(totalOverseasBudget)}</b></div>
     `;
   }
 
