@@ -292,7 +292,7 @@ select:focus, input:focus, textarea:focus {
 .bfh-bar-track { margin-top: 18px; height: 10px; border-radius: 999px; background: var(--grid); overflow: hidden; }
 .bfh-bar-fill { height: 100%; border-radius: 999px; transition: width .3s ease; }
 .bfh-footnote { margin-top: 12px; font-size: 12.5px; color: var(--text-secondary); }
-.bfh-footnote b { color: var(--text-primary); font-weight: 700; }
+.bfh-footnote b { color: #DC2626; font-weight: 700; }
 @media (max-width: 640px) {
   .bfh-diff { margin-left: 0; text-align: left; }
 }
