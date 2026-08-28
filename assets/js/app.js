@@ -689,36 +689,41 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
     `;
   }
 
-  // B. Budget chart — horizontal stacked bar by status, top 10 by total budget desc
-  const statusSeriesBudget = [
-    { key: 'pending', label: REVIEW_STATUS.pending.label, color: 'var(--status-pending)' },
-    { key: 'approved', label: REVIEW_STATUS.approved.label, color: 'var(--status-good)' },
-    { key: 'revise', label: REVIEW_STATUS.revise.label, color: 'var(--status-warning)' },
-    { key: 'rejected', label: REVIEW_STATUS.rejected.label, color: 'var(--status-critical)' },
-    { key: 'central', label: REVIEW_STATUS.central.label, color: 'var(--status-central)' },
-  ];
+  // B. Budget table — per-org breakdown by status, top 10 by total budget desc
   const budgetGroups = orgs.slice().sort((a, b) => b.total - a.total).slice(0, 10)
     .map((o) => ({ label: o.name, values: o.byStatus, count: o.count, avg: o.avg }));
   const budgetEl = document.getElementById('chart-budget');
   if (budgetGroups.some((g) => g.count > 0)) {
-    renderStackedBar(budgetEl, budgetGroups, statusSeriesBudget, {
-      width: 900, labelW: 190, trackPad: 130,
-      formatTotal: (t) => `${fmtBaht(t)} · ${pctOf(t)}%`,
-      formatLegendValue: fmtBaht,
-      tooltipHtml: (g, sr, v, t) => `
-        <div class="tt-title">${escapeHtml(g.label)}</div>
-        <dl class="tt-grid">
-          <dt>จำนวนแผน</dt><dd>${fmtNum(g.count)} แผน</dd>
-          <dt>งบประมาณรวม</dt><dd>${fmtBaht(t)}</dd>
-          <dt>งบเฉลี่ยต่อแผน</dt><dd>${fmtBaht(g.avg)}</dd>
-          <dt>${REVIEW_STATUS.pending.label}</dt><dd>${fmtBaht(g.values.pending || 0)}</dd>
-          <dt>${REVIEW_STATUS.approved.label}</dt><dd>${fmtBaht(g.values.approved || 0)}</dd>
-          <dt>${REVIEW_STATUS.revise.label}</dt><dd>${fmtBaht(g.values.revise || 0)}</dd>
-          <dt>${REVIEW_STATUS.rejected.label}</dt><dd>${fmtBaht(g.values.rejected || 0)}</dd>
-          <dt>${REVIEW_STATUS.central.label}</dt><dd>${fmtBaht(g.values.central || 0)}</dd>
-          <dt>% ของงบรวมทั้งหมด</dt><dd>${pctOf(t)}%</dd>
-        </dl>`,
-    });
+    const orgTotal = (g) => (g.values.pending || 0) + (g.values.approved || 0) + (g.values.revise || 0) + (g.values.rejected || 0) + (g.values.central || 0);
+    budgetEl.innerHTML = `
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr>
+            <th>หน่วยงาน</th>
+            <th class="num" style="color:var(--status-pending-text);">${REVIEW_STATUS.pending.label}</th>
+            <th class="num" style="color:var(--status-good-text);">${REVIEW_STATUS.approved.label}</th>
+            <th class="num" style="color:var(--status-warning-text);">${REVIEW_STATUS.revise.label}</th>
+            <th class="num" style="color:var(--status-critical-text);">${REVIEW_STATUS.rejected.label}</th>
+            <th class="num" style="color:var(--status-central-text);">${REVIEW_STATUS.central.label}</th>
+            <th class="num">รวม</th>
+            <th class="num">% ของงบรวม</th>
+          </tr></thead>
+          <tbody>
+            ${budgetGroups.map((g) => `
+              <tr>
+                <td class="cell-name">${escapeHtml(g.label)}</td>
+                <td class="num">${g.values.pending ? fmtBaht(g.values.pending) : '<span class="cell-muted">-</span>'}</td>
+                <td class="num">${g.values.approved ? fmtBaht(g.values.approved) : '<span class="cell-muted">-</span>'}</td>
+                <td class="num">${g.values.revise ? fmtBaht(g.values.revise) : '<span class="cell-muted">-</span>'}</td>
+                <td class="num">${g.values.rejected ? fmtBaht(g.values.rejected) : '<span class="cell-muted">-</span>'}</td>
+                <td class="num">${g.values.central ? fmtBaht(g.values.central) : '<span class="cell-muted">-</span>'}</td>
+                <td class="num" style="font-weight:600;">${fmtBaht(orgTotal(g))}</td>
+                <td class="num">${pctOf(orgTotal(g))}%</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>`;
   } else {
     budgetEl.innerHTML = '<div class="empty-state">ไม่มีข้อมูลงบประมาณ</div>';
   }
