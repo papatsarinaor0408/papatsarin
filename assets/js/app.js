@@ -656,9 +656,16 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
   // A0. Budget-frame hero — prominent, at the top of the Overview tab
   const frameHero = document.getElementById('budget-frame-hero');
   if (frameHero) {
-    const usedPct = BUDGET_FRAME_2570 > 0 ? (approvedBudgetPlantWide / BUDGET_FRAME_2570) * 100 : 0;
-    const barWidth = Math.min(Math.max(usedPct, 0), 100);
-    const barColor = frameDiff > 0 ? '#EA580C' : '#2563EB'; // เกินกรอบ = ส้ม, อยู่ในกรอบ = ฟ้า
+    // แถบแยกเป็น 2 ส่วน: ในประเทศ (แดง/เขียว ตามเงื่อนไขเดิม) และ ต่างประเทศ
+    // (ส้ม/ฟ้า) — เงื่อนไขเกิน/อยู่ในกรอบใช้ตัวเดียวกัน (frameDiff) ต่างกันแค่ชุดสี
+    const approvedOverseasBudget = STATE.records
+      .filter((r) => r.reviewStatus === 'approved' && (deliveryTypeOf(r) || '').indexOf('ต่างประเทศ') !== -1)
+      .reduce((s, r) => s + (r.effectiveBudget || 0), 0);
+    const approvedDomesticBudget = approvedBudgetPlantWide - approvedOverseasBudget;
+    const domesticBarWidth = BUDGET_FRAME_2570 > 0 ? Math.max(Math.min((approvedDomesticBudget / BUDGET_FRAME_2570) * 100, 100), 0) : 0;
+    const overseasBarWidth = BUDGET_FRAME_2570 > 0 ? Math.max(Math.min((approvedOverseasBudget / BUDGET_FRAME_2570) * 100, 100 - domesticBarWidth), 0) : 0;
+    const domesticBarColor = frameDiff > 0 ? '#DC2626' : '#16A34A'; // เกินกรอบ = แดง, อยู่ในกรอบ = เขียว (เงื่อนไขเดิม)
+    const overseasBarColor = frameDiff > 0 ? '#EA580C' : '#2563EB'; // เกินกรอบ = ส้ม, อยู่ในกรอบ = ฟ้า
     // หลักสูตรต่างประเทศไม่นับรวมในยอดนี้ — งบของหลักสูตรเหล่านี้ไปอยู่ในการพิจารณาของ อศค. แยกต่างหาก
     const totalProposedPlantWide = STATE.records
       .filter((r) => (deliveryTypeOf(r) || '').indexOf('ต่างประเทศ') === -1)
@@ -684,7 +691,10 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
           <div class="bfh-diff-value" style="color:${frameDiffColor};">${frameDiffIcon} ${frameDiff >= 0 ? 'เกินกรอบ ' : 'ต่ำกว่ากรอบ '}${fmtBaht(Math.abs(frameDiff))} (${framePct >= 0 ? '+' : ''}${framePct.toFixed(1)}%)</div>
         </div>
       </div>
-      <div class="bfh-bar-track"><div class="bfh-bar-fill" style="width:${barWidth}%;background:${barColor};"></div></div>
+      <div class="bfh-bar-track">
+        <div class="bfh-bar-fill" style="width:${domesticBarWidth}%;background:${domesticBarColor};"></div>
+        <div class="bfh-bar-fill" style="width:${overseasBarWidth}%;background:${overseasBarColor};"></div>
+      </div>
       <div class="bfh-footnote">งบประมาณที่เสนอมาทั้งหมด (ทุกสถานะ ไม่รวมหลักสูตรต่างประเทศ): <b>${fmtBaht(totalProposedPlantWide)}</b></div>
       <div class="bfh-footnote">งบหลักสูตรต่างประเทศ: <b>${fmtBaht(totalOverseasBudget)}</b></div>
       <div class="bfh-footnote">งบที่ขอรวมทั้งหมด: <b>${fmtBaht(totalRequestedAll)}</b></div>
