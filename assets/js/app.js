@@ -14,6 +14,7 @@ const STATE = {
   personnelFilters: { search: '', sort: 'count_desc' },
   selectedId: null,
   noteDraft: null, // in-progress text in the review note field, kept across re-renders
+  approvedBudgetDraft: null, // in-progress text in the อฟก.-approved-budget field, kept across re-renders
 
   // "สรุปตามหน่วยงาน" tab display prefs (not filters — these only affect
   // ordering/grouping of what's already shown).
@@ -36,8 +37,8 @@ async function loadAllRecords() {
 }
 
 /* ---------------- decision persistence ---------------- */
-async function commitDecision(id, status, note) {
-  await submitDecisionRemote(id, status, note);
+async function commitDecision(id, status, note, approvedBudget) {
+  await submitDecisionRemote(id, status, note, approvedBudget);
   await loadAllRecords();
 }
 
@@ -102,7 +103,7 @@ function matchesFiltersExcept(r, exceptKey) {
     if (!hay.includes(q)) return false;
   }
   if (exceptKey !== 'perCourse' && (f.perCourseMin !== '' || f.perCourseMax !== '')) {
-    const cost = r.budgetTotal || 0;
+    const cost = r.effectiveBudget || 0;
     if (f.perCourseMin !== '' && cost < Number(f.perCourseMin)) return false;
     if (f.perCourseMax !== '' && cost > Number(f.perCourseMax)) return false;
   }
@@ -588,8 +589,8 @@ function computeOrgBudgetStats(data, orgLevel, orgNames) {
   const orgs = orgNames.map((name) => {
     const rows = data.filter((r) => r[orgLevel] === name);
     const byStatus = { pending: 0, approved: 0, revise: 0, rejected: 0 };
-    rows.forEach((r) => { byStatus[r.reviewStatus] += (r.budgetTotal || 0); });
-    const total = rows.reduce((s, r) => s + (r.budgetTotal || 0), 0);
+    rows.forEach((r) => { byStatus[r.reviewStatus] += (r.effectiveBudget || 0); });
+    const total = rows.reduce((s, r) => s + (r.effectiveBudget || 0), 0);
     return { name, count: rows.length, total, byStatus, avg: rows.length ? total / rows.length : 0 };
   });
   const grandTotal = orgs.reduce((s, o) => s + o.total, 0);
@@ -610,7 +611,7 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
 
   // งบที่ได้รับอนุมัติ (2570, ตามตัวกรองปัจจุบัน) เทียบกับงบรวมปี 2569 ทั้งหมด
   // 36 หลักสูตร (ไม่กรองตามหน่วยงาน — เป็นค่าฐานอ้างอิงคงที่ ตามที่ผู้ใช้ยืนยัน)
-  const approvedBudget2570 = data.filter((r) => r.reviewStatus === 'approved').reduce((s, r) => s + (r.budgetTotal || 0), 0);
+  const approvedBudget2570 = data.filter((r) => r.reviewStatus === 'approved').reduce((s, r) => s + (r.effectiveBudget || 0), 0);
   const budget2569Total = HISTORICAL_2569.records.reduce((s, r) => s + (r.budgetBaht || 0), 0);
   const budgetDiff = approvedBudget2570 - budget2569Total;
   const budgetPctChange = budget2569Total > 0 ? (budgetDiff / budget2569Total) * 100 : 0;
@@ -618,7 +619,7 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
   const budgetDiffIcon = budgetDiff > 0 ? '↑' : budgetDiff < 0 ? '↓' : '→';
 
   // งบที่ใช้ไปแล้ว (เห็นชอบ) เทียบกับกรอบงบที่ได้รับจัดสรร — ทั้งโรง ไม่กรองตามตัวกรองที่เลือก
-  const approvedBudgetPlantWide = STATE.records.filter((r) => r.reviewStatus === 'approved').reduce((s, r) => s + (r.budgetTotal || 0), 0);
+  const approvedBudgetPlantWide = STATE.records.filter((r) => r.reviewStatus === 'approved').reduce((s, r) => s + (r.effectiveBudget || 0), 0);
   const frameDiff = approvedBudgetPlantWide - BUDGET_FRAME_2570;
   const framePct = BUDGET_FRAME_2570 > 0 ? (frameDiff / BUDGET_FRAME_2570) * 100 : 0;
   // เกินกรอบ = แย่ (แดง), ต่ำกว่า/เท่ากรอบ = ดี (เขียว)
@@ -771,7 +772,7 @@ function renderReviewTab() {
   const countRevise = statusBase.filter((r) => r.reviewStatus === 'revise').length;
   const countRejected = statusBase.filter((r) => r.reviewStatus === 'rejected').length;
   const countDecided = countApproved + countRevise + countRejected;
-  const totalBudget = data.reduce((s, r) => s + (r.budgetTotal || 0), 0);
+  const totalBudget = data.reduce((s, r) => s + (r.effectiveBudget || 0), 0);
   const chip = (status, label, count, extraClass, accentIdx) => {
     const accent = accentIdx != null ? ACCENT_PALETTE[accentIdx % ACCENT_PALETTE.length] : null;
     const style = accent ? ` style="--chip-accent:${accent};--chip-text:${readableTextOn(accent)}"` : '';
@@ -802,7 +803,7 @@ function renderReviewTab() {
               <td><span class="pill">${escapeHtml(r.courseType || '-')}</span></td>
               <td>${deliveryTypeOf(r) ? `<span class="pill">${escapeHtml(deliveryTypeOf(r))}</span>` : '<span class="cell-muted">—</span>'}</td>
               <td class="num">${fmtNum(r.participants)}</td>
-              <td class="num">${r.budgetTotal ? fmtBaht(r.budgetTotal) : '<span class="cell-muted">-</span>'}</td>
+              <td class="num">${r.effectiveBudget ? fmtBaht(r.effectiveBudget) : '<span class="cell-muted">-</span>'}</td>
               <td>${statusBadge(r.reviewStatus)}${r.reviewNote ? `<div class="note-snippet" title="${escapeAttr(r.reviewNote)}">📝 ${escapeHtml(truncate(r.reviewNote, 42))}</div>` : ''}</td>
               <td><button class="btn btn-sm review-open-btn" data-id="${r.id}">พิจารณา</button></td>
             </tr>
@@ -1076,7 +1077,7 @@ function renderDupCoursesTab() {
                         <td class="cell-name">${escapeHtml(unitOf(r))}</td>
                         <td>${escapeHtml(r.creatorName || '-')}</td>
                         <td class="num">${fmtNum(r.participants)}</td>
-                        <td class="num">${r.budgetTotal ? fmtBaht(r.budgetTotal) : '<span class="cell-muted">-</span>'}</td>
+                        <td class="num">${r.effectiveBudget ? fmtBaht(r.effectiveBudget) : '<span class="cell-muted">-</span>'}</td>
                         <td>${statusBadge(r.reviewStatus)}</td>
                       </tr>
                     `).join('')}
@@ -1293,7 +1294,7 @@ function renderPersonnelTab() {
                         <td>${escapeHtml(pl.inputFactor || '-')}</td>
                         <td>${deliveryTypeOf(pl) ? escapeHtml(deliveryTypeOf(pl)) : '<span class="cell-muted">—</span>'}</td>
                         <td class="num">${pl.days ? fmtNum(pl.days) : '<span class="cell-muted">-</span>'}</td>
-                        <td class="num">${pl.budgetTotal ? fmtBaht(pl.budgetTotal) : '<span class="cell-muted">-</span>'}</td>
+                        <td class="num">${pl.effectiveBudget ? fmtBaht(pl.effectiveBudget) : '<span class="cell-muted">-</span>'}</td>
                         <td>${statusBadge(pl.reviewStatus)}</td>
                       </tr>
                     `).join('')}
@@ -1628,8 +1629,8 @@ function renderPlanSummarySection(r, isCentral, hasConsiderationSection) {
       <div class="psum-card psum-card-highlight">
         <div class="psum-card-icon">💰</div>
         <div class="psum-card-label">งบประมาณรวมทั้งสิ้น</div>
-        <div class="psum-card-value">${r.budgetTotal ? fmtBaht(r.budgetTotal) : '<span class="cell-muted">ไม่ระบุ</span>'}</div>
-        <div class="psum-card-sub">งบประมาณที่ใช้ในการอบรม</div>
+        <div class="psum-card-value">${r.effectiveBudget ? fmtBaht(r.effectiveBudget) : '<span class="cell-muted">ไม่ระบุ</span>'}</div>
+        <div class="psum-card-sub">${r.approvedBudget != null ? `เสนอมา ${fmtBaht(r.budgetTotal || 0)}` : 'งบประมาณที่ใช้ในการอบรม'}</div>
       </div>
       <div class="psum-card">
         <div class="psum-card-icon">👥</div>
@@ -1749,6 +1750,7 @@ function renderConsiderationCard(r) {
 function openDrawer(id) {
   STATE.selectedId = id;
   STATE.noteDraft = null;
+  STATE.approvedBudgetDraft = null;
   renderDrawer();
   document.getElementById('modal-backdrop').classList.add('show');
 }
@@ -1756,6 +1758,7 @@ function closeDrawer() {
   document.getElementById('modal-backdrop').classList.remove('show');
   STATE.selectedId = null;
   STATE.noteDraft = null;
+  STATE.approvedBudgetDraft = null;
 }
 
 /**
@@ -1896,9 +1899,12 @@ function renderDecisionArea() {
     return;
   }
   const draft = STATE.noteDraft != null ? STATE.noteDraft : (r.reviewNote || '');
+  const budgetDraft = STATE.approvedBudgetDraft != null ? STATE.approvedBudgetDraft : (r.approvedBudget != null ? String(r.approvedBudget) : '');
   area.innerHTML = `
     <label for="decision-note" class="subheading-label" style="display:block;font-size:11px;margin-bottom:6px;">หมายเหตุของผู้พิจารณา</label>
     <textarea class="note-field" id="decision-note" placeholder="ระบุประเด็นที่ต้องการให้หน่วยงานแก้ไข เหตุผลการพิจารณา หรือข้อเสนอแนะเพิ่มเติม (จำเป็นเมื่อเลือก &quot;ให้ทบทวน&quot; หรือ &quot;ไม่เห็นชอบ&quot;)">${escapeHtml(draft)}</textarea>
+    <label for="decision-approved-budget" class="subheading-label" style="display:block;font-size:11px;margin:10px 0 6px;">วงเงินที่ อฟก. อนุมัติ (บาท) — เว้นว่างเพื่อใช้วงเงินที่เสนอมา (${fmtBaht(r.budgetTotal || 0)})</label>
+    <input type="text" inputmode="numeric" class="note-field" id="decision-approved-budget" placeholder="${r.budgetTotal || 0}" value="${escapeAttr(budgetDraft)}" />
     <div id="decision-error" style="color:var(--status-critical);font-size:12px;margin-top:4px;display:none;">กรุณาระบุหมายเหตุก่อนบันทึกผล "เห็นชอบแต่ให้ทบทวน" หรือ "ไม่เห็นชอบ"</div>
     <div class="action-row">
       ${Object.entries(DECISION_META).map(([status, meta]) => `<button class="btn ${meta.btnClass}" data-decision="${status}">${meta.icon} ${meta.label}</button>`).join('')}
@@ -1908,6 +1914,10 @@ function renderDecisionArea() {
   noteField.addEventListener('input', () => {
     STATE.noteDraft = noteField.value;
     document.getElementById('decision-error').style.display = 'none';
+  });
+  const budgetField = document.getElementById('decision-approved-budget');
+  budgetField.addEventListener('input', () => {
+    STATE.approvedBudgetDraft = budgetField.value;
   });
   area.querySelectorAll('[data-decision]').forEach((btn) => {
     btn.addEventListener('click', async () => {
@@ -1932,9 +1942,11 @@ function renderDecisionArea() {
         if (status === 'pending') {
           await revertToPending(r.id);
         } else {
-          await commitDecision(r.id, status, noteField.value.trim());
+          const approvedBudget = budgetField.value.trim().replace(/[^\d]/g, '');
+          await commitDecision(r.id, status, noteField.value.trim(), approvedBudget);
         }
         STATE.noteDraft = null;
+        STATE.approvedBudgetDraft = null;
         renderDrawer();
         renderAll();
       } catch (err) {
@@ -2117,7 +2129,7 @@ function exportCsv() {
   const cols = [
     ['id', 'รหัส'], ['nameTh', 'ชื่อหลักสูตร'], ['deptName', 'ฝ่าย'], ['divisionName', 'กอง'], ['sectionName', 'แผนก'],
     ['courseType', 'ประเภทหลักสูตร'], ['inputFactor', 'ปัจจัยนำเข้าหลัก'], ['deliveryType', 'ประเภทการอบรม'], ['participants', 'จำนวนผู้เข้าอบรม'],
-    ['budgetTotal', 'งบประมาณรวม'], ['reviewStatus', 'สถานะ'], ['reviewNote', 'หมายเหตุการพิจารณา'],
+    ['budgetTotal', 'งบประมาณรวม'], ['approvedBudget', 'วงเงินที่ อฟก. อนุมัติ'], ['reviewStatus', 'สถานะ'], ['reviewNote', 'หมายเหตุการพิจารณา'],
     ['reviewedBy', 'ผู้พิจารณา'], ['reviewedDate', 'วันที่พิจารณา'],
   ];
   const rows = [cols.map((c) => c[1]).join(',')];

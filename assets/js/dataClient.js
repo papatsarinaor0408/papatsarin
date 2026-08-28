@@ -33,6 +33,8 @@ function dbRowToRecord(planRow, decisionRow) {
     rec.reviewedDate = decisionRow.reviewed_at
       ? new Date(decisionRow.reviewed_at).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })
       : '';
+    rec.approvedBudget = (decisionRow.approved_budget !== undefined && decisionRow.approved_budget !== null)
+      ? Number(decisionRow.approved_budget) : null;
   } else {
     rec.reviewStatus = 'pending';
     rec.reviewNote = '';
@@ -42,7 +44,11 @@ function dbRowToRecord(planRow, decisionRow) {
     rec.reviewedByRole = '';
     rec.reviewedAtRaw = '';
     rec.reviewedDate = '';
+    rec.approvedBudget = null;
   }
+  // The budget actually "in play" for this plan — the อฟก.-approved amount
+  // when the reviewer has set one, otherwise the originally proposed total.
+  rec.effectiveBudget = (rec.approvedBudget != null) ? rec.approvedBudget : (rec.budgetTotal || 0);
   return rec;
 }
 
@@ -69,9 +75,10 @@ async function fetchPlansAndDecisions() {
   STATE.records = (plans || []).map((p) => dbRowToRecord(p, decisionByPlanId[p.id]));
 }
 
-async function submitDecisionRemote(planId, status, note) {
+async function submitDecisionRemote(planId, status, note, approvedBudget) {
   const { error } = await SB.rpc('submit_decision', {
     p_plan_id: planId, p_decision: status, p_remark: note || null,
+    p_approved_budget: (approvedBudget === '' || approvedBudget === undefined || approvedBudget === null) ? null : Number(approvedBudget),
   });
   if (error) throw error;
 }
