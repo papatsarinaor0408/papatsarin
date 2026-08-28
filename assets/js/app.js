@@ -711,11 +711,14 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
     statusCols.forEach((c) => { totalsByStatus[c.key] = budgetGroups.reduce((s, g) => s + (g.values[c.key] || 0), 0); });
     const approvedGrandShown = budgetGroups.reduce((s, g) => s + approvedTotal(g), 0);
     const pctOfApproved = (v) => (approvedGrandShown > 0 ? ((v / approvedGrandShown) * 100).toFixed(1) : '0.0');
+    // Always clickable, even when the budget sum shown is "-" — a plan can
+    // have a nonzero count with zero budget (e.g. a free course), so the
+    // displayed amount alone isn't a reliable signal that nothing's there.
     // data-org omitted (not data-org="") on the totals row/cells so the click
     // handler below can tell "this org" apart from "all shown orgs" cleanly.
-    const cell = (value, color, org, statusKey) => value
-      ? `<td class="num cell-clickable" style="background:color-mix(in srgb, ${color} 8%, transparent);" data-status="${statusKey}"${org ? ` data-org="${escapeAttr(org)}"` : ''}>${fmtBaht(value)}</td>`
-      : `<td class="num" style="background:color-mix(in srgb, ${color} 8%, transparent);"><span class="cell-muted">-</span></td>`;
+    const fmtCell = (value) => value ? fmtBaht(value) : '<span class="cell-muted">-</span>';
+    const cell = (value, color, org, statusKey) =>
+      `<td class="num cell-clickable" style="background:color-mix(in srgb, ${color} 8%, transparent);" data-status="${statusKey}"${org ? ` data-org="${escapeAttr(org)}"` : ''}>${fmtCell(value)}</td>`;
     budgetEl.innerHTML = `
       <div class="table-wrap">
         <table class="data-table">
@@ -730,14 +733,14 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
               <tr>
                 <td class="cell-name">${escapeHtml(g.label)}</td>
                 ${statusCols.map((c) => cell(g.values[c.key] || 0, c.color, g.label, c.key)).join('')}
-                <td class="num cell-clickable" style="font-weight:600;" data-status="approved_group" data-org="${escapeAttr(g.label)}">${fmtBaht(approvedTotal(g))}</td>
+                <td class="num cell-clickable" style="font-weight:600;" data-status="approved_group" data-org="${escapeAttr(g.label)}">${fmtCell(approvedTotal(g))}</td>
                 <td class="num">${pctOfApproved(approvedTotal(g))}%</td>
               </tr>
             `).join('')}
             <tr style="border-top:2px solid var(--border);font-weight:700;">
               <td class="cell-name">รวม</td>
               ${statusCols.map((c) => cell(totalsByStatus[c.key], c.color, '', c.key)).join('')}
-              <td class="num cell-clickable" data-status="approved_group">${fmtBaht(approvedGrandShown)}</td>
+              <td class="num cell-clickable" data-status="approved_group">${fmtCell(approvedGrandShown)}</td>
               <td class="num">${pctOfApproved(approvedGrandShown)}%</td>
             </tr>
           </tbody>
