@@ -793,7 +793,7 @@ function renderReviewTab() {
       <table class="data-table">
         <thead><tr>
           <th>ชื่อหลักสูตร / แผน</th><th>หน่วยงานที่เสนอ</th><th>ประเภทหลักสูตร</th><th>ประเภทการอบรม</th>
-          <th class="num">ผู้เข้าอบรม</th><th class="num">งบประมาณ</th><th>สถานะ</th><th></th>
+          <th class="num">ผู้เข้าอบรม</th><th class="num">งบที่ขอมา</th><th class="num">งบที่อนุมัติ</th><th>สถานะ</th><th></th>
         </tr></thead>
         <tbody>
           ${data.length ? data.map((r) => `
@@ -803,11 +803,12 @@ function renderReviewTab() {
               <td><span class="pill">${escapeHtml(r.courseType || '-')}</span></td>
               <td>${deliveryTypeOf(r) ? `<span class="pill">${escapeHtml(deliveryTypeOf(r))}</span>` : '<span class="cell-muted">—</span>'}</td>
               <td class="num">${fmtNum(r.participants)}</td>
+              <td class="num">${r.budgetTotal ? fmtBaht(r.budgetTotal) : '<span class="cell-muted">-</span>'}</td>
               <td class="num">${r.effectiveBudget ? fmtBaht(r.effectiveBudget) : '<span class="cell-muted">-</span>'}</td>
               <td>${statusBadge(r.reviewStatus)}${r.reviewNote ? `<div class="note-snippet" title="${escapeAttr(r.reviewNote)}">📝 ${escapeHtml(truncate(r.reviewNote, 42))}</div>` : ''}</td>
               <td><button class="btn btn-sm review-open-btn" data-id="${r.id}">พิจารณา</button></td>
             </tr>
-          `).join('') : `<tr><td colspan="8"><div class="empty-state"><div class="big">🔍</div>ไม่พบแผนที่ตรงกับตัวกรอง</div></td></tr>`}
+          `).join('') : `<tr><td colspan="9"><div class="empty-state"><div class="big">🔍</div>ไม่พบแผนที่ตรงกับตัวกรอง</div></td></tr>`}
         </tbody>
       </table>
     </div>
