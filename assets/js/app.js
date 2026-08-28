@@ -2212,10 +2212,12 @@ function handleFileImport(file) {
 }
 
 function exportCsv() {
+  // คอลัมน์แรกๆ ให้หน้าตาตรงกับข้อมูลที่นำเข้ามา (FIELDS ตามลำดับเดิม =
+  // เหมือนไฟล์ต้นฉบับที่อัปโหลด) แล้วต่อท้ายด้วยคอลัมน์ผลการพิจารณา
   const cols = [
-    ['id', 'รหัส'], ['nameTh', 'ชื่อหลักสูตร'], ['deptName', 'ฝ่าย'], ['divisionName', 'กอง'], ['sectionName', 'แผนก'],
-    ['courseType', 'ประเภทหลักสูตร'], ['inputFactor', 'ปัจจัยนำเข้าหลัก'], ['deliveryType', 'ประเภทการอบรม'], ['participants', 'จำนวนผู้เข้าอบรม'],
-    ['budgetTotal', 'งบประมาณรวม'], ['approvedBudget', 'วงเงินที่ อฟก. อนุมัติ'], ['reviewStatus', 'สถานะ'], ['reviewNote', 'หมายเหตุการพิจารณา'],
+    ['id', 'รหัส'],
+    ...FIELDS.map((f) => [f.key, f.header]),
+    ['approvedBudget', 'วงเงินที่ อฟก. อนุมัติ'], ['reviewStatus', 'สถานะ'], ['reviewNote', 'หมายเหตุการพิจารณา'],
     ['reviewedBy', 'ผู้พิจารณา'], ['reviewedDate', 'วันที่พิจารณา'],
   ];
   const rows = [cols.map((c) => c[1]).join(',')];
