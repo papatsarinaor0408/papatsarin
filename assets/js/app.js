@@ -769,6 +769,7 @@ function renderReviewTab() {
   const countRevise = statusBase.filter((r) => r.reviewStatus === 'revise').length;
   const countRejected = statusBase.filter((r) => r.reviewStatus === 'rejected').length;
   const countDecided = countApproved + countRevise + countRejected;
+  const totalBudget = data.reduce((s, r) => s + (r.budgetTotal || 0), 0);
   const chip = (status, label, count, extraClass, accentIdx) => {
     const accent = accentIdx != null ? ACCENT_PALETTE[accentIdx % ACCENT_PALETTE.length] : null;
     const style = accent ? ` style="--chip-accent:${accent};--chip-text:${readableTextOn(accent)}"` : '';
@@ -784,7 +785,7 @@ function renderReviewTab() {
       ${chip('revise', '↳ เห็นชอบแต่ให้ทบทวน', countRevise, 'sub sub-revise')}
       ${chip('rejected', '↳ ไม่เห็นชอบ', countRejected, 'sub sub-rejected')}
     </div>
-    <div class="filter-count" style="margin-bottom:10px;">พบ ${fmtNum(data.length)} แผน จากทั้งหมด ${fmtNum(STATE.records.length)} แผน</div>
+    <div class="filter-count" style="margin-bottom:10px;">พบ ${fmtNum(data.length)} แผน จากทั้งหมด ${fmtNum(STATE.records.length)} แผน · รวมงบประมาณ ${fmtBaht(totalBudget)}</div>
     <div class="table-wrap">
       <table class="data-table">
         <thead><tr>
