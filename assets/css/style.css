@@ -30,15 +30,19 @@
   --seq-400: #9E85B5; --seq-450: #896BA5; --seq-500: #745195;
   --seq-600: #5F427A; --seq-700: #4B3561;
 
-  /* Status — theme-native (never Green/Red/Blue/Teal), fixed everywhere status appears */
+  /* Status — theme-native (never Green/Red/Blue), fixed everywhere status
+     appears. --status-central is a deliberate exception (explicit request):
+     teal, to read as clearly distinct from the other four. */
   --status-good: #745195;     /* เห็นชอบ */
   --status-warning: #FABC59;  /* เห็นชอบแต่ให้ทบทวน */
   --status-critical: #D15B75; /* ไม่เห็นชอบ */
   --status-pending: #A7A3AD;  /* รอพิจารณา */
+  --status-central: #0D9488;  /* รวบรวมให้ อศค. ดำเนินการ */
   --status-good-text: #745195;
   --status-warning-text: #916D34;
   --status-critical-text: #A7495E;
   --status-pending-text: #6F6878;
+  --status-central-text: #0D9488;
 
   --accent: var(--series-1);
 
@@ -60,6 +64,7 @@
   --kpi-fill-approved: #617F5F;
   --kpi-fill-revise: #FAC240;
   --kpi-fill-rejected: #E44763;
+  --kpi-fill-central: #0D9488;
   --radius-sm: 10px;
   --radius-md: 14px;
   --radius-lg: 18px;
@@ -100,8 +105,8 @@
     --seq-400: #6C4E9A; --seq-450: #9B7CC0; --seq-500: #AC91CC;
     --seq-600: #C3AAD9; --seq-700: #DAC6E7;
 
-    --status-good: #9B82B3; --status-warning: #FBCF87; --status-critical: #DE899C; --status-pending: #C0BDC4;
-    --status-good-text: #C6B4D9; --status-warning-text: #FBCF87; --status-critical-text: #DE899C; --status-pending-text: #C5CAD3;
+    --status-good: #9B82B3; --status-warning: #FBCF87; --status-critical: #DE899C; --status-pending: #C0BDC4; --status-central: #5EEAD4;
+    --status-good-text: #C6B4D9; --status-warning-text: #FBCF87; --status-critical-text: #DE899C; --status-pending-text: #C5CAD3; --status-central-text: #5EEAD4;
 
     --shadow-1: 0 1px 2px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.25);
     --shadow-2: 0 12px 32px rgba(0,0,0,0.45);
@@ -123,8 +128,8 @@
   --seq-100: #2C2536; --seq-200: #3B3049; --seq-300: #52407A;
   --seq-400: #6C4E9A; --seq-450: #9B7CC0; --seq-500: #AC91CC;
   --seq-600: #C3AAD9; --seq-700: #DAC6E7;
-  --status-good: #9B82B3; --status-warning: #FBCF87; --status-critical: #DE899C; --status-pending: #C0BDC4;
-  --status-good-text: #C6B4D9; --status-warning-text: #FBCF87; --status-critical-text: #DE899C; --status-pending-text: #C5CAD3;
+  --status-good: #9B82B3; --status-warning: #FBCF87; --status-critical: #DE899C; --status-pending: #C0BDC4; --status-central: #5EEAD4;
+  --status-good-text: #C6B4D9; --status-warning-text: #FBCF87; --status-critical-text: #DE899C; --status-pending-text: #C5CAD3; --status-central-text: #5EEAD4;
   --shadow-1: 0 1px 2px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.25);
   --shadow-2: 0 12px 32px rgba(0,0,0,0.45);
   --shadow-donut: drop-shadow(0 10px 16px rgba(0,0,0,0.45)) drop-shadow(0 2px 4px rgba(0,0,0,0.3));
@@ -208,6 +213,8 @@ button, input, select, textarea { font-family: inherit; }
 .btn-critical:hover { filter: brightness(0.94); }
 .btn-pending { background: var(--surface-2); border-color: var(--status-pending); color: var(--status-pending-text); }
 .btn-pending:hover { background: color-mix(in srgb, var(--status-pending) 14%, var(--surface-2)); }
+.btn-central { background: var(--status-central); border-color: var(--status-central); color: #fff; }
+.btn-central:hover { filter: brightness(0.94); }
 .btn-ghost { background: transparent; }
 #logout-btn { background: #FFF0B2; border-color: #FFF0B2; color: #4A3B00; }
 #logout-btn:hover { filter: brightness(0.96); }
@@ -298,7 +305,7 @@ select:focus, input:focus, textarea:focus {
 }
 
 /* ---------- KPI cards ---------- */
-.kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 18px; }
+.kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin-bottom: 18px; }
 .kpi-card {
   background: var(--kpi-color, var(--series-1)); border: none; border-radius: var(--radius-lg);
   padding: 16px 18px; position: relative; overflow: hidden; color: #fff;
@@ -452,6 +459,7 @@ tr.clickable { cursor: pointer; }
 tr.row-status-approved { background: color-mix(in srgb, var(--status-good) 7%, transparent); }
 tr.row-status-revise { background: color-mix(in srgb, var(--status-warning) 10%, transparent); }
 tr.row-status-rejected { background: color-mix(in srgb, var(--status-critical) 7%, transparent); }
+tr.row-status-central { background: color-mix(in srgb, var(--status-central) 7%, transparent); }
 
 .cell-danger { color: var(--status-critical-text); font-weight: 500; }
 
@@ -465,6 +473,7 @@ tr.row-status-rejected { background: color-mix(in srgb, var(--status-critical) 7
 .badge-approved { background: color-mix(in srgb, var(--status-good) 15%, transparent); color: var(--status-good-text); }
 .badge-revise { background: color-mix(in srgb, var(--status-warning) 25%, transparent); color: var(--status-warning-text); }
 .badge-rejected { background: color-mix(in srgb, var(--status-critical) 15%, transparent); color: var(--status-critical-text); }
+.badge-central { background: color-mix(in srgb, var(--status-central) 15%, transparent); color: var(--status-central-text); }
 
 .pill { display:inline-block; font-size:11.5px; font-weight: 400; padding:3px 9px; border-radius:999px; background: color-mix(in srgb, var(--series-1) 8%, var(--surface-2)); border:1px solid var(--border); color:var(--text-secondary); }
 
@@ -499,6 +508,10 @@ tr.row-status-rejected { background: color-mix(in srgb, var(--status-critical) 7
 .status-chip.sub-approved.active { background: var(--status-good); border-color: color-mix(in srgb, var(--status-good) 75%, black 12%); }
 .status-chip.sub-revise.active { background: var(--status-warning); border-color: color-mix(in srgb, var(--status-warning) 75%, black 12%); color: #2b1c02; }
 .status-chip.sub-rejected.active { background: var(--status-critical); border-color: color-mix(in srgb, var(--status-critical) 75%, black 12%); }
+/* chip-central is a full-size top-level chip (not .sub) — its own bucket,
+   not nested under "พิจารณาแล้ว" like approved/revise/rejected are. */
+.status-chip.chip-central:not(.active) { border-color: color-mix(in srgb, var(--status-central) 45%, var(--border)); color: var(--status-central-text); }
+.status-chip.chip-central.active { background: var(--status-central); border-color: color-mix(in srgb, var(--status-central) 75%, black 12%); }
 
 /* ---------- Department summary table ---------- */
 .dept-row-toggle { cursor: pointer; transition: background .12s, box-shadow .12s; }

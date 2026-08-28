@@ -46,12 +46,14 @@ const FIELDS = [
   { key: 'targetDept',          header: 'ฝ่ายกลุ่มเป้าหมาย' },
 ];
 
-// Review workflow — the three decisions the executive can take on each plan.
+// Review workflow — the decisions the executive can take on each plan
+// (plus "central", a separate routing outcome the executive doesn't decide).
 const REVIEW_STATUS = {
   pending:  { label: 'รอพิจารณา',              order: 0 },
   approved: { label: 'เห็นชอบ',                 order: 1 },
   revise:   { label: 'เห็นชอบแต่ให้ทบทวน',       order: 2 },
   rejected: { label: 'ไม่เห็นชอบ',               order: 3 },
+  central:  { label: 'รวบรวมให้ อศค. ดำเนินการ', order: 4 },
 };
 
 // Grouping levels available for the "หน่วยงานเสนอ" dimension (org hierarchy).

@@ -94,7 +94,7 @@ function matchesFiltersExcept(r, exceptKey) {
   if (exceptKey !== 'inputFactor' && f.inputFactor && r.inputFactor !== f.inputFactor) return false;
   if (exceptKey !== 'deliveryType' && f.deliveryType && deliveryTypeOf(r) !== f.deliveryType) return false;
   if (exceptKey !== 'status' && f.status) {
-    if (f.status === 'decided') { if (r.reviewStatus === 'pending') return false; }
+    if (f.status === 'decided') { if (r.reviewStatus === 'pending' || r.reviewStatus === 'central') return false; }
     else if (r.reviewStatus !== f.status) return false;
   }
   if (exceptKey !== 'search' && f.search) {
@@ -113,7 +113,7 @@ function getFilteredExcept(exceptKey) { return STATE.records.filter((r) => match
 
 /* ---------------- shared status color/label ---------------- */
 function statusColor(status) {
-  return { pending: 'var(--status-pending)', approved: 'var(--status-good)', revise: 'var(--status-warning)', rejected: 'var(--status-critical)' }[status];
+  return { pending: 'var(--status-pending)', approved: 'var(--status-good)', revise: 'var(--status-warning)', rejected: 'var(--status-critical)', central: 'var(--status-central)' }[status];
 }
 function statusBadge(status) {
   const meta = REVIEW_STATUS[status] || REVIEW_STATUS.pending;
@@ -390,7 +390,7 @@ function renderOverview() {
   // cards degenerate (total == that one status, everything else zero).
   const data = getFilteredExcept('status');
   const total = data.length;
-  const counts = { pending: 0, approved: 0, revise: 0, rejected: 0 };
+  const counts = { pending: 0, approved: 0, revise: 0, rejected: 0, central: 0 };
   data.forEach((r) => { counts[r.reviewStatus] = (counts[r.reviewStatus] || 0) + 1; });
 
   const kpis = [
@@ -399,6 +399,7 @@ function renderOverview() {
     { key: 'approved', label: REVIEW_STATUS.approved.label, value: counts.approved, color: 'var(--kpi-fill-approved)' },
     { key: 'revise', label: REVIEW_STATUS.revise.label, value: counts.revise, color: 'var(--kpi-fill-revise)' },
     { key: 'rejected', label: REVIEW_STATUS.rejected.label, value: counts.rejected, color: 'var(--kpi-fill-rejected)' },
+    { key: 'central', label: REVIEW_STATUS.central.label, value: counts.central, color: 'var(--kpi-fill-central)' },
   ];
 
   root.innerHTML = `
@@ -461,6 +462,7 @@ function renderOverview() {
     { label: REVIEW_STATUS.approved.label, value: counts.approved, color: 'var(--status-good)', statusKey: 'approved' },
     { label: REVIEW_STATUS.revise.label, value: counts.revise, color: 'var(--status-warning)', statusKey: 'revise' },
     { label: REVIEW_STATUS.rejected.label, value: counts.rejected, color: 'var(--status-critical)', statusKey: 'rejected' },
+    { label: REVIEW_STATUS.central.label, value: counts.central, color: 'var(--status-central)', statusKey: 'central' },
   ], {
     centerLabel: 'แผน',
     onClick: (d) => openChartDetailModal(`สถานะ: ${d.label}`, data.filter((r) => r.reviewStatus === d.statusKey)),
@@ -496,7 +498,7 @@ function renderOverview() {
   const orgNames = uniqueValues(data, orgLevel);
   const groups = orgNames.map((name) => {
     const rows = data.filter((r) => r[orgLevel] === name);
-    const values = { pending: 0, approved: 0, revise: 0, rejected: 0 };
+    const values = { pending: 0, approved: 0, revise: 0, rejected: 0, central: 0 };
     rows.forEach((r) => { values[r.reviewStatus]++; });
     return { label: name, values, total: rows.length, records: rows };
   }).sort((a, b) => b.total - a.total);
@@ -588,7 +590,7 @@ function renderCategoricalExecSummary(el, items, opts) {
 function computeOrgBudgetStats(data, orgLevel, orgNames) {
   const orgs = orgNames.map((name) => {
     const rows = data.filter((r) => r[orgLevel] === name);
-    const byStatus = { pending: 0, approved: 0, revise: 0, rejected: 0 };
+    const byStatus = { pending: 0, approved: 0, revise: 0, rejected: 0, central: 0 };
     rows.forEach((r) => { byStatus[r.reviewStatus] += (r.effectiveBudget || 0); });
     const total = rows.reduce((s, r) => s + (r.effectiveBudget || 0), 0);
     return { name, count: rows.length, total, byStatus, avg: rows.length ? total / rows.length : 0 };
@@ -686,6 +688,7 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
     { key: 'approved', label: REVIEW_STATUS.approved.label, color: 'var(--status-good)' },
     { key: 'revise', label: REVIEW_STATUS.revise.label, color: 'var(--status-warning)' },
     { key: 'rejected', label: REVIEW_STATUS.rejected.label, color: 'var(--status-critical)' },
+    { key: 'central', label: REVIEW_STATUS.central.label, color: 'var(--status-central)' },
   ];
   const budgetGroups = orgs.slice().sort((a, b) => b.total - a.total).slice(0, 10)
     .map((o) => ({ label: o.name, values: o.byStatus, count: o.count, avg: o.avg }));
@@ -705,6 +708,7 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
           <dt>${REVIEW_STATUS.approved.label}</dt><dd>${fmtBaht(g.values.approved || 0)}</dd>
           <dt>${REVIEW_STATUS.revise.label}</dt><dd>${fmtBaht(g.values.revise || 0)}</dd>
           <dt>${REVIEW_STATUS.rejected.label}</dt><dd>${fmtBaht(g.values.rejected || 0)}</dd>
+          <dt>${REVIEW_STATUS.central.label}</dt><dd>${fmtBaht(g.values.central || 0)}</dd>
           <dt>% ของงบรวมทั้งหมด</dt><dd>${pctOf(t)}%</dd>
         </dl>`,
     });
@@ -771,6 +775,7 @@ function renderReviewTab() {
   const countApproved = statusBase.filter((r) => r.reviewStatus === 'approved').length;
   const countRevise = statusBase.filter((r) => r.reviewStatus === 'revise').length;
   const countRejected = statusBase.filter((r) => r.reviewStatus === 'rejected').length;
+  const countCentral = statusBase.filter((r) => r.reviewStatus === 'central').length;
   const countDecided = countApproved + countRevise + countRejected;
   const totalBudget = data.reduce((s, r) => s + (r.effectiveBudget || 0), 0);
   const chip = (status, label, count, extraClass, accentIdx) => {
@@ -787,6 +792,7 @@ function renderReviewTab() {
       ${chip('approved', '↳ เห็นชอบ', countApproved, 'sub sub-approved')}
       ${chip('revise', '↳ เห็นชอบแต่ให้ทบทวน', countRevise, 'sub sub-revise')}
       ${chip('rejected', '↳ ไม่เห็นชอบ', countRejected, 'sub sub-rejected')}
+      ${chip('central', 'รวบรวมให้ อศค. ดำเนินการ', countCentral, 'chip-central')}
     </div>
     <div class="filter-count" style="margin-bottom:10px;">พบ ${fmtNum(data.length)} แผน จากทั้งหมด ${fmtNum(STATE.records.length)} แผน · รวมงบประมาณ ${fmtBaht(totalBudget)}</div>
     <div class="table-wrap">
@@ -841,7 +847,7 @@ function renderDeptSummaryTab() {
   const orgNames = uniqueValues(data, orgLevel);
   const rows = orgNames.map((name) => {
     const deptRecords = data.filter((r) => r[orgLevel] === name);
-    const counts = { pending: 0, approved: 0, revise: 0, rejected: 0 };
+    const counts = { pending: 0, approved: 0, revise: 0, rejected: 0, central: 0 };
     deptRecords.forEach((r) => { counts[r.reviewStatus]++; });
     const decided = counts.approved + counts.revise + counts.rejected;
     const rate = decided ? (counts.approved / decided) * 100 : null;
@@ -902,7 +908,8 @@ function renderDeptSummaryTab() {
         <thead><tr>
           <th>หน่วยงาน</th><th class="num">เสนอทั้งหมด</th><th class="num">${REVIEW_STATUS.pending.label}</th>
           <th class="num">${REVIEW_STATUS.approved.label}</th><th class="num">${REVIEW_STATUS.revise.label}</th>
-          <th class="num">${REVIEW_STATUS.rejected.label}</th><th style="min-width:160px;">อัตราเห็นชอบ*</th>
+          <th class="num">${REVIEW_STATUS.rejected.label}</th><th class="num">${REVIEW_STATUS.central.label}</th>
+          <th style="min-width:160px;">อัตราเห็นชอบ*</th>
         </tr></thead>
         <tbody>
           ${rows.length ? rows.map((row) => `
@@ -913,13 +920,14 @@ function renderDeptSummaryTab() {
               <td class="num">${fmtNum(row.counts.approved)}</td>
               <td class="num">${fmtNum(row.counts.revise)}</td>
               <td class="num">${fmtNum(row.counts.rejected)}</td>
+              <td class="num">${fmtNum(row.counts.central)}</td>
               <td>
                 ${row.rate === null ? '<span class="cell-muted">ยังไม่พิจารณา</span>' : `
                   <div class="rate-bar"><span style="width:${row.rate}%;background:var(--status-good)"></span></div>
                   <span style="font-size:12px;color:var(--text-secondary)">${row.rate.toFixed(0)}% ของที่พิจารณาแล้ว</span>`}
               </td>
             </tr>
-            <tr class="dept-detail-row" data-key="${escapeHtml(row.name)}"><td colspan="7"><div class="dept-detail-inner">
+            <tr class="dept-detail-row" data-key="${escapeHtml(row.name)}"><td colspan="8"><div class="dept-detail-inner">
               ${breakdownHeading('แยกตามประเภทหลักสูตร', 'courseType')}
               <div style="margin-bottom:12px;">
                 ${breakdownSelect(row.name, 'courseType', sortBreakdownEntries(row.byCourseType, STATE.deptBreakdownSort.courseType))}
@@ -962,7 +970,7 @@ function renderDeptSummaryTab() {
               </div>`;
               })()}
             </div></td></tr>
-          `).join('') : `<tr><td colspan="7"><div class="empty-state"><div class="big">📋</div>ไม่พบข้อมูล</div></td></tr>`}
+          `).join('') : `<tr><td colspan="8"><div class="empty-state"><div class="big">📋</div>ไม่พบข้อมูล</div></td></tr>`}
         </tbody>
       </table>
     </div>
@@ -1201,7 +1209,7 @@ function renderPersonnelTab() {
 
   const people = Array.from(byId.values()).map((entry) => {
     const plans = Array.from(entry.plans.values());
-    const counts = { pending: 0, approved: 0, revise: 0, rejected: 0 };
+    const counts = { pending: 0, approved: 0, revise: 0, rejected: 0, central: 0 };
     plans.forEach((p) => { counts[p.reviewStatus] = (counts[p.reviewStatus] || 0) + 1; });
     // The only department evidence the system actually has is which unit
     // PROPOSED each course this person is named in — not their own home
@@ -1260,7 +1268,8 @@ function renderPersonnelTab() {
       <table class="data-table">
         <thead><tr>
           <th>เลขประจำตัว</th><th>ชื่อ-นามสกุล</th><th>หน่วยงานที่เสนอ*</th><th class="num">จำนวนหลักสูตร</th>
-          <th class="num">รอพิจารณา</th><th class="num">เห็นชอบ</th><th class="num">เห็นชอบแต่ให้ทบทวน</th><th class="num">ไม่เห็นชอบ</th><th></th>
+          <th class="num">รอพิจารณา</th><th class="num">เห็นชอบ</th><th class="num">เห็นชอบแต่ให้ทบทวน</th><th class="num">ไม่เห็นชอบ</th>
+          <th class="num">${REVIEW_STATUS.central.label}</th><th></th>
         </tr></thead>
         <tbody>
           ${filtered.length ? filtered.map((p) => `
@@ -1275,9 +1284,10 @@ function renderPersonnelTab() {
               <td class="num">${fmtNum(p.counts.approved || 0)}</td>
               <td class="num">${fmtNum(p.counts.revise || 0)}</td>
               <td class="num">${fmtNum(p.counts.rejected || 0)}</td>
+              <td class="num">${fmtNum(p.counts.central || 0)}</td>
               <td></td>
             </tr>
-            <tr class="dept-detail-row" data-key="${p.employeeId}"><td colspan="9"><div class="dept-detail-inner">
+            <tr class="dept-detail-row" data-key="${p.employeeId}"><td colspan="10"><div class="dept-detail-inner">
               <div class="subheading-label" style="margin-bottom:2px;">${escapeHtml(p.employeeId)} ${escapeHtml(p.name)}</div>
               <div class="cell-muted" style="font-size:12.5px;margin-bottom:10px;">อยู่ในแผนพัฒนา ${fmtNum(p.count)} หลักสูตร</div>
               <div class="table-wrap">
@@ -1303,7 +1313,7 @@ function renderPersonnelTab() {
                 </table>
               </div>
             </div></td></tr>
-          `).join('') : `<tr><td colspan="9"><div class="empty-state"><div class="big">🔍</div>ไม่พบบุคลากรที่ตรงกับการค้นหา</div></td></tr>`}
+          `).join('') : `<tr><td colspan="10"><div class="empty-state"><div class="big">🔍</div>ไม่พบบุคลากรที่ตรงกับการค้นหา</div></td></tr>`}
         </tbody>
       </table>
     </div>
@@ -1806,6 +1816,7 @@ const DECISION_META = {
   approved: { label: REVIEW_STATUS.approved.label, btnClass: 'btn-good', icon: '✓' },
   revise: { label: REVIEW_STATUS.revise.label, btnClass: 'btn-warning', icon: '↺' },
   rejected: { label: REVIEW_STATUS.rejected.label, btnClass: 'btn-critical', icon: '✕' },
+  central: { label: REVIEW_STATUS.central.label, btnClass: 'btn-central', icon: '↪' },
 };
 
 function renderDrawer() {
