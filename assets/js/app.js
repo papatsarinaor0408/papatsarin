@@ -662,8 +662,15 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
       .filter((r) => r.reviewStatus === 'approved' && (deliveryTypeOf(r) || '').indexOf('ต่างประเทศ') !== -1)
       .reduce((s, r) => s + (r.effectiveBudget || 0), 0);
     const approvedDomesticBudget = approvedBudgetPlantWide - approvedOverseasBudget;
-    const domesticBarWidth = BUDGET_FRAME_2570 > 0 ? Math.max(Math.min((approvedDomesticBudget / BUDGET_FRAME_2570) * 100, 100), 0) : 0;
-    const overseasBarWidth = BUDGET_FRAME_2570 > 0 ? Math.max(Math.min((approvedOverseasBudget / BUDGET_FRAME_2570) * 100, 100 - domesticBarWidth), 0) : 0;
+    // สัดส่วนจริงระหว่างในประเทศ/ต่างประเทศต้องคงไว้เสมอ แม้ยอดรวมจะเกิน 100%
+    // ของกรอบ — คำนวณ % ดิบของทั้งคู่ก่อน แล้วค่อยหด (scale) ทั้งคู่ลงตามอัตราส่วน
+    // เดียวกันถ้ารวมกันเกิน 100% แทนที่จะ clamp ทีละส่วนซึ่งจะบีบอีกส่วนจนหายไป
+    const domesticPctRaw = BUDGET_FRAME_2570 > 0 ? (approvedDomesticBudget / BUDGET_FRAME_2570) * 100 : 0;
+    const overseasPctRaw = BUDGET_FRAME_2570 > 0 ? (approvedOverseasBudget / BUDGET_FRAME_2570) * 100 : 0;
+    const totalPctRaw = domesticPctRaw + overseasPctRaw;
+    const barScale = totalPctRaw > 100 ? 100 / totalPctRaw : 1;
+    const domesticBarWidth = Math.max(domesticPctRaw * barScale, 0);
+    const overseasBarWidth = Math.max(overseasPctRaw * barScale, 0);
     const domesticBarColor = frameDiff > 0 ? '#DC2626' : '#16A34A'; // เกินกรอบ = แดง, อยู่ในกรอบ = เขียว (เงื่อนไขเดิม)
     const overseasBarColor = frameDiff > 0 ? '#EA580C' : '#2563EB'; // เกินกรอบ = ส้ม, อยู่ในกรอบ = ฟ้า
     // หลักสูตรต่างประเทศไม่นับรวมในยอดนี้ — งบของหลักสูตรเหล่านี้ไปอยู่ในการพิจารณาของ อศค. แยกต่างหาก
