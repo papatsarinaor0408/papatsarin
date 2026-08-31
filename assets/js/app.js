@@ -1703,7 +1703,7 @@ async function loadFinalDataTab() {
       catch (e) { STATE.finalDataLastImportInfo = null; }
       STATE.finalDataLoaded = true;
     } catch (e) {
-      root.innerHTML = `<div class="empty-state"><div class="big">⚠</div>โหลดข้อมูลไฟนอลไม่สำเร็จ: ${escapeHtml(e.message || '')}</div>`;
+      root.innerHTML = `<div class="empty-state"><div class="big">⚠</div>โหลด Approved Data ไม่สำเร็จ: ${escapeHtml(e.message || '')}</div>`;
       return;
     }
   }
@@ -1742,14 +1742,14 @@ function renderFinalDataTab() {
   const info = STATE.finalDataLastImportInfo;
   const importLine = info
     ? `อัปเดตล่าสุด: <b>${fmtThaiDateTime(info.imported_at)}</b>${info.file_name ? ` <span style="color:var(--text-muted);">(${escapeHtml(info.file_name)})</span>` : ''}`
-    : 'ยังไม่มีการนำเข้าข้อมูลไฟนอล';
+    : 'ยังไม่มีการนำเข้า Approved Data';
 
   root.innerHTML = `
-    <div class="subheading-label" style="font-size:15px;margin-bottom:6px;">ข้อมูลไฟนอล — หลักสูตรที่บันทึกในระบบกลาง อศค.</div>
+    <div class="subheading-label" style="font-size:15px;margin-bottom:6px;">Approved Data — หลักสูตรที่บันทึกในระบบกลาง อศค.</div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
       <div style="font-size:12.5px;color:var(--text-secondary);">${importLine}</div>
       <div>
-        <button class="btn admin-only" id="import-finaldata-btn">⬆ นำเข้าข้อมูลไฟนอล (Excel)</button>
+        <button class="btn admin-only" id="import-finaldata-btn">⬆ นำเข้า Approved Data (Excel)</button>
         <input type="file" id="import-finaldata-file-input" accept=".xlsx,.xls" hidden />
       </div>
     </div>
@@ -1798,7 +1798,7 @@ function renderFinalDataTab() {
         </tbody>
       </table>
     </div>
-    ` : `<div class="empty-state"><div class="big">📄</div>ยังไม่มีข้อมูลไฟนอล — กด "นำเข้าข้อมูลไฟนอล" เพื่ออัปโหลดไฟล์</div>`}
+    ` : `<div class="empty-state"><div class="big">📄</div>ยังไม่มี Approved Data — กด "นำเข้า Approved Data" เพื่ออัปโหลดไฟล์</div>`}
   `;
 
   root.querySelectorAll('tbody tr[data-id]').forEach((tr) => {
@@ -1892,7 +1892,7 @@ function handleFinalDataFileImport(file) {
       return;
     }
 
-    const confirmMsg = `การนำเข้าไฟล์นี้จะปรับปรุงข้อมูลไฟนอลที่มีอยู่ (พบ ${result.courses.length} หลักสูตรในไฟล์), เพิ่มหลักสูตรใหม่ที่ยังไม่มี, และนำหลักสูตรที่ไม่มีในไฟล์นี้ออกจากรายการปัจจุบัน — รายชื่อกลุ่มเป้าหมาย/หน่วยงาน/งบประมาณของทุกหลักสูตรในไฟล์จะถูกแทนที่ด้วยข้อมูลชุดนี้ทั้งหมด ยืนยันดำเนินการ?`;
+    const confirmMsg = `การนำเข้าไฟล์นี้จะปรับปรุง Approved Data ที่มีอยู่ (พบ ${result.courses.length} หลักสูตรในไฟล์), เพิ่มหลักสูตรใหม่ที่ยังไม่มี, และนำหลักสูตรที่ไม่มีในไฟล์นี้ออกจากรายการปัจจุบัน — รายชื่อกลุ่มเป้าหมาย/หน่วยงาน/งบประมาณของทุกหลักสูตรในไฟล์จะถูกแทนที่ด้วยข้อมูลชุดนี้ทั้งหมด ยืนยันดำเนินการ?`;
     if (!confirm(confirmMsg)) {
       const el = document.getElementById('import-finaldata-status');
       if (el) el.textContent = '';

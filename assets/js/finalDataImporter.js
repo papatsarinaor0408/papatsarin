@@ -135,7 +135,7 @@ function importFinalDataFile(file, callback) {
 
       const missing = Object.values(FINAL_SHEET_NAMES).filter((name) => wb.SheetNames.indexOf(name) === -1);
       if (missing.length) {
-        callback(new Error('ไฟล์นี้ไม่ใช่ไฟล์ข้อมูลไฟนอล — ไม่พบชีท: ' + missing.join(', ')));
+        callback(new Error('ไฟล์นี้ไม่ใช่ไฟล์ Approved Data — ไม่พบชีท: ' + missing.join(', ')));
         return;
       }
 
