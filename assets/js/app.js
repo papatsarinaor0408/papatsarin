@@ -29,6 +29,13 @@ const STATE = {
   loginHistoryFilters: { search: '', department: '', dateFrom: '', dateTo: '' },
   activityLog: [], activityLogLoaded: false,
   activityLogFilters: { search: '', action: '', dateFrom: '', dateTo: '' },
+
+  // "ข้อมูลไฟนอล" tab — a separate dataset (final_courses + 3 child detail
+  // tables), loaded lazily on first visit like the history tabs above, but
+  // visible to every user (not admin-only — only its import button is).
+  finalCourses: [], finalTargetsByName: [], finalTargetsByUnit: [], finalBudget: [],
+  finalDataLoaded: false, finalDataLastImportInfo: null,
+  finalDataFilters: { search: '', courseType: '', sourceStatus: '' },
 };
 
 /* ---------------- persistence (central database — see dataClient.js) ---------------- */
@@ -1680,6 +1687,236 @@ function renderActivityLogTab() {
 }
 
 /* ==================================================================== */
+/* TAB: FINAL DATA (ข้อมูลไฟนอล) — a separate dataset (final_courses + 3  */
+/* child detail tables) exported from the central อศค. tracking system   */
+/* once a course is re-keyed there. Unrelated to plans/decisions above — */
+/* visible to everyone, only its import button is admin-only.           */
+/* ==================================================================== */
+
+async function loadFinalDataTab() {
+  const root = document.getElementById('panel-finaldata');
+  if (!STATE.finalDataLoaded) {
+    root.innerHTML = '<div class="empty-state"><div class="big">⏳</div>กำลังโหลด...</div>';
+    try {
+      await fetchFinalData();
+      try { STATE.finalDataLastImportInfo = await fetchLastFinalImportInfo(); }
+      catch (e) { STATE.finalDataLastImportInfo = null; }
+      STATE.finalDataLoaded = true;
+    } catch (e) {
+      root.innerHTML = `<div class="empty-state"><div class="big">⚠</div>โหลดข้อมูลไฟนอลไม่สำเร็จ: ${escapeHtml(e.message || '')}</div>`;
+      return;
+    }
+  }
+  renderFinalDataTab();
+}
+
+/** สถานะหลักสูตรของระบบ อศค. เอง (เช่น ร่าง/รออนุมัติ) — คนละชุดกับ REVIEW_STATUS ของแอปนี้ จึงไม่ใช้ statusBadge()/DECISION_META เดิม */
+function finalStatusBadge(status) {
+  const s = String(status || '').trim();
+  if (!s) return '<span class="cell-muted">-</span>';
+  const colorMap = { 'ร่าง': 'var(--status-pending)', 'รออนุมัติ': 'var(--status-warning)', 'อนุมัติ': 'var(--status-good)', 'ไม่อนุมัติ': 'var(--status-critical)' };
+  const color = colorMap[s] || 'var(--status-pending)';
+  return `<span class="badge" style="background:color-mix(in srgb, ${color} 15%, transparent);color:${color};">${escapeHtml(s)}</span>`;
+}
+
+function renderFinalDataTab() {
+  const root = document.getElementById('panel-finaldata');
+  if (!root) return;
+  const courses = STATE.finalCourses;
+  const f = STATE.finalDataFilters;
+
+  let filtered = courses;
+  if (f.search) {
+    const q = f.search.toLowerCase();
+    filtered = filtered.filter((r) => (r.nameTh || '').toLowerCase().includes(q) || (r.id || '').toLowerCase().includes(q));
+  }
+  if (f.courseType) filtered = filtered.filter((r) => r.courseType === f.courseType);
+  if (f.sourceStatus) filtered = filtered.filter((r) => r.sourceStatus === f.sourceStatus);
+
+  const totalBudget = courses.reduce((s, r) => s + (r.budgetTotal || 0), 0);
+  const totalParticipants = courses.reduce((s, r) => s + (r.participants || 0), 0);
+  const centralCount = courses.filter((r) => r.courseType === 'หลักสูตรกลาง อศค. ดำเนินการ').length;
+  const courseTypes = uniqueValues(courses, 'courseType');
+  const sourceStatuses = uniqueValues(courses, 'sourceStatus');
+
+  const info = STATE.finalDataLastImportInfo;
+  const importLine = info
+    ? `อัปเดตล่าสุด: <b>${fmtThaiDateTime(info.imported_at)}</b>${info.file_name ? ` <span style="color:var(--text-muted);">(${escapeHtml(info.file_name)})</span>` : ''}`
+    : 'ยังไม่มีการนำเข้าข้อมูลไฟนอล';
+
+  root.innerHTML = `
+    <div class="subheading-label" style="font-size:15px;margin-bottom:6px;">ข้อมูลไฟนอล — หลักสูตรที่บันทึกในระบบกลาง อศค.</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+      <div style="font-size:12.5px;color:var(--text-secondary);">${importLine}</div>
+      <div>
+        <button class="btn admin-only" id="import-finaldata-btn">⬆ นำเข้าข้อมูลไฟนอล (Excel)</button>
+        <input type="file" id="import-finaldata-file-input" accept=".xlsx,.xls" hidden />
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin:0 0 14px;white-space:pre-line;" id="import-finaldata-status"></div>
+
+    ${courses.length ? `
+    <div class="mini-kpi-grid" style="margin-bottom:16px;">
+      <div class="mini-kpi-card"><div class="mini-kpi-label">หลักสูตรทั้งหมด</div><div class="mini-kpi-value">${fmtNum(courses.length)}</div><div class="mini-kpi-sub">หลักสูตรไฟนอล</div></div>
+      <div class="mini-kpi-card"><div class="mini-kpi-label">งบประมาณรวม</div><div class="mini-kpi-value">${fmtBaht(totalBudget)}</div><div class="mini-kpi-sub">ทุกหลักสูตร</div></div>
+      <div class="mini-kpi-card"><div class="mini-kpi-label">ผู้เข้าอบรมรวม</div><div class="mini-kpi-value">${fmtNum(totalParticipants)}</div><div class="mini-kpi-sub">คน (รวมทุกหลักสูตร)</div></div>
+      <div class="mini-kpi-card"><div class="mini-kpi-label">หลักสูตรกลาง อศค. ดำเนินการ</div><div class="mini-kpi-value">${fmtNum(centralCount)}</div><div class="mini-kpi-sub">จาก ${fmtNum(courses.length)} หลักสูตร</div></div>
+    </div>
+    <div class="filter-bar" style="margin-bottom:14px;">
+      <div class="filter-field">
+        <label>ค้นหา</label>
+        <input type="text" class="filter-search" id="fd-search" placeholder="ชื่อหลักสูตร / รหัส" value="${escapeAttr(f.search)}" />
+      </div>
+      <div class="filter-field">
+        <label>ประเภทหลักสูตร</label>
+        <select id="fd-coursetype"><option value="">ทั้งหมด</option>${courseTypes.map((v) => `<option value="${escapeAttr(v)}"${f.courseType === v ? ' selected' : ''}>${escapeHtml(v)}</option>`).join('')}</select>
+      </div>
+      <div class="filter-field">
+        <label>สถานะหลักสูตร</label>
+        <select id="fd-status"><option value="">ทั้งหมด</option>${sourceStatuses.map((v) => `<option value="${escapeAttr(v)}"${f.sourceStatus === v ? ' selected' : ''}>${escapeHtml(v)}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="filter-count" style="margin-bottom:10px;">พบ ${fmtNum(filtered.length)} หลักสูตร จากทั้งหมด ${fmtNum(courses.length)} หลักสูตร — คลิกแถวเพื่อดูรายละเอียด</div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>รหัส</th><th>ชื่อหลักสูตร</th><th>ประเภทหลักสูตร</th><th>ประเภทการส่งอบรม</th>
+          <th class="num">ผู้เข้าอบรม</th><th class="num">งบประมาณรวม</th><th>สถานะหลักสูตร</th>
+        </tr></thead>
+        <tbody>
+          ${filtered.length ? filtered.map((r) => `
+            <tr class="clickable" data-id="${escapeAttr(r.id)}">
+              <td class="cell-muted">${escapeHtml(r.id)}</td>
+              <td class="cell-name">${escapeHtml(r.nameTh || '-')}</td>
+              <td>${escapeHtml(r.courseType || '-')}</td>
+              <td>${escapeHtml(r.deliveryType || '-')}</td>
+              <td class="num">${fmtNum(r.participants)}</td>
+              <td class="num">${r.budgetTotal ? fmtBaht(r.budgetTotal) : '<span class="cell-muted">-</span>'}</td>
+              <td>${finalStatusBadge(r.sourceStatus)}</td>
+            </tr>
+          `).join('') : `<tr><td colspan="7"><div class="empty-state"><div class="big">🔍</div>ไม่พบหลักสูตรที่ตรงกับตัวกรอง</div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
+    ` : `<div class="empty-state"><div class="big">📄</div>ยังไม่มีข้อมูลไฟนอล — กด "นำเข้าข้อมูลไฟนอล" เพื่ออัปโหลดไฟล์</div>`}
+  `;
+
+  root.querySelectorAll('tbody tr[data-id]').forEach((tr) => {
+    tr.addEventListener('click', () => openFinalCourseDrawer(tr.dataset.id));
+  });
+  if (courses.length) {
+    bindSearchInput('fd-search', (v) => { STATE.finalDataFilters.search = v; renderFinalDataTab(); });
+    document.getElementById('fd-coursetype').addEventListener('change', (e) => { STATE.finalDataFilters.courseType = e.target.value; renderFinalDataTab(); });
+    document.getElementById('fd-status').addEventListener('change', (e) => { STATE.finalDataFilters.sourceStatus = e.target.value; renderFinalDataTab(); });
+  }
+  const importBtn = root.querySelector('#import-finaldata-btn');
+  const importInput = root.querySelector('#import-finaldata-file-input');
+  if (importBtn && importInput) {
+    importBtn.addEventListener('click', () => importInput.click());
+    importInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      importInput.value = '';
+      if (file) handleFinalDataFileImport(file);
+    });
+  }
+}
+
+/** ใช้กล่อง drawer เดียวกับ openDrawer() (plan) แต่เติมเนื้อหาเอง ไม่ผ่าน renderDrawer() เพราะข้อมูลคนละชุด/คนละรูปแบบกันโดยสิ้นเชิง */
+function openFinalCourseDrawer(courseId) {
+  const r = STATE.finalCourses.find((x) => x.id === courseId);
+  if (!r) return;
+  document.getElementById('drawer-title').textContent = r.nameTh || r.id;
+  document.getElementById('drawer-title-pill').textContent = r.courseType || 'ไม่ระบุ';
+  const body = document.getElementById('drawer-body');
+
+  const byName = STATE.finalTargetsByName.filter((t) => t.courseId === courseId);
+  const byUnit = STATE.finalTargetsByUnit.filter((t) => t.courseId === courseId);
+  const budgetRows = STATE.finalBudget.filter((t) => t.courseId === courseId);
+  const budgetNumKeys = ['days', 'perDiem', 'participants', 'accommodation', 'transport', 'airfare', 'passportFee', 'visaFee', 'travelInsurance', 'commsCost', 'registrationFee', 'perHeadSummary', 'total'];
+  const budgetTotals = budgetRows.reduce((acc, b) => { budgetNumKeys.forEach((k) => { acc[k] = (acc[k] || 0) + (b[k] || 0); }); return acc; }, {});
+  const orgPath = [r.deputyLine, r.assistantGovernor, r.deptName, r.workingGroup].filter(Boolean).join(' › ');
+  const field = (label, value) => `<div><div class="subheading-label">${label}</div><div style="margin-top:2px;">${value}</div></div>`;
+
+  body.innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:18px;">
+      ${field('รหัส', escapeHtml(r.id))}
+      ${field('สายบังคับบัญชา', escapeHtml(orgPath || '-'))}
+      ${field('ประเภทการส่งอบรม', escapeHtml(r.deliveryType || '-'))}
+      ${field('งบประมาณรวม', fmtBaht(r.budgetTotal))}
+      ${field('สถานะหลักสูตร', finalStatusBadge(r.sourceStatus))}
+    </div>
+    ${r.rationale ? `<div style="margin-bottom:18px;">${field('หลักการและเหตุผล', formatDetailValue(r.rationale, 'numbered'))}</div>` : ''}
+
+    <div class="subheading-label" style="margin-bottom:6px;">กลุ่มเป้าหมายตามรายชื่อ (${fmtNum(byName.length)})</div>
+    <div class="table-wrap" style="margin-bottom:18px;">
+      <table class="data-table">
+        <thead><tr><th>เลขประจำตัว</th><th>ชื่อ-สกุล</th><th>ตำแหน่ง</th><th>หน่วยงาน</th></tr></thead>
+        <tbody>
+          ${byName.length ? byName.map((t) => `<tr><td>${escapeHtml(t.employeeId || '-')}</td><td class="cell-name">${escapeHtml(t.fullName || '-')}</td><td>${escapeHtml(t.position || '-')}</td><td>${escapeHtml(t.unit || '-')}</td></tr>`).join('') : `<tr><td colspan="4"><div class="empty-state">ไม่มีข้อมูล</div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="subheading-label" style="margin-bottom:6px;">กลุ่มเป้าหมายตามหน่วยงาน (${fmtNum(byUnit.length)})</div>
+    <div class="table-wrap" style="margin-bottom:18px;">
+      <table class="data-table">
+        <thead><tr><th>สายรอง</th><th>ผู้ช่วย</th><th>ฝ่าย</th><th>กอง</th><th>หมายเหตุ</th></tr></thead>
+        <tbody>
+          ${byUnit.length ? byUnit.map((t) => `<tr><td>${escapeHtml(t.lineDeputy || '-')}</td><td>${escapeHtml(t.assistant || '-')}</td><td>${escapeHtml(t.deptName || '-')}</td><td>${escapeHtml(t.divisionName || '-')}</td><td>${escapeHtml(t.remark || '-')}</td></tr>`).join('') : `<tr><td colspan="5"><div class="empty-state">ไม่มีข้อมูล</div></td></tr>`}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="subheading-label" style="margin-bottom:6px;">รายละเอียดงบประมาณ (${fmtNum(budgetRows.length)})</div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr><th>ระดับ</th><th class="num">จำนวนวัน</th><th class="num">ค่าเบี้ยเลี้ยง</th><th class="num">ผู้เข้าอบรม</th><th class="num">ค่าที่พัก</th><th class="num">ค่าพาหนะ</th><th class="num">รวม</th></tr></thead>
+        <tbody>
+          ${budgetRows.length ? budgetRows.map((b) => `<tr><td>${escapeHtml(b.level || '-')}</td><td class="num">${fmtNum(b.days)}</td><td class="num">${fmtBaht(b.perDiem)}</td><td class="num">${fmtNum(b.participants)}</td><td class="num">${fmtBaht(b.accommodation)}</td><td class="num">${fmtBaht(b.transport)}</td><td class="num">${fmtBaht(b.total)}</td></tr>`).join('') : `<tr><td colspan="7"><div class="empty-state">ไม่มีข้อมูล</div></td></tr>`}
+          ${budgetRows.length ? `<tr style="border-top:2px solid var(--border);font-weight:700;"><td>รวม</td><td class="num">${fmtNum(budgetTotals.days)}</td><td class="num">${fmtBaht(budgetTotals.perDiem)}</td><td class="num">${fmtNum(budgetTotals.participants)}</td><td class="num">${fmtBaht(budgetTotals.accommodation)}</td><td class="num">${fmtBaht(budgetTotals.transport)}</td><td class="num">${fmtBaht(budgetTotals.total)}</td></tr>` : ''}
+        </tbody>
+      </table>
+    </div>
+  `;
+  document.getElementById('modal-backdrop').classList.add('show');
+}
+
+function handleFinalDataFileImport(file) {
+  if (!isAdmin()) return; // server-side RLS/RPC is the real gate — this is defense in depth only
+  const statusEl = document.getElementById('import-finaldata-status');
+  if (statusEl) statusEl.textContent = 'กำลังอ่านไฟล์...';
+  importFinalDataFile(file, async (err, result) => {
+    if (err) {
+      const el = document.getElementById('import-finaldata-status');
+      if (el) el.textContent = '⚠ ' + err.message;
+      return;
+    }
+
+    const confirmMsg = `การนำเข้าไฟล์นี้จะปรับปรุงข้อมูลไฟนอลที่มีอยู่ (พบ ${result.courses.length} หลักสูตรในไฟล์), เพิ่มหลักสูตรใหม่ที่ยังไม่มี, และนำหลักสูตรที่ไม่มีในไฟล์นี้ออกจากรายการปัจจุบัน — รายชื่อกลุ่มเป้าหมาย/หน่วยงาน/งบประมาณของทุกหลักสูตรในไฟล์จะถูกแทนที่ด้วยข้อมูลชุดนี้ทั้งหมด ยืนยันดำเนินการ?`;
+    if (!confirm(confirmMsg)) {
+      const el = document.getElementById('import-finaldata-status');
+      if (el) el.textContent = '';
+      return;
+    }
+
+    const busyEl = document.getElementById('import-finaldata-status');
+    if (busyEl) busyEl.textContent = 'กำลังนำเข้าข้อมูล...';
+    try {
+      const counts = await importFinalDataRemote(result, file.name);
+      await fetchFinalData();
+      try { STATE.finalDataLastImportInfo = await fetchLastFinalImportInfo(); }
+      catch (e) { STATE.finalDataLastImportInfo = null; }
+      renderFinalDataTab();
+      const doneEl = document.getElementById('import-finaldata-status');
+      if (doneEl) doneEl.textContent = `นำเข้าสำเร็จ — เพิ่มใหม่ ${counts.new_count}, ปรับปรุง ${counts.matched_count}, กลับมาใช้งาน ${counts.reactivated_count}, นำออกจากรายการปัจจุบัน ${counts.deactivated_count}`;
+    } catch (e) {
+      const errEl = document.getElementById('import-finaldata-status');
+      if (errEl) errEl.textContent = '⚠ นำเข้าไม่สำเร็จ: ' + (e.validation ? e.validation.message : (e.message || 'เกิดข้อผิดพลาด'));
+    }
+  });
+}
+
+/* ==================================================================== */
 /* DETAIL DRAWER + REVIEW ACTIONS                                       */
 /* ==================================================================== */
 function formatDetailValue(value, mode = 'plain') {
@@ -2207,6 +2444,9 @@ function switchTab(tab) {
   // hidden from Reviewers by CSS anyway.
   if (tab === 'loginhistory' && isAdmin()) loadLoginHistoryTab();
   if (tab === 'activitylog' && isAdmin()) loadActivityLogTab();
+  // Visible to everyone (unlike the two admin-only tabs above) — RLS scopes
+  // what a Reviewer's SELECT returns the same way it does for plans.
+  if (tab === 'finaldata' && !STATE.finalDataLoaded) loadFinalDataTab();
 }
 
 /* ==================================================================== */

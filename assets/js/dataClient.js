@@ -166,3 +166,81 @@ async function fetchPlanHistory(planId) {
   if (error) throw error;
   return data || [];
 }
+
+/* ==================================================================== */
+/* "ข้อมูลไฟนอล" — a separate, independent dataset (final_courses + 3    */
+/* child detail tables), unrelated to plans/decisions above.            */
+/* ==================================================================== */
+
+function finalCourseRowToRecord(row) {
+  const rec = { id: row.id };
+  FINAL_COURSE_FIELDS.forEach((f) => {
+    const v = row[camelToSnake(f.key)];
+    rec[f.key] = f.numeric ? Number(v || 0) : (v === undefined || v === null ? '' : v);
+  });
+  return rec;
+}
+
+function finalChildRowToRecord(row, fields) {
+  const rec = {};
+  fields.forEach((f) => {
+    const v = row[camelToSnake(f.key)];
+    rec[f.key] = f.numeric ? Number(v || 0) : (v === undefined || v === null ? '' : v);
+  });
+  return rec;
+}
+
+/** Populates STATE.finalCourses/finalTargetsByName/finalTargetsByUnit/finalBudget. Dataset is tiny (tens/hundreds of rows) — fetch-all, no pagination needed. */
+async function fetchFinalData() {
+  const [coursesRes, byNameRes, byUnitRes, budgetRes] = await Promise.all([
+    SB.from('final_courses').select('*').eq('is_active', true),
+    SB.from('final_course_targets_by_name').select('*'),
+    SB.from('final_course_targets_by_unit').select('*'),
+    SB.from('final_course_budget').select('*'),
+  ]);
+  if (coursesRes.error) throw coursesRes.error;
+  if (byNameRes.error) throw byNameRes.error;
+  if (byUnitRes.error) throw byUnitRes.error;
+  if (budgetRes.error) throw budgetRes.error;
+
+  STATE.finalCourses = (coursesRes.data || []).map(finalCourseRowToRecord);
+  STATE.finalTargetsByName = (byNameRes.data || []).map((r) => finalChildRowToRecord(r, FINAL_TARGET_NAME_FIELDS));
+  STATE.finalTargetsByUnit = (byUnitRes.data || []).map((r) => finalChildRowToRecord(r, FINAL_TARGET_UNIT_FIELDS));
+  STATE.finalBudget = (budgetRes.data || []).map((r) => finalChildRowToRecord(r, FINAL_BUDGET_FIELDS));
+}
+
+/**
+ * Admin-only. parsed = importFinalDataFile()'s callback result. Returns
+ * { new_count, matched_count, reactivated_count, deactivated_count } on
+ * success. On validation failure, throws an Error with a `.validation`
+ * property (same shape as importDatasetRemote()).
+ */
+async function importFinalDataRemote(parsed, fileName) {
+  const toRows = (records, fields, extraKey) => records.map((rec) => {
+    const row = {};
+    fields.forEach((f) => { row[camelToSnake(f.key)] = (rec[f.key] === undefined || rec[f.key] === null) ? '' : rec[f.key]; });
+    if (extraKey) row.id = rec.id;
+    return row;
+  });
+  const { data, error } = await SB.rpc('admin_import_final_data', {
+    p_courses: toRows(parsed.courses, FINAL_COURSE_FIELDS, 'id'),
+    p_targets_by_name: toRows(parsed.targetsByName, FINAL_TARGET_NAME_FIELDS),
+    p_targets_by_unit: toRows(parsed.targetsByUnit, FINAL_TARGET_UNIT_FIELDS),
+    p_budget: toRows(parsed.budget, FINAL_BUDGET_FIELDS),
+    p_file_name: fileName || null,
+  });
+  if (error) {
+    const parsedErr = parseImportValidationError(error);
+    const e = new Error(parsedErr ? parsedErr.message : (error.message || 'Import failed'));
+    if (parsedErr) e.validation = parsedErr;
+    throw e;
+  }
+  return (data && data[0]) || { new_count: 0, matched_count: 0, reactivated_count: 0, deactivated_count: 0 };
+}
+
+/** Everyone — last final-data import's timestamp/file name only. */
+async function fetchLastFinalImportInfo() {
+  const { data, error } = await SB.rpc('get_last_final_import_info');
+  if (error) throw error;
+  return (data && data[0]) || null;
+}
