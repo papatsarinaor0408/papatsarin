@@ -1,16 +1,13 @@
 /**
- * นำเข้าไฟล์ "ข้อมูลไฟนอล" — ไฟล์ Excel หลายชีทที่ส่งออกจากระบบกลาง อศค.
- * หลังจากคีย์หลักสูตรเข้าระบบใหม่แล้ว (มีรหัสจริง เช่น TN-0313) คนละรูปแบบ
- * กับไฟล์นำเข้าหลักที่ใช้ importer.js/schema.js — จึงแยกตัวอ่านเป็นไฟล์นี้
- * ต่างหาก ทำงานฝั่งเบราว์เซอร์ทั้งหมดเหมือนกัน
+ * นำเข้าไฟล์ "Approved Data" — ไฟล์ Excel ที่ส่งออกจากระบบกลาง อศค. หลังจาก
+ * คีย์หลักสูตรเข้าระบบใหม่แล้ว (มีรหัสจริง เช่น TN-0313) คนละรูปแบบกับไฟล์
+ * นำเข้าหลักที่ใช้ importer.js/schema.js — จึงแยกตัวอ่านเป็นไฟล์นี้ต่างหาก
+ * ทำงานฝั่งเบราว์เซอร์ทั้งหมดเหมือนกัน. อ่านเฉพาะชีทแรก "หลักสูตร" — ชีทอื่น
+ * ในไฟล์ (ถ้ามี) จะไม่ถูกใช้ เพราะรายชื่อกลุ่มเป้าหมายที่ควบรวมแล้วอยู่ใน
+ * คอลัมน์ "ชื่อกลุ่มเป้าหมาย" ของชีทนี้อยู่แล้ว
  */
 
-const FINAL_SHEET_NAMES = {
-  courses: 'หลักสูตร',
-  targetsByName: 'กลุ่มเป้าหมายตามรายชื่อ',
-  targetsByUnit: 'กลุ่มเป้าหมายตามหน่วยงาน',
-  budget: 'งบประมาณ',
-};
+const FINAL_COURSE_SHEET_NAME = 'หลักสูตร';
 
 const FINAL_COURSE_FIELDS = [
   { key: 'deputyLine',         header: 'รอง' },
@@ -51,41 +48,8 @@ const FINAL_COURSE_FIELDS = [
   { key: 'creatorName',        header: 'ผู้สร้างหลักสูตร' },
   { key: 'creatorUnit',        header: 'หน่วยงานผู้สร้างหลักสูตร' },
   { key: 'targetGroupNamesRaw',header: 'ชื่อกลุ่มเป้าหมาย' },
-];
-
-const FINAL_TARGET_NAME_FIELDS = [
-  { key: 'courseId',   header: 'ID' },
-  { key: 'employeeId', header: 'หมายเลขประจำตัว' },
-  { key: 'fullName',   header: 'ชื่อ-สกุล' },
-  { key: 'position',   header: 'ตำแหน่ง' },
-  { key: 'unit',       header: 'หน่วยงาน' },
-];
-
-const FINAL_TARGET_UNIT_FIELDS = [
-  { key: 'courseId',     header: 'ID' },
-  { key: 'lineDeputy',   header: 'สายรอง' },
-  { key: 'assistant',    header: 'ผู้ช่วย' },
-  { key: 'deptName',     header: 'ฝ่าย' },
-  { key: 'divisionName', header: 'กอง' },
-  { key: 'remark',       header: 'หมายเหตุ' },
-];
-
-const FINAL_BUDGET_FIELDS = [
-  { key: 'courseId',       header: 'ID' },
-  { key: 'level',          header: 'ระดับ' },
-  { key: 'days',           header: 'จำนวนวัน', numeric: true },
-  { key: 'perDiem',        header: 'ค่าเบี้ยเลี้ยง', numeric: true },
-  { key: 'participants',   header: 'จำนวนผู้เข้าอบรม', numeric: true },
-  { key: 'accommodation',  header: 'ค่าที่พัก', numeric: true },
-  { key: 'transport',      header: 'ค่าพาหนะ', numeric: true },
-  { key: 'airfare',        header: 'ค่าบัตรโดยสารเครื่องบินไป-กลับ', numeric: true },
-  { key: 'passportFee',    header: 'ค่าหนังสือเดินทาง', numeric: true },
-  { key: 'visaFee',        header: 'ค่าวีซ่า', numeric: true },
-  { key: 'travelInsurance',header: 'ค่าประกันเดินทาง', numeric: true },
-  { key: 'commsCost',      header: 'ค่าใช้จ่ายในการติดต่อสื่อสาร', numeric: true },
-  { key: 'registrationFee',header: 'ค่าลงทะเบียนรายคน', numeric: true },
-  { key: 'perHeadSummary', header: 'สรุปค่าใช้จ่ายต่อหัว', numeric: true },
-  { key: 'total',          header: 'รวม', numeric: true },
+  { key: 'targetSection',      header: 'แผนกกลุ่มเป้าหมาย' },
+  { key: 'targetDivision',     header: 'กองกลุ่มเป้าหมาย' },
 ];
 
 /** Builds a { trimmedHeader: field } lookup, same technique as importer.js's HEADER_TO_KEY. */
@@ -95,8 +59,7 @@ function buildHeaderMap(fields) {
   return map;
 }
 
-/** Maps one sheet_to_json row to a record using a field/header list — courses get their `id` from the 'ID' column, child sheets keep it as `courseId` (one of the mapped fields). */
-function mapFinalRow(row, headerMap, idKey) {
+function mapFinalRow(row, headerMap) {
   const rec = {};
   Object.keys(row).forEach((rawHeader) => {
     const header = String(rawHeader).trim();
@@ -107,19 +70,12 @@ function mapFinalRow(row, headerMap, idKey) {
     else if (field.key === 'startDate' || field.key === 'endDate') rec[field.key] = toDateLabel(val);
     else rec[field.key] = (val === undefined || val === null) ? '' : String(val).trim();
   });
-  if (idKey && !rec[idKey]) rec[idKey] = '';
   return rec;
 }
 
-function sheetRows(wb, sheetName) {
-  const ws = wb.Sheets[sheetName];
-  if (!ws) return [];
-  return XLSX.utils.sheet_to_json(ws, { defval: '' });
-}
-
 /**
- * อ่านไฟล์ "ข้อมูลไฟนอล" (Excel 4 ชีท) แล้วคืนค่า
- * { courses, targetsByName, targetsByUnit, budget } ผ่าน callback(err, result)
+ * อ่านไฟล์ "Approved Data" (ใช้เฉพาะชีท "หลักสูตร") แล้วคืนค่า { courses }
+ * ผ่าน callback(err, result)
  */
 function importFinalDataFile(file, callback) {
   if (typeof XLSX === 'undefined') {
@@ -133,45 +89,30 @@ function importFinalDataFile(file, callback) {
       const data = new Uint8Array(e.target.result);
       const wb = XLSX.read(data, { type: 'array', cellDates: true });
 
-      const missing = Object.values(FINAL_SHEET_NAMES).filter((name) => wb.SheetNames.indexOf(name) === -1);
-      if (missing.length) {
-        callback(new Error('ไฟล์นี้ไม่ใช่ไฟล์ Approved Data — ไม่พบชีท: ' + missing.join(', ')));
+      const ws = wb.Sheets[FINAL_COURSE_SHEET_NAME];
+      if (!ws) {
+        callback(new Error(`ไฟล์นี้ไม่ใช่ไฟล์ Approved Data — ไม่พบชีท "${FINAL_COURSE_SHEET_NAME}"`));
+        return;
+      }
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      if (!rows.length) {
+        callback(new Error(`ไม่พบข้อมูลในชีท "${FINAL_COURSE_SHEET_NAME}"`));
         return;
       }
 
       const courseMap = buildHeaderMap(FINAL_COURSE_FIELDS);
-      const courses = sheetRows(wb, FINAL_SHEET_NAMES.courses).map((row) => {
+      const courses = rows.map((row) => {
         const rec = mapFinalRow(row, courseMap);
         rec.id = String(row['ID'] === undefined || row['ID'] === null ? '' : row['ID']).trim();
         return rec;
       });
       const missingId = courses.findIndex((r) => !r.id || !r.nameTh);
       if (missingId !== -1) {
-        callback(new Error(`ชีท "${FINAL_SHEET_NAMES.courses}" แถวที่ ${missingId + 2} ไม่มีรหัส (ID) หรือชื่อหลักสูตร`));
+        callback(new Error(`ชีท "${FINAL_COURSE_SHEET_NAME}" แถวที่ ${missingId + 2} ไม่มีรหัส (ID) หรือชื่อหลักสูตร`));
         return;
       }
 
-      const targetNameMap = buildHeaderMap(FINAL_TARGET_NAME_FIELDS);
-      const targetsByName = sheetRows(wb, FINAL_SHEET_NAMES.targetsByName)
-        .map((row) => mapFinalRow(row, targetNameMap, 'courseId'))
-        .filter((r) => r.courseId);
-
-      const targetUnitMap = buildHeaderMap(FINAL_TARGET_UNIT_FIELDS);
-      const targetsByUnit = sheetRows(wb, FINAL_SHEET_NAMES.targetsByUnit)
-        .map((row) => mapFinalRow(row, targetUnitMap, 'courseId'))
-        .filter((r) => r.courseId);
-
-      const budgetMap = buildHeaderMap(FINAL_BUDGET_FIELDS);
-      const budget = sheetRows(wb, FINAL_SHEET_NAMES.budget)
-        .map((row) => mapFinalRow(row, budgetMap, 'courseId'))
-        .filter((r) => r.courseId);
-
-      if (!courses.length) {
-        callback(new Error(`ไม่พบข้อมูลในชีท "${FINAL_SHEET_NAMES.courses}"`));
-        return;
-      }
-
-      callback(null, { courses, targetsByName, targetsByUnit, budget });
+      callback(null, { courses });
     } catch (err) {
       callback(new Error('รูปแบบไฟล์ไม่ถูกต้อง หรือไม่สามารถอ่านได้ (' + err.message + ')'));
     }

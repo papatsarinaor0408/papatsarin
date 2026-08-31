@@ -30,10 +30,11 @@ const STATE = {
   activityLog: [], activityLogLoaded: false,
   activityLogFilters: { search: '', action: '', dateFrom: '', dateTo: '' },
 
-  // "ข้อมูลไฟนอล" tab — a separate dataset (final_courses + 3 child detail
-  // tables), loaded lazily on first visit like the history tabs above, but
-  // visible to every user (not admin-only — only its import button is).
-  finalCourses: [], finalTargetsByName: [], finalTargetsByUnit: [], finalBudget: [],
+  // "Approved Data" tab — a separate dataset (final_courses, sheet 1 of
+  // the อศค. workbook only), loaded lazily on first visit like the history
+  // tabs above, but visible to every user (not admin-only — only its
+  // import button is).
+  finalCourses: [],
   finalDataLoaded: false, finalDataLastImportInfo: null,
   finalDataFilters: { search: '', courseType: '', sourceStatus: '' },
 };
@@ -1687,10 +1688,10 @@ function renderActivityLogTab() {
 }
 
 /* ==================================================================== */
-/* TAB: FINAL DATA (ข้อมูลไฟนอล) — a separate dataset (final_courses + 3  */
-/* child detail tables) exported from the central อศค. tracking system   */
-/* once a course is re-keyed there. Unrelated to plans/decisions above — */
-/* visible to everyone, only its import button is admin-only.           */
+/* TAB: APPROVED DATA — a separate dataset (final_courses, sheet 1 of the */
+/* อศค. workbook only) exported once a course is re-keyed into the central */
+/* อศค. tracking system. Unrelated to plans/decisions above — visible to  */
+/* everyone, only its import button is admin-only.                      */
 /* ==================================================================== */
 
 async function loadFinalDataTab() {
@@ -1829,12 +1830,8 @@ function openFinalCourseDrawer(courseId) {
   document.getElementById('drawer-title-pill').textContent = r.courseType || 'ไม่ระบุ';
   const body = document.getElementById('drawer-body');
 
-  const byName = STATE.finalTargetsByName.filter((t) => t.courseId === courseId);
-  const byUnit = STATE.finalTargetsByUnit.filter((t) => t.courseId === courseId);
-  const budgetRows = STATE.finalBudget.filter((t) => t.courseId === courseId);
-  const budgetNumKeys = ['days', 'perDiem', 'participants', 'accommodation', 'transport', 'airfare', 'passportFee', 'visaFee', 'travelInsurance', 'commsCost', 'registrationFee', 'perHeadSummary', 'total'];
-  const budgetTotals = budgetRows.reduce((acc, b) => { budgetNumKeys.forEach((k) => { acc[k] = (acc[k] || 0) + (b[k] || 0); }); return acc; }, {});
   const orgPath = [r.deputyLine, r.assistantGovernor, r.deptName, r.workingGroup].filter(Boolean).join(' › ');
+  const targetUnit = [r.targetDivision, r.targetSection].filter(Boolean).join(' / ');
   const field = (label, value) => `<div><div class="subheading-label">${label}</div><div style="margin-top:2px;">${value}</div></div>`;
 
   body.innerHTML = `
@@ -1844,39 +1841,10 @@ function openFinalCourseDrawer(courseId) {
       ${field('ประเภทการส่งอบรม', escapeHtml(r.deliveryType || '-'))}
       ${field('งบประมาณรวม', fmtBaht(r.budgetTotal))}
       ${field('สถานะหลักสูตร', finalStatusBadge(r.sourceStatus))}
+      ${targetUnit ? field('หน่วยงานกลุ่มเป้าหมาย', escapeHtml(targetUnit)) : ''}
     </div>
     ${r.rationale ? `<div style="margin-bottom:18px;">${field('หลักการและเหตุผล', formatDetailValue(r.rationale, 'numbered'))}</div>` : ''}
-
-    <div class="subheading-label" style="margin-bottom:6px;">กลุ่มเป้าหมายตามรายชื่อ (${fmtNum(byName.length)})</div>
-    <div class="table-wrap" style="margin-bottom:18px;">
-      <table class="data-table">
-        <thead><tr><th>เลขประจำตัว</th><th>ชื่อ-สกุล</th><th>ตำแหน่ง</th><th>หน่วยงาน</th></tr></thead>
-        <tbody>
-          ${byName.length ? byName.map((t) => `<tr><td>${escapeHtml(t.employeeId || '-')}</td><td class="cell-name">${escapeHtml(t.fullName || '-')}</td><td>${escapeHtml(t.position || '-')}</td><td>${escapeHtml(t.unit || '-')}</td></tr>`).join('') : `<tr><td colspan="4"><div class="empty-state">ไม่มีข้อมูล</div></td></tr>`}
-        </tbody>
-      </table>
-    </div>
-
-    <div class="subheading-label" style="margin-bottom:6px;">กลุ่มเป้าหมายตามหน่วยงาน (${fmtNum(byUnit.length)})</div>
-    <div class="table-wrap" style="margin-bottom:18px;">
-      <table class="data-table">
-        <thead><tr><th>สายรอง</th><th>ผู้ช่วย</th><th>ฝ่าย</th><th>กอง</th><th>หมายเหตุ</th></tr></thead>
-        <tbody>
-          ${byUnit.length ? byUnit.map((t) => `<tr><td>${escapeHtml(t.lineDeputy || '-')}</td><td>${escapeHtml(t.assistant || '-')}</td><td>${escapeHtml(t.deptName || '-')}</td><td>${escapeHtml(t.divisionName || '-')}</td><td>${escapeHtml(t.remark || '-')}</td></tr>`).join('') : `<tr><td colspan="5"><div class="empty-state">ไม่มีข้อมูล</div></td></tr>`}
-        </tbody>
-      </table>
-    </div>
-
-    <div class="subheading-label" style="margin-bottom:6px;">รายละเอียดงบประมาณ (${fmtNum(budgetRows.length)})</div>
-    <div class="table-wrap">
-      <table class="data-table">
-        <thead><tr><th>ระดับ</th><th class="num">จำนวนวัน</th><th class="num">ค่าเบี้ยเลี้ยง</th><th class="num">ผู้เข้าอบรม</th><th class="num">ค่าที่พัก</th><th class="num">ค่าพาหนะ</th><th class="num">รวม</th></tr></thead>
-        <tbody>
-          ${budgetRows.length ? budgetRows.map((b) => `<tr><td>${escapeHtml(b.level || '-')}</td><td class="num">${fmtNum(b.days)}</td><td class="num">${fmtBaht(b.perDiem)}</td><td class="num">${fmtNum(b.participants)}</td><td class="num">${fmtBaht(b.accommodation)}</td><td class="num">${fmtBaht(b.transport)}</td><td class="num">${fmtBaht(b.total)}</td></tr>`).join('') : `<tr><td colspan="7"><div class="empty-state">ไม่มีข้อมูล</div></td></tr>`}
-          ${budgetRows.length ? `<tr style="border-top:2px solid var(--border);font-weight:700;"><td>รวม</td><td class="num">${fmtNum(budgetTotals.days)}</td><td class="num">${fmtBaht(budgetTotals.perDiem)}</td><td class="num">${fmtNum(budgetTotals.participants)}</td><td class="num">${fmtBaht(budgetTotals.accommodation)}</td><td class="num">${fmtBaht(budgetTotals.transport)}</td><td class="num">${fmtBaht(budgetTotals.total)}</td></tr>` : ''}
-        </tbody>
-      </table>
-    </div>
+    <div>${field('กลุ่มเป้าหมาย (ควบรวมแล้ว)', formatDetailValue(r.targetGroupNamesRaw, 'people'))}</div>
   `;
   document.getElementById('modal-backdrop').classList.add('show');
 }
@@ -1892,7 +1860,7 @@ function handleFinalDataFileImport(file) {
       return;
     }
 
-    const confirmMsg = `การนำเข้าไฟล์นี้จะปรับปรุง Approved Data ที่มีอยู่ (พบ ${result.courses.length} หลักสูตรในไฟล์), เพิ่มหลักสูตรใหม่ที่ยังไม่มี, และนำหลักสูตรที่ไม่มีในไฟล์นี้ออกจากรายการปัจจุบัน — รายชื่อกลุ่มเป้าหมาย/หน่วยงาน/งบประมาณของทุกหลักสูตรในไฟล์จะถูกแทนที่ด้วยข้อมูลชุดนี้ทั้งหมด ยืนยันดำเนินการ?`;
+    const confirmMsg = `การนำเข้าไฟล์นี้จะปรับปรุง Approved Data ที่มีอยู่ (พบ ${result.courses.length} หลักสูตรในไฟล์), เพิ่มหลักสูตรใหม่ที่ยังไม่มี, และนำหลักสูตรที่ไม่มีในไฟล์นี้ออกจากรายการปัจจุบัน ยืนยันดำเนินการ?`;
     if (!confirm(confirmMsg)) {
       const el = document.getElementById('import-finaldata-status');
       if (el) el.textContent = '';
