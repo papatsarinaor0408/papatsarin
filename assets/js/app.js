@@ -1734,27 +1734,31 @@ function renderFinalDataTab() {
   if (f.courseType) filtered = filtered.filter((r) => r.courseType === f.courseType);
   if (f.sourceStatus) filtered = filtered.filter((r) => r.sourceStatus === f.sourceStatus);
 
-  const totalBudget = courses.reduce((s, r) => s + (r.budgetTotal || 0), 0);
-  const totalParticipants = courses.reduce((s, r) => s + (r.participants || 0), 0);
-  const centralCount = courses.filter((r) => r.courseType === 'หลักสูตรกลาง อศค. ดำเนินการ').length;
   const courseTypes = uniqueValues(courses, 'courseType');
   const sourceStatuses = uniqueValues(courses, 'sourceStatus');
 
+  // "ร่าง" ไม่นับในแดชบอร์ดเลย (ไม่ใช่แค่ไม่มีการ์ดของตัวเอง) ตามที่ผู้ใช้ระบุ —
+  // ยังคงหาเจอได้ในตาราง/ตัวกรองด้านล่าง (เพื่อรู้ว่าเคยมีอยู่) แต่ไม่ถูกนับรวมใน
+  // ยอดรวม/การ์ด/% ใดๆ บนแดชบอร์ดด้านบนนี้เลย
+  const dashboardCourses = courses.filter((r) => r.sourceStatus !== 'ร่าง');
+  const totalBudget = dashboardCourses.reduce((s, r) => s + (r.budgetTotal || 0), 0);
+  const totalParticipants = dashboardCourses.reduce((s, r) => s + (r.participants || 0), 0);
+  const centralCount = dashboardCourses.filter((r) => r.courseType === 'หลักสูตรกลาง อศค. ดำเนินการ').length;
+
   // งบที่ อศค. อนุมัติแล้ว (สถานะหลักสูตร = "อนุมัติ" เท่านั้น) เทียบกับงบที่เสนอทั้งหมด
-  const approvedBudget = courses.filter((r) => r.sourceStatus === 'อนุมัติ').reduce((s, r) => s + (r.budgetTotal || 0), 0);
+  const approvedBudget = dashboardCourses.filter((r) => r.sourceStatus === 'อนุมัติ').reduce((s, r) => s + (r.budgetTotal || 0), 0);
   const approvedPct = totalBudget > 0 ? (approvedBudget / totalBudget) * 100 : 0;
   const approvedBarWidth = Math.min(Math.max(approvedPct, 0), 100);
 
-  // การ์ดสีตามสถานะหลักสูตร (สถานะของระบบ อศค. เอง) — ไม่แสดงการ์ด "ร่าง" แยกต่างหาก
-  // ตามที่ผู้ใช้ระบุ (ร่าง = ยังไม่อนุมัติ ไม่ต้องเน้นเป็นการ์ดของตัวเอง แม้จะมีข้อมูล)
+  // การ์ดสีตามสถานะหลักสูตร (สถานะของระบบ อศค. เอง) — ไม่รวม "ร่าง" เลย
   // ใช้จานสี --kpi-fill-* ชุดเดียวกับการ์ดสถานะในหน้าภาพรวม เพื่อให้อ่านง่ายในสไตล์เดียวกัน
   const statusColorMap = { 'รออนุมัติ': 'var(--kpi-fill-revise)', 'อนุมัติ': 'var(--kpi-fill-approved)', 'ไม่อนุมัติ': 'var(--kpi-fill-rejected)' };
   const statusOrderPref = ['รออนุมัติ', 'อนุมัติ', 'ไม่อนุมัติ'];
   const statusCounts = {};
-  courses.forEach((r) => { const s = (r.sourceStatus || '').trim() || 'ไม่ระบุ'; statusCounts[s] = (statusCounts[s] || 0) + 1; });
-  const orderedStatuses = statusOrderPref.filter((s) => statusCounts[s]).concat(Object.keys(statusCounts).filter((s) => !statusOrderPref.includes(s) && s !== 'ร่าง'));
+  dashboardCourses.forEach((r) => { const s = (r.sourceStatus || '').trim() || 'ไม่ระบุ'; statusCounts[s] = (statusCounts[s] || 0) + 1; });
+  const orderedStatuses = statusOrderPref.filter((s) => statusCounts[s]).concat(Object.keys(statusCounts).filter((s) => !statusOrderPref.includes(s)));
   const statusKpis = [
-    { label: 'หลักสูตรทั้งหมด', value: courses.length, color: 'var(--kpi-fill-total)' },
+    { label: 'หลักสูตรทั้งหมด', value: dashboardCourses.length, color: 'var(--kpi-fill-total)' },
     ...orderedStatuses.map((s) => ({ label: s, value: statusCounts[s], color: statusColorMap[s] || 'var(--kpi-fill-pending)' })),
   ];
 
@@ -1796,14 +1800,14 @@ function renderFinalDataTab() {
         <div class="bfh-bar-fill" style="width:${approvedBarWidth}%;background:var(--status-good);"></div>
       </div>
       <div class="bfh-footnote">ผู้เข้าอบรมรวม: <b>${fmtNum(totalParticipants)}</b> คน (ทุกหลักสูตร)</div>
-      <div class="bfh-footnote">หลักสูตรกลาง อศค. ดำเนินการ: <b>${fmtNum(centralCount)}</b> จาก ${fmtNum(courses.length)} หลักสูตร</div>
+      <div class="bfh-footnote">หลักสูตรกลาง อศค. ดำเนินการ: <b>${fmtNum(centralCount)}</b> จาก ${fmtNum(dashboardCourses.length)} หลักสูตร</div>
     </div>
     <div class="kpi-grid" style="margin-bottom:16px;">
       ${statusKpis.map((k) => `
         <div class="kpi-card" style="--kpi-color:${k.color}">
           <div class="kpi-label">${escapeHtml(k.label)}</div>
           <div class="kpi-value">${fmtNum(k.value)}</div>
-          <div class="kpi-pct">${courses.length ? ((k.value / courses.length) * 100).toFixed(1) : '0.0'}% ของทั้งหมด</div>
+          <div class="kpi-pct">${dashboardCourses.length ? ((k.value / dashboardCourses.length) * 100).toFixed(1) : '0.0'}% ของทั้งหมด</div>
         </div>`).join('')}
     </div>
     <div class="filter-bar" style="margin-bottom:14px;">
