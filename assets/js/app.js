@@ -1764,9 +1764,9 @@ function renderFinalDataTab() {
       <div class="mini-kpi-card"><div class="mini-kpi-label">หลักสูตรกลาง อศค. ดำเนินการ</div><div class="mini-kpi-value">${fmtNum(centralCount)}</div><div class="mini-kpi-sub">จาก ${fmtNum(courses.length)} หลักสูตร</div></div>
     </div>
     <div class="filter-bar" style="margin-bottom:14px;">
-      <div class="filter-field">
+      <div class="filter-field filter-search">
         <label>ค้นหา</label>
-        <input type="text" class="filter-search" id="fd-search" placeholder="ชื่อหลักสูตร / รหัส" value="${escapeAttr(f.search)}" />
+        <input type="search" id="fd-search" placeholder="ชื่อหลักสูตร / รหัส" value="${escapeAttr(f.search)}" />
       </div>
       <div class="filter-field">
         <label>ประเภทหลักสูตร</label>
