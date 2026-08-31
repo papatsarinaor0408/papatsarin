@@ -1745,13 +1745,14 @@ function renderFinalDataTab() {
   const approvedPct = totalBudget > 0 ? (approvedBudget / totalBudget) * 100 : 0;
   const approvedBarWidth = Math.min(Math.max(approvedPct, 0), 100);
 
-  // การ์ดสีตามสถานะหลักสูตร (สถานะของระบบ อศค. เอง — ร่าง/รออนุมัติ/อนุมัติ/ไม่อนุมัติ)
+  // การ์ดสีตามสถานะหลักสูตร (สถานะของระบบ อศค. เอง) — ไม่แสดงการ์ด "ร่าง" แยกต่างหาก
+  // ตามที่ผู้ใช้ระบุ (ร่าง = ยังไม่อนุมัติ ไม่ต้องเน้นเป็นการ์ดของตัวเอง แม้จะมีข้อมูล)
   // ใช้จานสี --kpi-fill-* ชุดเดียวกับการ์ดสถานะในหน้าภาพรวม เพื่อให้อ่านง่ายในสไตล์เดียวกัน
-  const statusColorMap = { 'ร่าง': 'var(--kpi-fill-pending)', 'รออนุมัติ': 'var(--kpi-fill-revise)', 'อนุมัติ': 'var(--kpi-fill-approved)', 'ไม่อนุมัติ': 'var(--kpi-fill-rejected)' };
-  const statusOrderPref = ['ร่าง', 'รออนุมัติ', 'อนุมัติ', 'ไม่อนุมัติ'];
+  const statusColorMap = { 'รออนุมัติ': 'var(--kpi-fill-revise)', 'อนุมัติ': 'var(--kpi-fill-approved)', 'ไม่อนุมัติ': 'var(--kpi-fill-rejected)' };
+  const statusOrderPref = ['รออนุมัติ', 'อนุมัติ', 'ไม่อนุมัติ'];
   const statusCounts = {};
   courses.forEach((r) => { const s = (r.sourceStatus || '').trim() || 'ไม่ระบุ'; statusCounts[s] = (statusCounts[s] || 0) + 1; });
-  const orderedStatuses = statusOrderPref.filter((s) => statusCounts[s]).concat(Object.keys(statusCounts).filter((s) => !statusOrderPref.includes(s)));
+  const orderedStatuses = statusOrderPref.filter((s) => statusCounts[s]).concat(Object.keys(statusCounts).filter((s) => !statusOrderPref.includes(s) && s !== 'ร่าง'));
   const statusKpis = [
     { label: 'หลักสูตรทั้งหมด', value: courses.length, color: 'var(--kpi-fill-total)' },
     ...orderedStatuses.map((s) => ({ label: s, value: statusCounts[s], color: statusColorMap[s] || 'var(--kpi-fill-pending)' })),
