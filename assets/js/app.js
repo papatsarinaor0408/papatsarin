@@ -1740,6 +1740,23 @@ function renderFinalDataTab() {
   const courseTypes = uniqueValues(courses, 'courseType');
   const sourceStatuses = uniqueValues(courses, 'sourceStatus');
 
+  // งบที่ อศค. อนุมัติแล้ว (สถานะหลักสูตร = "อนุมัติ" เท่านั้น) เทียบกับงบที่เสนอทั้งหมด
+  const approvedBudget = courses.filter((r) => r.sourceStatus === 'อนุมัติ').reduce((s, r) => s + (r.budgetTotal || 0), 0);
+  const approvedPct = totalBudget > 0 ? (approvedBudget / totalBudget) * 100 : 0;
+  const approvedBarWidth = Math.min(Math.max(approvedPct, 0), 100);
+
+  // การ์ดสีตามสถานะหลักสูตร (สถานะของระบบ อศค. เอง — ร่าง/รออนุมัติ/อนุมัติ/ไม่อนุมัติ)
+  // ใช้จานสี --kpi-fill-* ชุดเดียวกับการ์ดสถานะในหน้าภาพรวม เพื่อให้อ่านง่ายในสไตล์เดียวกัน
+  const statusColorMap = { 'ร่าง': 'var(--kpi-fill-pending)', 'รออนุมัติ': 'var(--kpi-fill-revise)', 'อนุมัติ': 'var(--kpi-fill-approved)', 'ไม่อนุมัติ': 'var(--kpi-fill-rejected)' };
+  const statusOrderPref = ['ร่าง', 'รออนุมัติ', 'อนุมัติ', 'ไม่อนุมัติ'];
+  const statusCounts = {};
+  courses.forEach((r) => { const s = (r.sourceStatus || '').trim() || 'ไม่ระบุ'; statusCounts[s] = (statusCounts[s] || 0) + 1; });
+  const orderedStatuses = statusOrderPref.filter((s) => statusCounts[s]).concat(Object.keys(statusCounts).filter((s) => !statusOrderPref.includes(s)));
+  const statusKpis = [
+    { label: 'หลักสูตรทั้งหมด', value: courses.length, color: 'var(--kpi-fill-total)' },
+    ...orderedStatuses.map((s) => ({ label: s, value: statusCounts[s], color: statusColorMap[s] || 'var(--kpi-fill-pending)' })),
+  ];
+
   const info = STATE.finalDataLastImportInfo;
   const importLine = info
     ? `อัปเดตล่าสุด: <b>${fmtThaiDateTime(info.imported_at)}</b>${info.file_name ? ` <span style="color:var(--text-muted);">(${escapeHtml(info.file_name)})</span>` : ''}`
@@ -1757,11 +1774,36 @@ function renderFinalDataTab() {
     <div style="font-size:12px;color:var(--text-muted);margin:0 0 14px;white-space:pre-line;" id="import-finaldata-status"></div>
 
     ${courses.length ? `
-    <div class="mini-kpi-grid" style="margin-bottom:16px;">
-      <div class="mini-kpi-card"><div class="mini-kpi-label">หลักสูตรทั้งหมด</div><div class="mini-kpi-value">${fmtNum(courses.length)}</div><div class="mini-kpi-sub">หลักสูตรทั้งหมดในระบบ</div></div>
-      <div class="mini-kpi-card"><div class="mini-kpi-label">งบประมาณรวม</div><div class="mini-kpi-value">${fmtBaht(totalBudget)}</div><div class="mini-kpi-sub">ทุกหลักสูตร</div></div>
-      <div class="mini-kpi-card"><div class="mini-kpi-label">ผู้เข้าอบรมรวม</div><div class="mini-kpi-value">${fmtNum(totalParticipants)}</div><div class="mini-kpi-sub">คน (รวมทุกหลักสูตร)</div></div>
-      <div class="mini-kpi-card"><div class="mini-kpi-label">หลักสูตรกลาง อศค. ดำเนินการ</div><div class="mini-kpi-value">${fmtNum(centralCount)}</div><div class="mini-kpi-sub">จาก ${fmtNum(courses.length)} หลักสูตร</div></div>
+    <div class="budget-frame-hero">
+      <div class="bfh-label">เปรียบเทียบงบประมาณ Approved Data — งบที่เสนอเทียบกับงบที่ อศค. อนุมัติแล้ว</div>
+      <div class="bfh-row">
+        <div class="bfh-stat">
+          <div class="bfh-stat-label">งบประมาณที่เสนอทั้งหมด</div>
+          <div class="bfh-stat-value">${fmtBaht(totalBudget)}</div>
+        </div>
+        <div class="bfh-vs">เทียบกับ</div>
+        <div class="bfh-stat">
+          <div class="bfh-stat-label">ได้รับอนุมัติแล้ว (สถานะ "อนุมัติ")</div>
+          <div class="bfh-stat-value">${fmtBaht(approvedBudget)}</div>
+        </div>
+        <div class="bfh-diff">
+          <div class="bfh-diff-label">สัดส่วนที่ได้รับอนุมัติ</div>
+          <div class="bfh-diff-value" style="color:var(--status-good);">${approvedPct.toFixed(1)}%</div>
+        </div>
+      </div>
+      <div class="bfh-bar-track">
+        <div class="bfh-bar-fill" style="width:${approvedBarWidth}%;background:var(--status-good);"></div>
+      </div>
+      <div class="bfh-footnote">ผู้เข้าอบรมรวม: <b>${fmtNum(totalParticipants)}</b> คน (ทุกหลักสูตร)</div>
+      <div class="bfh-footnote">หลักสูตรกลาง อศค. ดำเนินการ: <b>${fmtNum(centralCount)}</b> จาก ${fmtNum(courses.length)} หลักสูตร</div>
+    </div>
+    <div class="kpi-grid" style="margin-bottom:16px;">
+      ${statusKpis.map((k) => `
+        <div class="kpi-card" style="--kpi-color:${k.color}">
+          <div class="kpi-label">${escapeHtml(k.label)}</div>
+          <div class="kpi-value">${fmtNum(k.value)}</div>
+          <div class="kpi-pct">${courses.length ? ((k.value / courses.length) * 100).toFixed(1) : '0.0'}% ของทั้งหมด</div>
+        </div>`).join('')}
     </div>
     <div class="filter-bar" style="margin-bottom:14px;">
       <div class="filter-field filter-search">
