@@ -1746,7 +1746,7 @@ function renderFinalDataTab() {
     : 'ยังไม่มีการนำเข้า Approved Data';
 
   root.innerHTML = `
-    <div class="subheading-label" style="font-size:15px;margin-bottom:6px;">Approved Data — หลักสูตรที่บันทึกในระบบกลาง อศค.</div>
+    <div class="subheading-label" style="font-size:15px;margin-bottom:6px;text-transform:none;">Approved Data — หลักสูตรที่บันทึกในระบบกลาง อศค.</div>
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
       <div style="font-size:12.5px;color:var(--text-secondary);">${importLine}</div>
       <div>
@@ -1758,7 +1758,7 @@ function renderFinalDataTab() {
 
     ${courses.length ? `
     <div class="mini-kpi-grid" style="margin-bottom:16px;">
-      <div class="mini-kpi-card"><div class="mini-kpi-label">หลักสูตรทั้งหมด</div><div class="mini-kpi-value">${fmtNum(courses.length)}</div><div class="mini-kpi-sub">หลักสูตรไฟนอล</div></div>
+      <div class="mini-kpi-card"><div class="mini-kpi-label">หลักสูตรทั้งหมด</div><div class="mini-kpi-value">${fmtNum(courses.length)}</div><div class="mini-kpi-sub">หลักสูตรทั้งหมดในระบบ</div></div>
       <div class="mini-kpi-card"><div class="mini-kpi-label">งบประมาณรวม</div><div class="mini-kpi-value">${fmtBaht(totalBudget)}</div><div class="mini-kpi-sub">ทุกหลักสูตร</div></div>
       <div class="mini-kpi-card"><div class="mini-kpi-label">ผู้เข้าอบรมรวม</div><div class="mini-kpi-value">${fmtNum(totalParticipants)}</div><div class="mini-kpi-sub">คน (รวมทุกหลักสูตร)</div></div>
       <div class="mini-kpi-card"><div class="mini-kpi-label">หลักสูตรกลาง อศค. ดำเนินการ</div><div class="mini-kpi-value">${fmtNum(centralCount)}</div><div class="mini-kpi-sub">จาก ${fmtNum(courses.length)} หลักสูตร</div></div>
