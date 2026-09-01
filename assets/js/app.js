@@ -1785,9 +1785,16 @@ function renderFinalDataTab() {
           <div class="bfh-stat-label">งบประมาณรวมทั้งหมด</div>
           <div class="bfh-stat-value">${fmtBaht(totalBudget)}</div>
         </div>
+        <div class="bfh-stat">
+          <div class="bfh-stat-label">จำนวนหลักสูตร</div>
+          <div class="bfh-stat-value">${fmtNum(courses.length)}</div>
+        </div>
+        <div class="bfh-stat">
+          <div class="bfh-stat-label">ผู้เข้าอบรมรวม</div>
+          <div class="bfh-stat-value">${fmtNum(totalParticipants)} <span style="font-size:14px;font-weight:500;color:var(--text-muted);">คน</span></div>
+        </div>
       </div>
-      <div class="bfh-footnote">ผู้เข้าอบรมรวม: <b>${fmtNum(totalParticipants)}</b> คน (ทุกหลักสูตร)</div>
-      <div class="bfh-footnote">หลักสูตรกลาง อศค. ดำเนินการ: <b>${fmtNum(centralCount)}</b> จาก ${fmtNum(courses.length)} หลักสูตร</div>
+      <div class="bfh-footnote">หลักสูตรกลาง อศค. ดำเนินการ: <span class="bfh-value-badge" style="background:var(--kpi-fill-central);">${fmtNum(centralCount)}</span> จาก ${fmtNum(courses.length)} หลักสูตร</div>
     </div>
     <div class="kpi-grid" style="margin-bottom:16px;">
       ${statusKpis.map((k) => `
