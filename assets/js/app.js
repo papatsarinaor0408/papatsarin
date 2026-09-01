@@ -731,24 +731,24 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
       </div>
       <div class="bfh2-footnote-row">
         <span class="bfh2-footnote-text">งบประมาณที่เสนอทั้งหมด (ทุกสถานะ ไม่รวมหลักสูตรต่างประเทศ):</span>
-        <span class="bfh-value-badge" style="background:${domesticBarColor};">${fmtBaht(totalProposedPlantWide)}</span>
+        <span class="bfh2-value-text" style="color:${domesticBarColor};">${fmtBaht(totalProposedPlantWide)}</span>
         <span class="bfh2-footnote-arrow">→</span>
         <span class="bfh2-footnote-text">ได้รับอนุมัติ</span>
-        <span class="bfh-value-badge" style="background:${domesticBarColor};">${fmtBaht(approvedDomesticBudget)}</span>
+        <span class="bfh2-value-text" style="color:${domesticBarColor};">${fmtBaht(approvedDomesticBudget)}</span>
       </div>
       <div class="bfh2-footnote-row">
         <span class="bfh2-footnote-text">งบหลักสูตรต่างประเทศที่เสนอ:</span>
-        <span class="bfh-value-badge" style="background:${overseasBarColor};">${fmtBaht(totalOverseasBudget)}</span>
+        <span class="bfh2-value-text" style="color:${overseasBarColor};">${fmtBaht(totalOverseasBudget)}</span>
         <span class="bfh2-footnote-arrow">→</span>
         <span class="bfh2-footnote-text">ได้รับอนุมัติ</span>
-        <span class="bfh-value-badge" style="background:${overseasBarColor};">${fmtBaht(approvedOverseasBudget)}</span>
+        <span class="bfh2-value-text" style="color:${overseasBarColor};">${fmtBaht(approvedOverseasBudget)}</span>
       </div>
       <div class="bfh2-footnote-row">
         <span class="bfh2-footnote-text">งบที่เสนอขอรวมทั้งหมด:</span>
-        <span class="bfh-value-badge" style="background:#0F172A;">${fmtBaht(totalRequestedAll)}</span>
+        <span class="bfh2-value-text" style="color:#0F172A;">${fmtBaht(totalRequestedAll)}</span>
         <span class="bfh2-footnote-arrow">→</span>
         <span class="bfh2-footnote-text">ได้รับอนุมัติ</span>
-        <span class="bfh-value-badge" style="background:#0F172A;">${fmtBaht(approvedBudgetPlantWide)}</span>
+        <span class="bfh2-value-text" style="color:#0F172A;">${fmtBaht(approvedBudgetPlantWide)}</span>
       </div>
     `;
   }
