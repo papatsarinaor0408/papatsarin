@@ -1840,6 +1840,7 @@ function renderFinalDataTab() {
   });
   const totalParticipants = uniqueParticipantIds.size;
   const centralCount = courses.filter((r) => r.courseType === 'หลักสูตรกลาง อศค. ดำเนินการ').length;
+  const approvedByOsakhoTotal = courses.filter((r) => r.finalReviewDecision === 'approved').reduce((s, r) => s + (r.budgetTotal || 0), 0);
 
   // การ์ดสีตามสถานะหลักสูตร (สถานะของระบบ อศค. เอง) — ไม่รวม "ร่าง" เลย (กรองออกแล้วด้านบน)
   // ใช้จานสี --kpi-fill-* ชุดเดียวกับการ์ดสถานะในหน้าภาพรวม เพื่อให้อ่านง่ายในสไตล์เดียวกัน
@@ -1890,6 +1891,10 @@ function renderFinalDataTab() {
         <div class="bfh-stat">
           <div class="bfh-stat-label">ผู้เข้าอบรมรวม (ไม่ซ้ำคน)</div>
           <div class="bfh-stat-value">${fmtNum(totalParticipants)} <span style="font-size:14px;font-weight:500;color:var(--text-muted);">คน</span></div>
+        </div>
+        <div class="bfh-stat">
+          <div class="bfh-stat-label">วงเงินที่ได้รับอนุมัติจาก อศค.</div>
+          <div class="bfh-stat-value">${fmtBaht(approvedByOsakhoTotal)}</div>
         </div>
       </div>
       <div class="bfh-footnote">หลักสูตรกลาง อศค. ดำเนินการ: <span class="bfh-value-badge" style="background:var(--kpi-fill-central);">${fmtNum(centralCount)}</span> จาก ${fmtNum(courses.length)} หลักสูตร</div>
