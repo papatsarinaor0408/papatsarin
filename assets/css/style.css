@@ -235,6 +235,8 @@ button, input, select, textarea { font-family: inherit; }
 }
 .tab-btn.active { background: #58508D; color: #fff; font-weight: 600; }
 .tab-btn:hover:not(.active) { color: var(--text-primary); background: color-mix(in srgb, #58508D 10%, transparent); }
+.tab-btn-finaldata.active { background: #128F59; }
+.tab-btn-finaldata:hover:not(.active) { background: color-mix(in srgb, #128F59 10%, transparent); }
 .tab-panel { display: none; }
 .tab-panel.active { display: block; animation: fadein .15s ease; }
 @keyframes fadein { from { opacity: 0; transform: translateY(2px);} to { opacity:1; transform:none;} }
