@@ -2866,11 +2866,16 @@ async function init() {
   try { STATE.lastImportInfo = await fetchLastImportInfo(); }
   catch (e) { STATE.lastImportInfo = null; }
   // Approved Data ต้องพร้อมใช้งานตั้งแต่โหลดหน้าแรก ไม่ใช่แค่ตอนเปิดแท็บของมันเอง
-  // เพราะการ์ดสรุปผลพิจารณา อศค. ในหน้าภาพรวมต้องใช้ข้อมูลชุดนี้ทันที
+  // เพราะการ์ดสรุปผลพิจารณา อศค. ในหน้าภาพรวมต้องใช้ข้อมูลชุดนี้ทันที — ต้องเรียก
+  // renderFinalDataTab() เองด้วย (ไม่ใช่แค่ตั้ง finalDataLoaded=true) ไม่งั้นพอสลับ
+  // ไปแท็บ Approved Data จริงๆ switchTab()'s guard จะเห็นว่าโหลดแล้วและข้าม
+  // loadFinalDataTab() ไปเลย ทำให้ตาราง/การ์ดในแท็บนั้นไม่ถูกวาดเลยสักครั้ง
   try {
     await fetchFinalData();
-    STATE.finalDataLastImportInfo = await fetchLastFinalImportInfo();
+    try { STATE.finalDataLastImportInfo = await fetchLastFinalImportInfo(); }
+    catch (e) { STATE.finalDataLastImportInfo = null; }
     STATE.finalDataLoaded = true;
+    renderFinalDataTab();
   } catch (e) { /* การ์ด อศค. จะแสดง ฿0 — ส่วนอื่นของแอปยังใช้งานได้ปกติ */ }
   initTheme();
 
