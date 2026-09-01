@@ -449,16 +449,13 @@ function renderOverview() {
         </div>
       </div>
     </div>
-    <div class="budget-section">
-      <div class="budget-main">
-        <div class="mini-kpi-grid" id="budget-mini-kpis"></div>
-        <div class="card">
-          <div class="card-title">งบประมาณรวมต่อหน่วยงาน แยกตามสถานะการพิจารณา</div>
-          <div class="card-sub">เรียงตามงบประมาณสูงสุด 10 อันดับ</div>
-          <div id="chart-budget" style="overflow-x:auto;"></div>
-        </div>
+    <div class="budget-main">
+      <div class="mini-kpi-grid" id="budget-mini-kpis"></div>
+      <div class="card">
+        <div class="card-title">งบประมาณรวมต่อหน่วยงาน แยกตามสถานะการพิจารณา</div>
+        <div class="card-sub">เรียงตามงบประมาณสูงสุด 10 อันดับ</div>
+        <div id="chart-budget" style="overflow-x:auto;"></div>
       </div>
-      <div id="budget-insight-panel"></div>
     </div>
   `;
 
@@ -605,12 +602,6 @@ function computeOrgBudgetStats(data, orgLevel, orgNames) {
   });
   const grandTotal = orgs.reduce((s, o) => s + o.total, 0);
   return { orgs, grandTotal };
-}
-
-function maxOrgBy(orgs, getValue) {
-  let best = null;
-  orgs.forEach((o) => { const v = getValue(o); if (v > 0 && (!best || v > getValue(best))) best = o; });
-  return best;
 }
 
 function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
@@ -839,50 +830,6 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
     budgetEl.innerHTML = '<div class="empty-state">ไม่มีข้อมูลงบประมาณ</div>';
   }
 
-  // C. Executive Insight Panel — คำนวณจากข้อมูลที่ผ่าน filter ปัจจุบันทั้งหมด ไม่มีข้อมูลสมมติ
-  // "เห็นชอบ" ในแผงนี้หมายถึง เห็นชอบ + เห็นชอบแต่ให้ทบทวน รวมกัน — สัมพันธ์กับ
-  // ความหมายของคอลัมน์ "รวมงบที่เห็นชอบ" ในตารางด้านบน
-  const approvedSumOf = (o) => (o.byStatus.approved || 0) + (o.byStatus.revise || 0);
-  const grandApprovedAll = orgs.reduce((s, o) => s + approvedSumOf(o), 0);
-  const pctOfApprovedAll = (v) => (grandApprovedAll > 0 ? ((v / grandApprovedAll) * 100).toFixed(1) : '0.0');
-  const top3 = orgs.slice().sort((a, b) => approvedSumOf(b) - approvedSumOf(a)).filter((o) => approvedSumOf(o) > 0).slice(0, 3);
-  const maxPending = maxOrgBy(orgs, (o) => o.byStatus.pending);
-  const maxApproved = maxOrgBy(orgs, approvedSumOf);
-  const maxRejected = maxOrgBy(orgs, (o) => o.byStatus.rejected);
-  const maxPlans = orgs.slice().sort((a, b) => b.count - a.count)[0] || null;
-
-  const insightItem = (icon, color, title, bodyHtml) => `
-    <div class="insight-item">
-      <div class="insight-icon" style="--insight-color:${color}">${icon}</div>
-      <div class="insight-body">
-        <div class="insight-title">${title}</div>
-        ${bodyHtml}
-      </div>
-    </div>`;
-
-  document.getElementById('budget-insight-panel').innerHTML = `
-    <div class="insight-panel">
-      <div>
-        <div class="card-title">ข้อมูลเชิงลึก (Insight)</div>
-        <div class="card-sub" style="margin-bottom:0;">อัปเดตตามตัวกรองปัจจุบัน</div>
-      </div>
-      ${insightItem('🏆', 'var(--series-1)', '3 หน่วยงานที่มีงบเห็นชอบสูงสุด',
-        top3.length ? `<div class="insight-rank-list">${top3.map((o, i) => `
-          <div class="insight-rank-row">
-            <span class="insight-rank-num">${i + 1}</span>
-            <span class="insight-rank-name">${escapeHtml(o.name)}</span>
-            <span class="insight-rank-value">${fmtBaht(approvedSumOf(o))} · ${pctOfApprovedAll(approvedSumOf(o))}%</span>
-          </div>`).join('')}</div>` : '<div class="insight-value">—</div>')}
-      ${insightItem('📋', 'var(--series-1)', 'หน่วยงานที่มีจำนวนแผนมากที่สุด',
-        maxPlans && maxPlans.count > 0 ? `<div class="insight-name">${escapeHtml(maxPlans.name)}</div><div class="insight-value">${fmtNum(maxPlans.count)} แผน</div>` : '<div class="insight-value">—</div>')}
-      ${insightItem('✓', 'var(--status-good)', 'หน่วยงานที่มีงบเห็นชอบสูงสุด',
-        maxApproved ? `<div class="insight-name">${escapeHtml(maxApproved.name)}</div><div class="insight-value">${fmtBaht(approvedSumOf(maxApproved))}</div>` : '<div class="insight-value">—</div>')}
-      ${insightItem('✕', 'var(--status-critical)', 'หน่วยงานที่มีงบไม่เห็นชอบสูงสุด',
-        maxRejected ? `<div class="insight-name">${escapeHtml(maxRejected.name)}</div><div class="insight-value">${fmtBaht(maxRejected.byStatus.rejected)}</div>` : '<div class="insight-value">—</div>')}
-      ${insightItem('⏳', 'var(--status-pending)', 'หน่วยงานที่มีงบรอพิจารณาสูงสุด',
-        maxPending ? `<div class="insight-name">${escapeHtml(maxPending.name)}</div><div class="insight-value">${fmtBaht(maxPending.byStatus.pending)} · ${pctOf(maxPending.byStatus.pending)}%</div>` : '<div class="insight-value">—</div>')}
-    </div>
-  `;
 }
 
 /* ==================================================================== */
