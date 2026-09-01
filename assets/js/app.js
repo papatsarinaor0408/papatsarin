@@ -1880,7 +1880,6 @@ function renderFinalDataTab() {
     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
       <div style="font-size:12.5px;color:var(--text-secondary);">${importLine}</div>
       <div>
-        <button class="btn" id="fd-print-summary-btn">🖨 ตารางสรุป (พิมพ์)</button>
         <button class="btn admin-only" id="import-finaldata-btn">⬆ นำเข้า Approved Data (Excel)</button>
         <input type="file" id="import-finaldata-file-input" accept=".xlsx,.xls" hidden />
       </div>
@@ -1999,6 +1998,30 @@ function renderFinalDataTab() {
         </tr></tfoot>` : ''}
       </table>
     </div>
+
+    <div class="subheading-label" style="font-size:14px;margin:20px 0 8px;text-transform:none;">ตารางสรุปผลพิจารณา อศค. — Approved Data</div>
+    <div id="final-summary-section">
+      <div class="print-summary-toolbar no-print">
+        <span class="filter-count">พบ ${fmtNum(filtered.length)} หลักสูตร (ตามตัวกรองปัจจุบัน)</span>
+        <button class="btn btn-primary btn-sm" id="fd-print-summary-btn">🖨 พิมพ์</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table print-summary-table">
+          <thead><tr><th>รหัส</th><th>ชื่อหลักสูตร</th><th class="num">งบประมาณ</th><th>ผลพิจารณา อศค.</th><th>หมายเหตุ</th></tr></thead>
+          <tbody>
+            ${filtered.length ? filtered.map((r) => `
+              <tr>
+                <td>${escapeHtml(r.id)}</td>
+                <td>${escapeHtml(r.nameTh || '-')}</td>
+                <td class="num">${r.budgetTotal ? fmtBaht(r.budgetTotal) : '-'}</td>
+                <td>${r.finalReviewDecision && FINAL_REVIEW_META[r.finalReviewDecision] ? escapeHtml(FINAL_REVIEW_META[r.finalReviewDecision].label) : 'ยังไม่พิจารณา'}</td>
+                <td>${escapeHtml(r.finalReviewRemark || '-')}</td>
+              </tr>
+            `).join('') : `<tr><td colspan="5">ไม่พบข้อมูล</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </div>
     ` : `<div class="empty-state"><div class="big">📄</div>ยังไม่มี Approved Data — กด "นำเข้า Approved Data" เพื่ออัปโหลดไฟล์</div>`}
   `;
 
@@ -2070,42 +2093,14 @@ function renderFinalDataTab() {
       if (file) handleFinalDataFileImport(file);
     });
   }
-  root.querySelector('#fd-print-summary-btn').addEventListener('click', openFinalDataSummaryPrint);
-}
-
-/**
- * ตารางสรุปแบบเรียบ (ไม่มีปุ่ม/สี) สำหรับดู/พิมพ์ — ใช้ #chart-detail-backdrop
- * โมดัลตัวเดียวกับที่ chart drill-down ใช้อยู่แล้ว แต่แยกเนื้อหาเอง เพราะรูปแบบ
- * ตารางคนละชุดกัน ยึดตามตัวกรองปัจจุบันของแท็บ Approved Data
- */
-function openFinalDataSummaryPrint() {
-  const courses = STATE.finalCourses.filter((r) => r.sourceStatus !== 'ร่าง');
-  const filtered = courses.filter((r) => matchesFinalFiltersExcept(r, null));
-  document.getElementById('chart-detail-title').textContent = 'ตารางสรุปผลพิจารณา อศค. — Approved Data';
-  const body = document.getElementById('chart-detail-body');
-  body.innerHTML = `
-    <div class="print-summary-toolbar no-print">
-      <span class="filter-count">พบ ${fmtNum(filtered.length)} หลักสูตร (ตามตัวกรองปัจจุบัน)</span>
-      <button class="btn btn-primary btn-sm" id="print-summary-btn">🖨 พิมพ์</button>
-    </div>
-    <table class="data-table print-summary-table">
-      <thead><tr><th>รหัส</th><th>ชื่อหลักสูตร</th><th class="num">งบประมาณ</th><th>ผลพิจารณา อศค.</th><th>หมายเหตุ</th></tr></thead>
-      <tbody>
-        ${filtered.length ? filtered.map((r) => `
-          <tr>
-            <td>${escapeHtml(r.id)}</td>
-            <td>${escapeHtml(r.nameTh || '-')}</td>
-            <td class="num">${r.budgetTotal ? fmtBaht(r.budgetTotal) : '-'}</td>
-            <td>${r.finalReviewDecision && FINAL_REVIEW_META[r.finalReviewDecision] ? escapeHtml(FINAL_REVIEW_META[r.finalReviewDecision].label) : 'ยังไม่พิจารณา'}</td>
-            <td>${escapeHtml(r.finalReviewRemark || '-')}</td>
-          </tr>
-        `).join('') : `<tr><td colspan="5">ไม่พบข้อมูล</td></tr>`}
-      </tbody>
-    </table>
-  `;
-  document.getElementById('print-summary-btn').addEventListener('click', () => window.print());
-  document.body.classList.add('printing-final-summary');
-  document.getElementById('chart-detail-backdrop').classList.add('show');
+  const printSummaryBtn = root.querySelector('#fd-print-summary-btn');
+  if (printSummaryBtn) {
+    printSummaryBtn.addEventListener('click', () => {
+      window.addEventListener('afterprint', () => document.body.classList.remove('printing-final-summary'), { once: true });
+      document.body.classList.add('printing-final-summary');
+      window.print();
+    });
+  }
 }
 
 /**
@@ -2497,7 +2492,6 @@ function openChartDetailModal(title, records) {
 }
 function closeChartDetailModal() {
   document.getElementById('chart-detail-backdrop').classList.remove('show');
-  document.body.classList.remove('printing-final-summary');
 }
 
 const DECISION_META = {

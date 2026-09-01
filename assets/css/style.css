@@ -603,12 +603,14 @@ tr.row-status-central { background: color-mix(in srgb, var(--status-central) 7%,
 .print-summary-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
 .print-summary-table th, .print-summary-table td { font-size: 12.5px; }
 @media print {
-  body.printing-final-summary > *:not(#chart-detail-backdrop) { display: none !important; }
-  body.printing-final-summary #chart-detail-backdrop {
-    position: static !important; background: none !important; display: block !important;
-  }
-  body.printing-final-summary .drawer {
-    width: 100% !important; height: auto !important; box-shadow: none !important; animation: none !important;
+  /* พิมพ์เฉพาะ #final-summary-section — ซ่อนทุกอย่างก่อน แล้วค่อยเปิดเฉพาะตัวมันเอง
+     กับลูกหลาน แล้วดึงมาวางที่มุมบนซ้ายของหน้ากระดาษ (element นี้อยู่ลึกในต้นไม้ DOM
+     ไม่ใช่ลูกตรงของ body เหมือนโมดัลเดิม จึงต้องใช้ visibility แทน display บน *) */
+  body.printing-final-summary * { visibility: hidden !important; }
+  body.printing-final-summary #final-summary-section,
+  body.printing-final-summary #final-summary-section * { visibility: visible !important; }
+  body.printing-final-summary #final-summary-section {
+    position: absolute; left: 0; top: 0; width: 100%;
   }
   body.printing-final-summary .no-print { display: none !important; }
   body.printing-final-summary .print-summary-table th {
