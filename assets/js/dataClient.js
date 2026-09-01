@@ -172,20 +172,49 @@ async function fetchPlanHistory(planId) {
 /* sheet 1 only), unrelated to plans/decisions above.                   */
 /* ==================================================================== */
 
-function finalCourseRowToRecord(row) {
+function finalCourseRowToRecord(row, reviewRow) {
   const rec = { id: row.id };
   FINAL_COURSE_FIELDS.forEach((f) => {
     const v = row[camelToSnake(f.key)];
     rec[f.key] = f.numeric ? Number(v || 0) : (v === undefined || v === null ? '' : v);
   });
+
+  if (reviewRow) {
+    rec.finalReviewDecision = reviewRow.decision;
+    rec.finalReviewedByEmployeeId = reviewRow.reviewer_employee_id || '';
+    rec.finalReviewedByPosition = reviewRow.reviewer_position || '';
+    rec.finalReviewedAtRaw = reviewRow.reviewed_at || '';
+  } else {
+    rec.finalReviewDecision = 'pending';
+    rec.finalReviewedByEmployeeId = '';
+    rec.finalReviewedByPosition = '';
+    rec.finalReviewedAtRaw = '';
+  }
   return rec;
 }
 
-/** Populates STATE.finalCourses. Dataset is tiny (tens of rows) — fetch-all, no pagination needed. */
+/**
+ * Populates STATE.finalCourses. Dataset is tiny (tens of rows) — fetch-all,
+ * no pagination needed. Also joins each course's own admin-set review
+ * decision (final_course_reviews — separate from the อศค.-imported
+ * source_status already on the course row itself).
+ */
 async function fetchFinalData() {
   const { data, error } = await SB.from('final_courses').select('*').eq('is_active', true);
   if (error) throw error;
-  STATE.finalCourses = (data || []).map(finalCourseRowToRecord);
+
+  const { data: reviews, error: reviewErr } = await SB.from('final_course_reviews').select('*');
+  if (reviewErr) throw reviewErr;
+  const reviewByCourseId = {};
+  (reviews || []).forEach((rv) => { reviewByCourseId[rv.course_id] = rv; });
+
+  STATE.finalCourses = (data || []).map((row) => finalCourseRowToRecord(row, reviewByCourseId[row.id]));
+}
+
+/** Admin-only (enforced server-side). decision = 'approved'|'rejected'|'revise'|null (null resets). */
+async function submitFinalCourseReviewRemote(courseId, decision) {
+  const { error } = await SB.rpc('submit_final_course_review', { p_course_id: courseId, p_decision: decision });
+  if (error) throw error;
 }
 
 /**

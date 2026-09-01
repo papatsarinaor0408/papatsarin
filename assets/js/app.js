@@ -1713,6 +1713,29 @@ function finalStatusBadge(status) {
   return `<span class="badge" style="background:color-mix(in srgb, ${color} 15%, transparent);color:${color};">${escapeHtml(s)}</span>`;
 }
 
+// ผลพิจารณาที่ Admin กำหนดเองต่อหลักสูตร Approved Data แต่ละรายการ — คนละชุด
+// กับ source_status (สถานะที่นำเข้ามาจาก อศค.) ด้านบน ไม่เกี่ยวข้องกันเลย
+const FINAL_REVIEW_META = {
+  approved: { label: 'อศค. เห็นชอบ', icon: '✓', btnClass: 'btn-good' },
+  rejected: { label: 'อศค.ไม่เห็นชอบ', icon: '✕', btnClass: 'btn-critical' },
+  revise:   { label: 'อศค.ให้ปรับปรุงข้อมูล', icon: '✎', btnClass: 'btn-warning' },
+};
+const FINAL_REVIEW_COLOR = { approved: 'var(--status-good)', rejected: 'var(--status-critical)', revise: 'var(--status-warning)' };
+
+function finalReviewBadge(decision) {
+  if (!decision || decision === 'pending') return '<span class="cell-muted">-</span>';
+  const meta = FINAL_REVIEW_META[decision];
+  if (!meta) return '<span class="cell-muted">-</span>';
+  const color = FINAL_REVIEW_COLOR[decision];
+  return `<span class="badge" style="background:color-mix(in srgb, ${color} 15%, transparent);color:${color};">${escapeHtml(meta.label)}</span>`;
+}
+
+async function commitFinalCourseReview(courseId, decision) {
+  await submitFinalCourseReviewRemote(courseId, decision);
+  await fetchFinalData();
+  renderFinalDataTab();
+}
+
 function renderFinalDataTab() {
   const root = document.getElementById('panel-finaldata');
   if (!root) return;
@@ -1822,7 +1845,7 @@ function renderFinalDataTab() {
       <table class="data-table approved-data-table">
         <thead><tr>
           <th>รหัส</th><th>ชื่อหลักสูตร</th><th>ประเภทหลักสูตร</th><th>ประเภทการส่งอบรม</th>
-          <th class="num">ผู้เข้าอบรม</th><th class="num">งบประมาณรวม</th><th>สถานะหลักสูตร</th>
+          <th class="num">ผู้เข้าอบรม</th><th class="num">งบประมาณรวม</th><th>สถานะหลักสูตร</th><th>ผลพิจารณา อศค.</th>
         </tr></thead>
         <tbody>
           ${filtered.length ? filtered.map((r) => `
@@ -1834,13 +1857,22 @@ function renderFinalDataTab() {
               <td class="num">${fmtNum(r.participants)}</td>
               <td class="num">${r.budgetTotal ? fmtBaht(r.budgetTotal) : '<span class="cell-muted">-</span>'}</td>
               <td>${finalStatusBadge(r.sourceStatus)}</td>
+              <td>${isAdmin() ? `
+                <div class="final-review-actions">
+                  ${Object.entries(FINAL_REVIEW_META).map(([key, meta]) => `
+                    <button type="button" class="btn btn-sm final-review-btn ${meta.btnClass}${r.finalReviewDecision === key ? ' active' : ''}" data-course-id="${escapeAttr(r.id)}" data-decision="${key}" title="${escapeAttr(meta.label)}">${meta.icon}</button>
+                  `).join('')}
+                  <button type="button" class="btn btn-sm btn-ghost final-review-btn" data-course-id="${escapeAttr(r.id)}" data-decision="" title="ล้างผลพิจารณา">↺</button>
+                </div>
+              ` : finalReviewBadge(r.finalReviewDecision)}</td>
             </tr>
-          `).join('') : `<tr><td colspan="7"><div class="empty-state"><div class="big">🔍</div>ไม่พบหลักสูตรที่ตรงกับตัวกรอง</div></td></tr>`}
+          `).join('') : `<tr><td colspan="8"><div class="empty-state"><div class="big">🔍</div>ไม่พบหลักสูตรที่ตรงกับตัวกรอง</div></td></tr>`}
         </tbody>
         ${filtered.length ? `
         <tfoot><tr class="table-total-row">
           <td colspan="5">รวมงบประมาณ (${fmtNum(filtered.length)} หลักสูตรตามตัวกรองปัจจุบัน)</td>
           <td class="num">${fmtBaht(filteredBudgetTotal)}</td>
+          <td></td>
           <td></td>
         </tr></tfoot>` : ''}
       </table>
@@ -1850,6 +1882,12 @@ function renderFinalDataTab() {
 
   root.querySelectorAll('tbody tr[data-id]').forEach((tr) => {
     tr.addEventListener('click', () => openFinalCourseDrawer(tr.dataset.id));
+  });
+  root.querySelectorAll('.final-review-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation(); // ไม่ให้เปิด drawer ตามมาด้วยเมื่อกดปุ่มในแถว
+      commitFinalCourseReview(btn.dataset.courseId, btn.dataset.decision || null);
+    });
   });
   if (courses.length) {
     bindSearchInput('fd-search', (v) => { STATE.finalDataFilters.search = v; renderFinalDataTab(); });
