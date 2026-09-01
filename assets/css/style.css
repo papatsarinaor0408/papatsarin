@@ -484,11 +484,11 @@ table.approved-data-table tbody tr.final-reviewed td:first-child { border-left: 
 .kpi-card-clickable { cursor: pointer; font: inherit; text-align: left; width: 100%; }
 .kpi-card-clickable.active { box-shadow: inset 0 0 0 3px rgba(255,255,255,.85), 0 4px 8px -1px color-mix(in srgb, var(--kpi-color, var(--series-1)) 35%, transparent); }
 table.approved-data-table tbody tr:hover { background: #D1E9C0; }
-.final-review-actions { display: flex; flex-direction: column; gap: 6px; min-width: 170px; }
+.final-review-actions { display: flex; flex-direction: column; gap: 6px; min-width: 210px; }
 .final-review-card {
   display: block; width: 100%; text-align: center; cursor: pointer;
   border: 1px solid transparent; border-radius: var(--radius-sm); padding: 8px 10px;
-  font-size: 12.5px; font-weight: 600; line-height: 1.3;
+  font-size: 12.5px; font-weight: 600; line-height: 1.3; white-space: nowrap;
   transition: background .15s, color .15s, border-color .15s, box-shadow .15s;
 }
 .final-review-card.btn-ghost { background: var(--surface-2); color: var(--text-secondary); border: 1px solid var(--border); }
