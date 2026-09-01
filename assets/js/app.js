@@ -1861,7 +1861,94 @@ function renderFinalDataTab() {
   }
 }
 
-/** ใช้กล่อง drawer เดียวกับ openDrawer() (plan) แต่เติมเนื้อหาเอง ไม่ผ่าน renderDrawer() เพราะข้อมูลคนละชุด/คนละรูปแบบกันโดยสิ้นเชิง */
+/**
+ * ใช้กล่อง drawer เดียวกับ openDrawer() (plan) แต่เติมเนื้อหาเอง ไม่ผ่าน
+ * renderDrawer() เพราะข้อมูลคนละชุดกันโดยสิ้นเชิง — layout เดียวกับหน้า
+ * พิจารณาแผนรายฉบับ (ใช้ CSS class psum-card / consider-card ชุดเดียวกัน)
+ * เพียงแต่ไม่มีส่วน "การพิจารณา" เพราะ Approved Data ไม่มี workflow พิจารณา
+ * ของตัวเอง. โครงสร้างหน่วยงานต่างจากแผน (รอง/ผู้ช่วย/ฝ่าย/คณะทำงาน แทนที่
+ * ฝ่าย/กอง/แผนก) และไม่มี effectiveBudget/approvedBudget เพราะไม่มีการอนุมัติ
+ * งบในระบบนี้.
+ */
+function renderFinalCourseSummarySection(r) {
+  const isCentral = isCentralCourse(r);
+  const infoRow = (icon, label, value, mode) => `
+    <div class="psum-row"><span class="psum-row-icon">${icon}</span>
+      <div><div class="psum-row-label">${label}</div><div class="psum-row-value">${formatDetailValue(value, mode || 'plain')}</div></div>
+    </div>`;
+  const badgeRow = (icon, label, badgeHtml) => `
+    <div class="psum-row"><span class="psum-row-icon">${icon}</span>
+      <div><div class="psum-row-label">${label}</div><div class="psum-row-value">${badgeHtml}</div></div>
+    </div>`;
+
+  const orgPath = [r.deputyLine, r.assistantGovernor, r.deptName, r.workingGroup].filter(Boolean).join(' › ');
+  const targetUnit = [r.targetDivision, r.targetSection].filter(Boolean).join(' / ');
+
+  return `
+    <div class="psum-cards">
+      <div class="psum-card psum-card-highlight">
+        <div class="psum-card-icon">💰</div>
+        <div class="psum-card-label">งบประมาณรวมทั้งสิ้น</div>
+        <div class="psum-card-value">${r.budgetTotal ? fmtBaht(r.budgetTotal) : '<span class="cell-muted">ไม่ระบุ</span>'}</div>
+        <div class="psum-card-sub">งบประมาณที่ใช้ในการอบรม</div>
+      </div>
+      <div class="psum-card">
+        <div class="psum-card-icon">👥</div>
+        <div class="psum-card-label">จำนวนผู้เข้าอบรม</div>
+        <div class="psum-card-value">${fmtNum(r.participants)} <span class="psum-card-unit">คน</span></div>
+        <div class="psum-card-sub">กลุ่มเป้าหมาย</div>
+      </div>
+      <div class="psum-card">
+        <div class="psum-card-icon">📅</div>
+        <div class="psum-card-label">ระยะเวลาอบรม</div>
+        <div class="psum-card-value">${fmtNum(r.days)} <span class="psum-card-unit">วัน</span></div>
+        <div class="psum-card-sub">ระยะเวลาในการอบรม</div>
+      </div>
+      ${!isCentral ? `
+      <div class="psum-card">
+        <div class="psum-card-icon">✈️</div>
+        <div class="psum-card-label">ประเภทการอบรม</div>
+        <div class="psum-card-value" style="font-size:15px;">${r.deliveryType ? escapeHtml(r.deliveryType) : '<span class="cell-muted">ไม่ระบุ</span>'}</div>
+        <div class="psum-card-sub">ประเภทการส่งอบรม</div>
+      </div>` : ''}
+    </div>
+    <div class="psum-info-grid">
+      <div class="psum-info-card">
+        <div class="psum-info-title"><span class="psum-info-icon">📖</span>ข้อมูลหลักสูตร</div>
+        ${infoRow('🆔', 'รหัส', r.id)}
+        ${infoRow('🔑', 'ปัจจัยนำเข้าหลัก', r.inputFactor)}
+        ${infoRow('📄', 'ประเภทหลักสูตร', r.courseType)}
+        ${infoRow('🏫', 'รูปแบบการเรียนรู้', r.learningFormat)}
+        ${!isCentral ? infoRow('✈️', 'ประเภทการส่งอบรม', r.deliveryType) : ''}
+        ${infoRow('👤', 'ค่าจ้างเหมา/วิทยากรภายนอก', r.budgetOutsource ? fmtBaht(r.budgetOutsource) : '')}
+      </div>
+      <div class="psum-info-card">
+        <div class="psum-info-title"><span class="psum-info-icon">🏢</span>หน่วยงานและผู้เสนอ</div>
+        ${infoRow('🏢', 'สายบังคับบัญชา', orgPath)}
+        ${targetUnit ? infoRow('🏢', 'หน่วยงานกลุ่มเป้าหมาย', targetUnit) : ''}
+        ${infoRow('👤', 'ผู้สร้างหลักสูตร', r.creatorName)}
+        ${infoRow('🏢', 'หน่วยงานผู้สร้างหลักสูตร', r.creatorUnit)}
+        ${infoRow('🪪', 'ผู้ประสานงานหลักสูตร', r.coordinator)}
+        ${badgeRow('🏷️', 'สถานะหลักสูตร', finalStatusBadge(r.sourceStatus))}
+      </div>
+    </div>
+    <div class="psum-schedule-card">
+      <div class="psum-info-title"><span class="psum-info-icon">📅</span>กำหนดการและการจัดอบรม</div>
+      <div class="psum-schedule-grid">
+        <div class="psum-schedule-item"><span class="psum-row-icon">📅</span><div><div class="psum-row-label">วันเริ่มต้น</div><div class="psum-row-value">${formatDetailValue(r.startDate)}</div></div></div>
+        <div class="psum-schedule-item"><span class="psum-row-icon">📅</span><div><div class="psum-row-label">วันสิ้นสุด</div><div class="psum-row-value">${formatDetailValue(r.endDate)}</div></div></div>
+        <div class="psum-schedule-item"><span class="psum-row-icon">👤</span><div><div class="psum-row-label">วิทยากร/สถาบันผู้จัดอบรม</div><div class="psum-row-value">${formatDetailValue(r.externalInstructor || r.internalInstructor)}</div></div></div>
+      </div>
+      <div class="psum-schedule-item" style="margin-top:12px;"><span class="psum-row-icon">👥</span><div><div class="psum-row-label">กลุ่มเป้าหมาย (ควบรวมแล้ว)</div><div class="psum-row-value">${formatDetailValue(r.targetGroupNamesRaw, 'people')}</div></div></div>
+    </div>
+    ${r.remark && String(r.remark).trim() ? `
+    <div class="consider-remark" style="margin-bottom:14px;">
+      <span class="consider-remark-icon">ℹ️</span>
+      <div><div class="consider-subtitle">หมายเหตุ</div><div>${formatDetailValue(r.remark, 'numbered')}</div></div>
+    </div>` : ''}
+  `;
+}
+
 function openFinalCourseDrawer(courseId) {
   const r = STATE.finalCourses.find((x) => x.id === courseId);
   if (!r) return;
@@ -1869,21 +1956,13 @@ function openFinalCourseDrawer(courseId) {
   document.getElementById('drawer-title-pill').textContent = r.courseType || 'ไม่ระบุ';
   const body = document.getElementById('drawer-body');
 
-  const orgPath = [r.deputyLine, r.assistantGovernor, r.deptName, r.workingGroup].filter(Boolean).join(' › ');
-  const targetUnit = [r.targetDivision, r.targetSection].filter(Boolean).join(' / ');
-  const field = (label, value) => `<div><div class="subheading-label">${label}</div><div style="margin-top:2px;">${value}</div></div>`;
+  // หลักสูตรกลาง อศค. ดำเนินการ ไม่มีวัตถุประสงค์/ผลลัพธ์ ฯลฯ กรอกไว้ตั้งแต่ต้น
+  // (เหมือนกับหน้าพิจารณา) จึงซ่อนการ์ด "ข้อมูลสำหรับพิจารณา" ไปทั้งหมด
+  const considerationSection = isCentralCourse(r) ? '' : renderConsiderationCard(r);
 
   body.innerHTML = `
-    <div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:18px;">
-      ${field('รหัส', escapeHtml(r.id))}
-      ${field('สายบังคับบัญชา', escapeHtml(orgPath || '-'))}
-      ${field('ประเภทการส่งอบรม', escapeHtml(r.deliveryType || '-'))}
-      ${field('งบประมาณรวม', fmtBaht(r.budgetTotal))}
-      ${field('สถานะหลักสูตร', finalStatusBadge(r.sourceStatus))}
-      ${targetUnit ? field('หน่วยงานกลุ่มเป้าหมาย', escapeHtml(targetUnit)) : ''}
-    </div>
-    ${r.rationale ? `<div style="margin-bottom:18px;">${field('หลักการและเหตุผล', formatDetailValue(r.rationale, 'numbered'))}</div>` : ''}
-    <div>${field('กลุ่มเป้าหมาย (ควบรวมแล้ว)', formatDetailValue(r.targetGroupNamesRaw, 'people'))}</div>
+    ${renderFinalCourseSummarySection(r)}
+    ${considerationSection}
   `;
   document.getElementById('modal-backdrop').classList.add('show');
 }
