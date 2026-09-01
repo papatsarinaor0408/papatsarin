@@ -1817,13 +1817,19 @@ function renderFinalDataTab() {
   // ตัวเลือกแบบ cascading — แต่ละดรอปดาวน์แสดงเฉพาะค่าที่ยังเหลืออยู่จริงภายใต้
   // ตัวกรองอื่นๆ ที่เลือกไว้ (เหมือนแถบตัวกรองหลักของแผน) ถ้าค่าที่เลือกไว้
   // ไม่อยู่ในตัวเลือกที่แคบลงแล้ว ให้ล้างตัวกรองนั้นทิ้งเพื่อไม่ให้ UI ขัดกับ STATE
-  const orgOptions = uniqueValues(getFinalFilteredExcept('orgValue'), f.orgLevel);
+  // กันเคส dropdown ว่างเปล่าทั้งที่มีข้อมูลจริงอยู่ (ตัวกรองอื่นบีบผลลัพธ์จนไม่
+  // เหลือตัวเลือก) — ถ้าเซตแบบ cascading ว่าง ให้ใช้เซตดิบจาก courses ทั้งหมดแทน
+  const orgOptionsRaw = uniqueValues(getFinalFilteredExcept('orgValue'), f.orgLevel);
+  const orgOptions = orgOptionsRaw.length ? orgOptionsRaw : uniqueValues(courses, f.orgLevel);
   if (f.orgValue && !orgOptions.includes(f.orgValue)) f.orgValue = '';
-  const courseTypes = uniqueValues(getFinalFilteredExcept('courseType'), 'courseType');
+  const courseTypesRaw = uniqueValues(getFinalFilteredExcept('courseType'), 'courseType');
+  const courseTypes = courseTypesRaw.length ? courseTypesRaw : uniqueValues(courses, 'courseType');
   if (f.courseType && !courseTypes.includes(f.courseType)) f.courseType = '';
-  const deliveryTypes = uniqueValues(getFinalFilteredExcept('deliveryType'), 'deliveryType');
+  const deliveryTypesRaw = uniqueValues(getFinalFilteredExcept('deliveryType'), 'deliveryType');
+  const deliveryTypes = deliveryTypesRaw.length ? deliveryTypesRaw : uniqueValues(courses, 'deliveryType');
   if (f.deliveryType && !deliveryTypes.includes(f.deliveryType)) f.deliveryType = '';
-  const sourceStatuses = uniqueValues(getFinalFilteredExcept('sourceStatus'), 'sourceStatus');
+  const sourceStatusesRaw = uniqueValues(getFinalFilteredExcept('sourceStatus'), 'sourceStatus');
+  const sourceStatuses = sourceStatusesRaw.length ? sourceStatusesRaw : uniqueValues(courses, 'sourceStatus');
   if (f.sourceStatus && !sourceStatuses.includes(f.sourceStatus)) f.sourceStatus = '';
 
   const totalBudget = courses.reduce((s, r) => s + (r.budgetTotal || 0), 0);
