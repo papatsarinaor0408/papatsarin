@@ -1778,7 +1778,7 @@ function renderFinalDataTab() {
     <div style="font-size:12px;color:var(--text-muted);margin:0 0 14px;white-space:pre-line;" id="import-finaldata-status"></div>
 
     ${courses.length ? `
-    <div class="budget-frame-hero">
+    <div class="budget-frame-hero approved-data-hero">
       <div class="bfh-label">ข้อมูล Approved Data — หลักสูตรที่ผ่านการพิจารณาแล้ว บันทึกในระบบกลาง อศค.</div>
       <div class="bfh-row">
         <div class="bfh-stat">

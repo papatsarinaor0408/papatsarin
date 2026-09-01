@@ -287,6 +287,18 @@ select:focus, input:focus, textarea:focus {
   }
 }
 :root[data-theme="dark"] .budget-frame-hero { background: var(--surface-1); }
+/* Approved Data's own hero card — scoped separately from .budget-frame-hero
+   above (shared with the Overview tab's hero) so only this card gets the
+   pasted background image. */
+.approved-data-hero {
+  background: url("../img/approved-data-hero-bg.png") no-repeat center / cover;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .approved-data-hero {
+    background: var(--surface-1);
+  }
+}
+:root[data-theme="dark"] .approved-data-hero { background: var(--surface-1); }
 .bfh-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 16px; }
 .bfh-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 20px 28px; }
 .bfh-stat { display: flex; flex-direction: column; gap: 5px; }
