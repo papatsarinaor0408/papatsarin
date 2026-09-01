@@ -1851,7 +1851,7 @@ function renderFinalDataTab() {
       <table class="data-table approved-data-table">
         <thead><tr>
           <th>รหัส</th><th>ชื่อหลักสูตร</th><th>ประเภทหลักสูตร</th><th>ประเภทการส่งอบรม</th>
-          <th class="num">ผู้เข้าอบรม</th><th class="num">งบประมาณรวม</th><th>สถานะหลักสูตร</th><th>ผลพิจารณา อศค.</th>
+          <th class="num">ผู้เข้าอบรม</th><th class="num">งบประมาณรวม</th><th>สถานะหลักสูตร</th><th>ผลพิจารณา อศค.</th><th>หมายเหตุ</th>
         </tr></thead>
         <tbody>
           ${filtered.length ? filtered.map((r) => `
@@ -1866,18 +1866,22 @@ function renderFinalDataTab() {
               <td>${isAdmin() ? `
                 <div class="final-review-actions">
                   ${Object.entries(FINAL_REVIEW_META).map(([key, meta]) => `
-                    <button type="button" class="btn btn-sm final-review-btn ${meta.btnClass}${r.finalReviewDecision === key ? ' active' : ''}" data-course-id="${escapeAttr(r.id)}" data-decision="${key}" title="${escapeAttr(meta.label)}">${meta.icon}</button>
+                    <button type="button" class="final-review-card final-review-btn ${meta.btnClass}${r.finalReviewDecision === key ? ' active' : ''}" data-course-id="${escapeAttr(r.id)}" data-decision="${key}">${escapeHtml(meta.label)}</button>
                   `).join('')}
-                  <button type="button" class="btn btn-sm btn-ghost final-review-btn" data-course-id="${escapeAttr(r.id)}" data-decision="" title="ล้างผลพิจารณา">↺</button>
+                  <button type="button" class="final-review-card final-review-btn btn-ghost" data-course-id="${escapeAttr(r.id)}" data-decision="">ล้างผลพิจารณา</button>
                 </div>
-              ` : finalReviewBadge(r.finalReviewDecision, r.finalReviewRemark)}</td>
+              ` : finalReviewBadge(r.finalReviewDecision)}</td>
+              <td>${isAdmin()
+                ? `<input type="text" class="final-review-remark-input" data-course-id="${escapeAttr(r.id)}" value="${escapeAttr(r.finalReviewRemark || '')}" placeholder="หมายเหตุ...">`
+                : (r.finalReviewRemark ? escapeHtml(r.finalReviewRemark) : '<span class="cell-muted">-</span>')}</td>
             </tr>
-          `).join('') : `<tr><td colspan="8"><div class="empty-state"><div class="big">🔍</div>ไม่พบหลักสูตรที่ตรงกับตัวกรอง</div></td></tr>`}
+          `).join('') : `<tr><td colspan="9"><div class="empty-state"><div class="big">🔍</div>ไม่พบหลักสูตรที่ตรงกับตัวกรอง</div></td></tr>`}
         </tbody>
         ${filtered.length ? `
         <tfoot><tr class="table-total-row">
           <td colspan="5">รวมงบประมาณ (${fmtNum(filtered.length)} หลักสูตรตามตัวกรองปัจจุบัน)</td>
           <td class="num">${fmtBaht(filteredBudgetTotal)}</td>
+          <td></td>
           <td></td>
           <td></td>
         </tr></tfoot>` : ''}
@@ -1894,12 +1898,22 @@ function renderFinalDataTab() {
       e.stopPropagation(); // ไม่ให้เปิด drawer ตามมาด้วยเมื่อกดปุ่มในแถว
       const courseId = btn.dataset.courseId;
       const decision = btn.dataset.decision || null;
-      if (!decision) { commitFinalCourseReview(courseId, null, null); return; } // ปุ่ม reset — ไม่ต้องถามหมายเหตุ
       const current = STATE.finalCourses.find((x) => x.id === courseId);
-      const remark = prompt('หมายเหตุ (ถ้ามี):', (current && current.finalReviewRemark) || '');
-      if (remark === null) return; // กด Cancel — ไม่บันทึกอะไรทั้งสิ้น
-      commitFinalCourseReview(courseId, decision, remark);
+      const currentRemark = current ? current.finalReviewRemark : '';
+      commitFinalCourseReview(courseId, decision, currentRemark);
     });
+  });
+  root.querySelectorAll('.final-review-remark-input').forEach((input) => {
+    input.addEventListener('click', (e) => e.stopPropagation()); // ไม่ให้เปิด drawer ตอนโฟกัสกล่องข้อความ
+    const save = () => {
+      const courseId = input.dataset.courseId;
+      const current = STATE.finalCourses.find((x) => x.id === courseId);
+      const currentDecision = current && current.finalReviewDecision !== 'pending' ? current.finalReviewDecision : null;
+      if (current && current.finalReviewRemark === input.value) return; // ไม่มีอะไรเปลี่ยน ไม่ต้องยิง request
+      commitFinalCourseReview(courseId, currentDecision, input.value);
+    };
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
   });
   if (courses.length) {
     bindSearchInput('fd-search', (v) => { STATE.finalDataFilters.search = v; renderFinalDataTab(); });
