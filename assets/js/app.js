@@ -619,9 +619,14 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
   const topOrg = orgs.slice().sort((a, b) => b.total - a.total)[0] || null;
   const pctOf = (v) => (grandTotal > 0 ? ((v / grandTotal) * 100).toFixed(1) : '0.0');
 
+  // งบที่ "ได้รับอนุมัติ" หมายถึง เห็นชอบ + เห็นชอบแต่ให้ทบทวน รวมกัน (ทั้งคู่มี
+  // วงเงินอนุมัติของตัวเองจากผู้พิจารณา) — เดียวกับนิยาม "รวมงบที่เห็นชอบ" ที่ใช้
+  // ในตารางงบประมาณและ Insight panel ด้านล่าง ไม่ใช่แค่สถานะ "เห็นชอบ" เพียวๆ
+  const isApprovedOrRevise = (r) => r.reviewStatus === 'approved' || r.reviewStatus === 'revise';
+
   // งบที่ได้รับอนุมัติ (2570, ตามตัวกรองปัจจุบัน) เทียบกับงบรวมปี 2569 ทั้งหมด
   // 36 หลักสูตร (ไม่กรองตามหน่วยงาน — เป็นค่าฐานอ้างอิงคงที่ ตามที่ผู้ใช้ยืนยัน)
-  const approvedBudget2570 = data.filter((r) => r.reviewStatus === 'approved').reduce((s, r) => s + (r.effectiveBudget || 0), 0);
+  const approvedBudget2570 = data.filter(isApprovedOrRevise).reduce((s, r) => s + (r.effectiveBudget || 0), 0);
   const budget2569Total = HISTORICAL_2569.records.reduce((s, r) => s + (r.budgetBaht || 0), 0);
   const budgetDiff = approvedBudget2570 - budget2569Total;
   const budgetPctChange = budget2569Total > 0 ? (budgetDiff / budget2569Total) * 100 : 0;
@@ -629,7 +634,7 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
   const budgetDiffIcon = budgetDiff > 0 ? '↑' : budgetDiff < 0 ? '↓' : '→';
 
   // งบที่ใช้ไปแล้ว (เห็นชอบ) เทียบกับกรอบงบที่ได้รับจัดสรร — ทั้งโรง ไม่กรองตามตัวกรองที่เลือก
-  const approvedBudgetPlantWide = STATE.records.filter((r) => r.reviewStatus === 'approved').reduce((s, r) => s + (r.effectiveBudget || 0), 0);
+  const approvedBudgetPlantWide = STATE.records.filter(isApprovedOrRevise).reduce((s, r) => s + (r.effectiveBudget || 0), 0);
   const frameDiff = approvedBudgetPlantWide - BUDGET_FRAME_2570;
   const framePct = BUDGET_FRAME_2570 > 0 ? (frameDiff / BUDGET_FRAME_2570) * 100 : 0;
   // เกินกรอบ = แย่ (แดง), ต่ำกว่า/เท่ากรอบ = ดี (เขียว)
@@ -667,7 +672,7 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
     // แถบแยกเป็น 2 ส่วน: ในประเทศ (แดง/เขียว ตามเงื่อนไขเดิม) และ ต่างประเทศ
     // (ส้ม/ฟ้า) — เงื่อนไขเกิน/อยู่ในกรอบใช้ตัวเดียวกัน (frameDiff) ต่างกันแค่ชุดสี
     const approvedOverseasBudget = STATE.records
-      .filter((r) => r.reviewStatus === 'approved' && (deliveryTypeOf(r) || '').indexOf('ต่างประเทศ') !== -1)
+      .filter((r) => isApprovedOrRevise(r) && (deliveryTypeOf(r) || '').indexOf('ต่างประเทศ') !== -1)
       .reduce((s, r) => s + (r.effectiveBudget || 0), 0);
     const approvedDomesticBudget = approvedBudgetPlantWide - approvedOverseasBudget;
     // สัดส่วนจริงระหว่างในประเทศ/ต่างประเทศต้องคงไว้เสมอ แม้ยอดรวมจะเกิน 100%
