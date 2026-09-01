@@ -2003,7 +2003,10 @@ function renderFinalDataTab() {
 
     <div class="print-summary-toolbar no-print" style="margin-top:20px;">
       <div class="subheading-label" style="font-size:14px;margin:0;text-transform:none;">ตารางสรุปผลพิจารณา อศค. — Approved Data (แยกตามผลการพิจารณา)</div>
-      <button class="btn btn-primary btn-sm" id="fd-print-summary-btn">🖨 พิมพ์</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-sm" id="fd-export-excel-btn">📊 ส่งออก Excel</button>
+        <button class="btn btn-primary btn-sm" id="fd-print-summary-btn">🖨 พิมพ์</button>
+      </div>
     </div>
     <div id="final-summary-section">
       ${Object.entries(FINAL_REVIEW_META).map(([key, meta]) => {
@@ -2109,6 +2112,29 @@ function renderFinalDataTab() {
       window.print();
     });
   }
+  const exportExcelBtn = root.querySelector('#fd-export-excel-btn');
+  if (exportExcelBtn) exportExcelBtn.addEventListener('click', exportFinalDataExcel);
+}
+
+/** ส่งออกหลักสูตร Approved Data ตามตัวกรองปัจจุบันเป็นไฟล์ .xlsx จริง (ใช้ไลบรารี XLSX ตัวเดียวกับที่ใช้นำเข้าไฟล์) */
+function exportFinalDataExcel() {
+  const courses = STATE.finalCourses.filter((r) => r.sourceStatus !== 'ร่าง');
+  const filtered = courses.filter((r) => matchesFinalFiltersExcept(r, null));
+  const rows = filtered.map((r) => ({
+    'รหัส': r.id,
+    'ชื่อหลักสูตร': r.nameTh || '',
+    'ประเภทหลักสูตร': r.courseType || '',
+    'ประเภทการส่งอบรม': r.deliveryType || '',
+    'ผู้เข้าอบรม': r.participants || 0,
+    'งบประมาณรวม': r.budgetTotal || 0,
+    'สถานะหลักสูตร (อศค.)': r.sourceStatus || '',
+    'ผลพิจารณา อศค.': r.finalReviewDecision && FINAL_REVIEW_META[r.finalReviewDecision] ? FINAL_REVIEW_META[r.finalReviewDecision].label : 'ยังไม่พิจารณา',
+    'หมายเหตุ': r.finalReviewRemark || '',
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Approved Data');
+  XLSX.writeFile(wb, `Approved_Data_สรุปผลพิจารณา_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
 /**
