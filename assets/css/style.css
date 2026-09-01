@@ -465,6 +465,7 @@ table.data-table th {
 table.data-table td { padding: 11px 14px; border-bottom: 1px solid var(--grid); vertical-align: top; font-weight: 300; }
 table.data-table tbody tr { transition: background .1s; }
 table.data-table tbody tr:hover { background: var(--table-hover-bg); }
+table.data-table tfoot .table-total-row td { padding: 11px 14px; font-weight: 700; background: var(--surface-2); border-top: 2px solid var(--border); border-bottom: none; }
 table.data-table tbody tr:last-child td { border-bottom: none; }
 .cell-name { font-weight: 500; max-width: 320px; }
 .cell-muted { color: var(--text-muted); }

@@ -1734,6 +1734,7 @@ function renderFinalDataTab() {
   const sourceStatuses = uniqueValues(courses, 'sourceStatus');
 
   const totalBudget = courses.reduce((s, r) => s + (r.budgetTotal || 0), 0);
+  const filteredBudgetTotal = filtered.reduce((s, r) => s + (r.budgetTotal || 0), 0);
   // นับคนไม่ซ้ำจากรายชื่อจริง (ชื่อกลุ่มเป้าหมาย) ไม่ใช่บวกยอด participants
   // ของแต่ละหลักสูตรตรงๆ — คนเดียวกันไปหลายหลักสูตรต้องนับเป็น 1 คน ใช้ตัวแยก
   // ข้อความชุดเดียวกับแท็บ "บุคลากรในแผนพัฒนา" (splitPeopleText/parsePersonSegment)
@@ -1836,6 +1837,12 @@ function renderFinalDataTab() {
             </tr>
           `).join('') : `<tr><td colspan="7"><div class="empty-state"><div class="big">🔍</div>ไม่พบหลักสูตรที่ตรงกับตัวกรอง</div></td></tr>`}
         </tbody>
+        ${filtered.length ? `
+        <tfoot><tr class="table-total-row">
+          <td colspan="5">รวมงบประมาณ (${fmtNum(filtered.length)} หลักสูตรตามตัวกรองปัจจุบัน)</td>
+          <td class="num">${fmtBaht(filteredBudgetTotal)}</td>
+          <td></td>
+        </tr></tfoot>` : ''}
       </table>
     </div>
     ` : `<div class="empty-state"><div class="big">📄</div>ยังไม่มี Approved Data — กด "นำเข้า Approved Data" เพื่ออัปโหลดไฟล์</div>`}
