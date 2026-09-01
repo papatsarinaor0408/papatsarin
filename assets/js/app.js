@@ -1749,11 +1749,6 @@ function renderFinalDataTab() {
   const totalParticipants = courses.reduce((s, r) => s + (r.participants || 0), 0);
   const centralCount = courses.filter((r) => r.courseType === 'หลักสูตรกลาง อศค. ดำเนินการ').length;
 
-  // งบที่ อศค. อนุมัติแล้ว (สถานะหลักสูตร = "อนุมัติ" เท่านั้น) เทียบกับงบที่เสนอทั้งหมด
-  const approvedBudget = courses.filter((r) => r.sourceStatus === 'อนุมัติ').reduce((s, r) => s + (r.budgetTotal || 0), 0);
-  const approvedPct = totalBudget > 0 ? (approvedBudget / totalBudget) * 100 : 0;
-  const approvedBarWidth = Math.min(Math.max(approvedPct, 0), 100);
-
   // การ์ดสีตามสถานะหลักสูตร (สถานะของระบบ อศค. เอง) — ไม่รวม "ร่าง" เลย (กรองออกแล้วด้านบน)
   // ใช้จานสี --kpi-fill-* ชุดเดียวกับการ์ดสถานะในหน้าภาพรวม เพื่อให้อ่านง่ายในสไตล์เดียวกัน
   const statusColorMap = { 'รออนุมัติ': 'var(--kpi-fill-revise)', 'อนุมัติ': 'var(--kpi-fill-approved)', 'ไม่อนุมัติ': 'var(--kpi-fill-rejected)' };
@@ -1784,24 +1779,12 @@ function renderFinalDataTab() {
 
     ${courses.length ? `
     <div class="budget-frame-hero">
-      <div class="bfh-label">เปรียบเทียบงบประมาณ Approved Data — งบที่เสนอเทียบกับงบที่ อศค. อนุมัติแล้ว</div>
+      <div class="bfh-label">ข้อมูล Approved Data — หลักสูตรที่ผ่านการพิจารณาแล้ว บันทึกในระบบกลาง อศค.</div>
       <div class="bfh-row">
         <div class="bfh-stat">
-          <div class="bfh-stat-label">งบประมาณที่เสนอทั้งหมด</div>
+          <div class="bfh-stat-label">งบประมาณรวมทั้งหมด</div>
           <div class="bfh-stat-value">${fmtBaht(totalBudget)}</div>
         </div>
-        <div class="bfh-vs">เทียบกับ</div>
-        <div class="bfh-stat">
-          <div class="bfh-stat-label">ได้รับอนุมัติแล้ว (สถานะ "อนุมัติ")</div>
-          <div class="bfh-stat-value">${fmtBaht(approvedBudget)}</div>
-        </div>
-        <div class="bfh-diff">
-          <div class="bfh-diff-label">สัดส่วนที่ได้รับอนุมัติ</div>
-          <div class="bfh-diff-value" style="color:var(--status-good);">${approvedPct.toFixed(1)}%</div>
-        </div>
-      </div>
-      <div class="bfh-bar-track">
-        <div class="bfh-bar-fill" style="width:${approvedBarWidth}%;background:var(--status-good);"></div>
       </div>
       <div class="bfh-footnote">ผู้เข้าอบรมรวม: <b>${fmtNum(totalParticipants)}</b> คน (ทุกหลักสูตร)</div>
       <div class="bfh-footnote">หลักสูตรกลาง อศค. ดำเนินการ: <b>${fmtNum(centralCount)}</b> จาก ${fmtNum(courses.length)} หลักสูตร</div>
