@@ -36,7 +36,7 @@ const STATE = {
   // import button is).
   finalCourses: [],
   finalDataLoaded: false, finalDataLastImportInfo: null,
-  finalDataFilters: { search: '', courseType: '', sourceStatus: '', deliveryType: '', orgLevel: 'deptName', orgValue: '', budgetMin: '', budgetMax: '' },
+  finalDataFilters: { search: '', courseType: '', sourceStatus: '', reviewDecision: '', deliveryType: '', orgLevel: 'deptName', orgValue: '', budgetMin: '', budgetMax: '' },
 };
 
 /* ---------------- persistence (central database — see dataClient.js) ---------------- */
@@ -1753,6 +1753,7 @@ function matchesFinalFiltersExcept(r, exceptKey) {
   if (exceptKey !== 'courseType' && f.courseType && r.courseType !== f.courseType) return false;
   if (exceptKey !== 'deliveryType' && f.deliveryType && r.deliveryType !== f.deliveryType) return false;
   if (exceptKey !== 'sourceStatus' && f.sourceStatus && r.sourceStatus !== f.sourceStatus) return false;
+  if (exceptKey !== 'reviewDecision' && f.reviewDecision && r.finalReviewDecision !== f.reviewDecision) return false;
   if (exceptKey !== 'search' && f.search) {
     const q = f.search.toLowerCase();
     if (!((r.nameTh || '').toLowerCase().includes(q) || (r.id || '').toLowerCase().includes(q))) return false;
@@ -1817,9 +1818,9 @@ function renderFinalDataTab() {
   const reviewCounts = { approved: 0, rejected: 0, revise: 0 };
   courses.forEach((r) => { if (reviewCounts[r.finalReviewDecision] !== undefined) reviewCounts[r.finalReviewDecision]++; });
   const statusKpis = [
-    { label: 'หลักสูตรทั้งหมด', value: courses.length, color: '#239A91' },
-    ...orderedStatuses.map((s) => ({ label: s, value: statusCounts[s], color: statusColorMap[s] || 'var(--kpi-fill-pending)' })),
-    ...Object.entries(FINAL_REVIEW_META).map(([key, meta]) => ({ label: meta.label, value: reviewCounts[key], color: FINAL_REVIEW_COLOR[key] })),
+    { label: 'หลักสูตรทั้งหมด', value: courses.length, color: '#239A91', filterType: 'all' },
+    ...orderedStatuses.map((s) => ({ label: s, value: statusCounts[s], color: statusColorMap[s] || 'var(--kpi-fill-pending)', filterType: 'sourceStatus', filterValue: s })),
+    ...Object.entries(FINAL_REVIEW_META).map(([key, meta]) => ({ label: meta.label, value: reviewCounts[key], color: FINAL_REVIEW_COLOR[key], filterType: 'reviewDecision', filterValue: key })),
   ];
 
   const info = STATE.finalDataLastImportInfo;
@@ -1858,12 +1859,17 @@ function renderFinalDataTab() {
       <div class="bfh-footnote">หลักสูตรกลาง อศค. ดำเนินการ: <span class="bfh-value-badge" style="background:var(--kpi-fill-central);">${fmtNum(centralCount)}</span> จาก ${fmtNum(courses.length)} หลักสูตร</div>
     </div>
     <div class="kpi-grid" style="margin-bottom:16px;">
-      ${statusKpis.map((k) => `
-        <div class="kpi-card${k.darkText ? ' kpi-dark-text' : ''}" style="--kpi-color:${k.color}">
+      ${statusKpis.map((k) => {
+        const isActive = k.filterType === 'all'
+          ? (!f.sourceStatus && !f.reviewDecision)
+          : (f[k.filterType] === k.filterValue);
+        return `
+        <button type="button" class="kpi-card kpi-card-clickable${k.darkText ? ' kpi-dark-text' : ''}${isActive ? ' active' : ''}" style="--kpi-color:${k.color}" data-filter-type="${k.filterType}" data-filter-value="${escapeAttr(k.filterValue || '')}">
           <div class="kpi-label">${escapeHtml(k.label)}</div>
           <div class="kpi-value">${fmtNum(k.value)}</div>
           <div class="kpi-pct">${courses.length ? ((k.value / courses.length) * 100).toFixed(1) : '0.0'}% ของทั้งหมด</div>
-        </div>`).join('')}
+        </button>`;
+      }).join('')}
     </div>
     <div class="filter-bar" style="margin-bottom:14px;">
       <div class="filter-field">
@@ -1957,6 +1963,20 @@ function renderFinalDataTab() {
       commitFinalCourseReview(courseId, decision, currentRemark);
     });
   });
+  root.querySelectorAll('.kpi-card-clickable').forEach((card) => {
+    card.addEventListener('click', () => {
+      const type = card.dataset.filterType;
+      if (type === 'all') {
+        STATE.finalDataFilters.sourceStatus = '';
+        STATE.finalDataFilters.reviewDecision = '';
+      } else {
+        const value = card.dataset.filterValue;
+        // คลิกการ์ดที่กำลังเลือกอยู่ซ้ำ = ยกเลิกตัวกรองนั้น, คลิกการ์ดอื่นในกลุ่มเดียวกัน = สลับไปตัวนั้น
+        STATE.finalDataFilters[type] = STATE.finalDataFilters[type] === value ? '' : value;
+      }
+      renderFinalDataTab();
+    });
+  });
   root.querySelectorAll('.final-review-remark-input').forEach((input) => {
     input.addEventListener('click', (e) => e.stopPropagation()); // ไม่ให้เปิด drawer ตอนโฟกัสกล่องข้อความ
     const save = () => {
@@ -1984,7 +2004,7 @@ function renderFinalDataTab() {
     bindSearchInput('fd-budget-min', (v) => { STATE.finalDataFilters.budgetMin = v.replace(/[^\d]/g, ''); renderFinalDataTab(); });
     bindSearchInput('fd-budget-max', (v) => { STATE.finalDataFilters.budgetMax = v.replace(/[^\d]/g, ''); renderFinalDataTab(); });
     document.getElementById('fd-clear').addEventListener('click', () => {
-      STATE.finalDataFilters = { search: '', courseType: '', sourceStatus: '', deliveryType: '', orgLevel: STATE.finalDataFilters.orgLevel, orgValue: '', budgetMin: '', budgetMax: '' };
+      STATE.finalDataFilters = { search: '', courseType: '', sourceStatus: '', reviewDecision: '', deliveryType: '', orgLevel: STATE.finalDataFilters.orgLevel, orgValue: '', budgetMin: '', budgetMax: '' };
       renderFinalDataTab();
     });
   }
