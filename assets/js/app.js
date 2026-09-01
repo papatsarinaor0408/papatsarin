@@ -1778,9 +1778,14 @@ function renderFinalDataTab() {
   const statusCounts = {};
   courses.forEach((r) => { const s = (r.sourceStatus || '').trim() || 'ไม่ระบุ'; statusCounts[s] = (statusCounts[s] || 0) + 1; });
   const orderedStatuses = statusOrderPref.filter((s) => statusCounts[s]).concat(Object.keys(statusCounts).filter((s) => !statusOrderPref.includes(s)));
+  // การ์ดนับผลพิจารณาที่ Admin กำหนดเอง (เห็นชอบ/ไม่เห็นชอบ/ให้ปรับปรุงข้อมูล)
+  // ตามปุ่มพิจารณาในตารางด้านล่าง — คนละชุดกับการ์ดสถานะ อศค. ด้านบน
+  const reviewCounts = { approved: 0, rejected: 0, revise: 0 };
+  courses.forEach((r) => { if (reviewCounts[r.finalReviewDecision] !== undefined) reviewCounts[r.finalReviewDecision]++; });
   const statusKpis = [
     { label: 'หลักสูตรทั้งหมด', value: courses.length, color: '#239A91' },
     ...orderedStatuses.map((s) => ({ label: s, value: statusCounts[s], color: statusColorMap[s] || 'var(--kpi-fill-pending)' })),
+    ...Object.entries(FINAL_REVIEW_META).map(([key, meta]) => ({ label: meta.label, value: reviewCounts[key], color: FINAL_REVIEW_COLOR[key] })),
   ];
 
   const info = STATE.finalDataLastImportInfo;
