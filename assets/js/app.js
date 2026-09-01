@@ -691,15 +691,6 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
     const totalRequestedAll = totalProposedPlantWide + totalOverseasBudget;
     const usedPct = BUDGET_FRAME_2570 > 0 ? (approvedBudgetPlantWide / BUDGET_FRAME_2570) * 100 : 0;
 
-    // สรุปผลพิจารณาจาก อศค. (ข้อมูล Approved Data — final_courses/
-    // final_course_reviews) — คนละชุดข้อมูล/คนละ workflow กับแผน+decisions
-    // ด้านบนโดยสิ้นเชิง ไม่กรองตามตัวกรองหน้านี้ (ทั้งโรงเสมอ เหมือนกรอบงบประมาณ)
-    // ไม่รวม "ร่าง" ตามหลักการเดียวกับแท็บ Approved Data เอง
-    const finalCoursesForOsakho = STATE.finalCourses.filter((r) => r.sourceStatus !== 'ร่าง');
-    const osakhoRequestedTotal = finalCoursesForOsakho.reduce((s, r) => s + (r.budgetTotal || 0), 0);
-    const osakhoApprovedTotal = finalCoursesForOsakho.filter((r) => r.finalReviewDecision === 'approved').reduce((s, r) => s + (r.budgetTotal || 0), 0);
-    const osakhoRejectedTotal = finalCoursesForOsakho.filter((r) => r.finalReviewDecision === 'rejected').reduce((s, r) => s + (r.budgetTotal || 0), 0);
-
     frameHero.innerHTML = `
       <div class="bfh2-title">
         <span class="bfh2-icon" style="background:#1E293B;">📊</span>
@@ -726,30 +717,6 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
           <div>
             <div class="bfh2-stat-label">ส่วนต่างงบประมาณ</div>
             <div class="bfh2-diff-value" style="color:${frameDiffColor};">${frameDiffIcon} ${frameDiff >= 0 ? 'เกินกรอบ ' : 'ต่ำกว่ากรอบ '}${fmtBaht(Math.abs(frameDiff))} (${framePct >= 0 ? '+' : ''}${framePct.toFixed(1)}%)</div>
-          </div>
-        </div>
-      </div>
-      <div class="bfh2-subrow-label">สรุปผลพิจารณาจาก อศค. (ข้อมูล Approved Data)</div>
-      <div class="bfh2-stats-row">
-        <div class="bfh2-stat-card">
-          <span class="bfh2-stat-icon" style="background:color-mix(in srgb, #6366F1 15%, transparent);">💵</span>
-          <div>
-            <div class="bfh2-stat-label">วงเงินที่ขอความเห็นชอบจาก อศค.</div>
-            <div class="bfh2-stat-value">${fmtBaht(osakhoRequestedTotal)}</div>
-          </div>
-        </div>
-        <div class="bfh2-stat-card">
-          <span class="bfh2-stat-icon" style="background:color-mix(in srgb, var(--status-good) 15%, transparent);">✅</span>
-          <div>
-            <div class="bfh2-stat-label">อศค. เห็นชอบ</div>
-            <div class="bfh2-stat-value">${fmtBaht(osakhoApprovedTotal)}</div>
-          </div>
-        </div>
-        <div class="bfh2-stat-card">
-          <span class="bfh2-stat-icon" style="background:color-mix(in srgb, var(--status-critical) 15%, transparent);">❌</span>
-          <div>
-            <div class="bfh2-stat-label">อศค. ไม่เห็นชอบ</div>
-            <div class="bfh2-stat-value">${fmtBaht(osakhoRejectedTotal)}</div>
           </div>
         </div>
       </div>
@@ -1849,6 +1816,10 @@ function renderFinalDataTab() {
   const totalParticipants = uniqueParticipantIds.size;
   const centralCount = courses.filter((r) => r.courseType === 'หลักสูตรกลาง อศค. ดำเนินการ').length;
   const approvedByOsakhoTotal = courses.filter((r) => r.finalReviewDecision === 'approved').reduce((s, r) => s + (r.budgetTotal || 0), 0);
+  // สรุปผลพิจารณาจาก อศค. — ย้ายมาจากหน้าภาพรวมมาไว้ที่แท็บนี้โดยตรงตามคำขอ
+  const osakhoRequestedTotal = courses.reduce((s, r) => s + (r.budgetTotal || 0), 0);
+  const osakhoApprovedTotal = approvedByOsakhoTotal;
+  const osakhoRejectedTotal = courses.filter((r) => r.finalReviewDecision === 'rejected').reduce((s, r) => s + (r.budgetTotal || 0), 0);
 
   // การ์ดสีตามสถานะหลักสูตร (สถานะของระบบ อศค. เอง) — ไม่รวม "ร่าง" เลย (กรองออกแล้วด้านบน)
   // ใช้จานสี --kpi-fill-* ชุดเดียวกับการ์ดสถานะในหน้าภาพรวม เพื่อให้อ่านง่ายในสไตล์เดียวกัน
@@ -1910,6 +1881,30 @@ function renderFinalDataTab() {
         </div>
       </div>
       <div class="bfh-footnote">หลักสูตรกลาง อศค. ดำเนินการ: <span class="bfh-value-badge" style="background:var(--kpi-fill-central);">${fmtNum(centralCount)}</span> จาก ${fmtNum(courses.length)} หลักสูตร</div>
+    </div>
+    <div class="bfh2-subrow-label">สรุปผลพิจารณาจาก อศค. (ข้อมูล Approved Data)</div>
+    <div class="bfh2-stats-row">
+      <div class="bfh2-stat-card">
+        <span class="bfh2-stat-icon" style="background:color-mix(in srgb, #6366F1 15%, transparent);">💵</span>
+        <div>
+          <div class="bfh2-stat-label">วงเงินที่ขอความเห็นชอบจาก อศค.</div>
+          <div class="bfh2-stat-value">${fmtBaht(osakhoRequestedTotal)}</div>
+        </div>
+      </div>
+      <div class="bfh2-stat-card">
+        <span class="bfh2-stat-icon" style="background:color-mix(in srgb, var(--status-good) 15%, transparent);">✅</span>
+        <div>
+          <div class="bfh2-stat-label">อศค. เห็นชอบ</div>
+          <div class="bfh2-stat-value">${fmtBaht(osakhoApprovedTotal)}</div>
+        </div>
+      </div>
+      <div class="bfh2-stat-card">
+        <span class="bfh2-stat-icon" style="background:color-mix(in srgb, var(--status-critical) 15%, transparent);">❌</span>
+        <div>
+          <div class="bfh2-stat-label">อศค. ไม่เห็นชอบ</div>
+          <div class="bfh2-stat-value">${fmtBaht(osakhoRejectedTotal)}</div>
+        </div>
+      </div>
     </div>
     <div class="kpi-grid" style="margin-bottom:16px;">
       ${statusKpis.map((k) => {
