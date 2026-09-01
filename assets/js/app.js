@@ -1755,7 +1755,7 @@ function renderFinalDataTab() {
   courses.forEach((r) => { const s = (r.sourceStatus || '').trim() || 'ไม่ระบุ'; statusCounts[s] = (statusCounts[s] || 0) + 1; });
   const orderedStatuses = statusOrderPref.filter((s) => statusCounts[s]).concat(Object.keys(statusCounts).filter((s) => !statusOrderPref.includes(s)));
   const statusKpis = [
-    { label: 'หลักสูตรทั้งหมด', value: courses.length, color: '#1B4332' },
+    { label: 'หลักสูตรทั้งหมด', value: courses.length, color: '#D4E815', darkText: true },
     ...orderedStatuses.map((s) => ({ label: s, value: statusCounts[s], color: statusColorMap[s] || 'var(--kpi-fill-pending)' })),
   ];
 
@@ -1796,7 +1796,7 @@ function renderFinalDataTab() {
     </div>
     <div class="kpi-grid" style="margin-bottom:16px;">
       ${statusKpis.map((k) => `
-        <div class="kpi-card" style="--kpi-color:${k.color}">
+        <div class="kpi-card${k.darkText ? ' kpi-dark-text' : ''}" style="--kpi-color:${k.color}">
           <div class="kpi-label">${escapeHtml(k.label)}</div>
           <div class="kpi-value">${fmtNum(k.value)}</div>
           <div class="kpi-pct">${courses.length ? ((k.value / courses.length) * 100).toFixed(1) : '0.0'}% ของทั้งหมด</div>
