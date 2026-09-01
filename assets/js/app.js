@@ -690,6 +690,16 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
       .reduce((s, r) => s + (r.budgetTotal || 0), 0);
     const totalRequestedAll = totalProposedPlantWide + totalOverseasBudget;
     const usedPct = BUDGET_FRAME_2570 > 0 ? (approvedBudgetPlantWide / BUDGET_FRAME_2570) * 100 : 0;
+
+    // สรุปผลพิจารณาจาก อศค. (ข้อมูล Approved Data — final_courses/
+    // final_course_reviews) — คนละชุดข้อมูล/คนละ workflow กับแผน+decisions
+    // ด้านบนโดยสิ้นเชิง ไม่กรองตามตัวกรองหน้านี้ (ทั้งโรงเสมอ เหมือนกรอบงบประมาณ)
+    // ไม่รวม "ร่าง" ตามหลักการเดียวกับแท็บ Approved Data เอง
+    const finalCoursesForOsakho = STATE.finalCourses.filter((r) => r.sourceStatus !== 'ร่าง');
+    const osakhoRequestedTotal = finalCoursesForOsakho.reduce((s, r) => s + (r.budgetTotal || 0), 0);
+    const osakhoApprovedTotal = finalCoursesForOsakho.filter((r) => r.finalReviewDecision === 'approved').reduce((s, r) => s + (r.budgetTotal || 0), 0);
+    const osakhoRejectedTotal = finalCoursesForOsakho.filter((r) => r.finalReviewDecision === 'rejected').reduce((s, r) => s + (r.budgetTotal || 0), 0);
+
     frameHero.innerHTML = `
       <div class="bfh2-title">
         <span class="bfh2-icon" style="background:#1E293B;">📊</span>
@@ -716,6 +726,30 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
           <div>
             <div class="bfh2-stat-label">ส่วนต่างงบประมาณ</div>
             <div class="bfh2-diff-value" style="color:${frameDiffColor};">${frameDiffIcon} ${frameDiff >= 0 ? 'เกินกรอบ ' : 'ต่ำกว่ากรอบ '}${fmtBaht(Math.abs(frameDiff))} (${framePct >= 0 ? '+' : ''}${framePct.toFixed(1)}%)</div>
+          </div>
+        </div>
+      </div>
+      <div class="bfh2-subrow-label">สรุปผลพิจารณาจาก อศค. (ข้อมูล Approved Data)</div>
+      <div class="bfh2-stats-row">
+        <div class="bfh2-stat-card">
+          <span class="bfh2-stat-icon" style="background:color-mix(in srgb, #6366F1 15%, transparent);">💵</span>
+          <div>
+            <div class="bfh2-stat-label">วงเงินที่ขอความเห็นชอบจาก อศค.</div>
+            <div class="bfh2-stat-value">${fmtBaht(osakhoRequestedTotal)}</div>
+          </div>
+        </div>
+        <div class="bfh2-stat-card">
+          <span class="bfh2-stat-icon" style="background:color-mix(in srgb, var(--status-good) 15%, transparent);">✅</span>
+          <div>
+            <div class="bfh2-stat-label">อศค. เห็นชอบ</div>
+            <div class="bfh2-stat-value">${fmtBaht(osakhoApprovedTotal)}</div>
+          </div>
+        </div>
+        <div class="bfh2-stat-card">
+          <span class="bfh2-stat-icon" style="background:color-mix(in srgb, var(--status-critical) 15%, transparent);">❌</span>
+          <div>
+            <div class="bfh2-stat-label">อศค. ไม่เห็นชอบ</div>
+            <div class="bfh2-stat-value">${fmtBaht(osakhoRejectedTotal)}</div>
           </div>
         </div>
       </div>
@@ -1735,6 +1769,7 @@ async function commitFinalCourseReview(courseId, decision, remark) {
   await submitFinalCourseReviewRemote(courseId, decision, remark);
   await fetchFinalData();
   renderFinalDataTab();
+  renderOverview(); // อัปเดตการ์ดสรุปผลพิจารณา อศค. บนหน้าภาพรวมด้วย
 }
 
 // สายบังคับบัญชาของ Approved Data เอง (รอง/ผู้ช่วย/ฝ่าย/คณะทำงาน) — คนละ
@@ -2154,6 +2189,7 @@ function handleFinalDataFileImport(file) {
       try { STATE.finalDataLastImportInfo = await fetchLastFinalImportInfo(); }
       catch (e) { STATE.finalDataLastImportInfo = null; }
       renderFinalDataTab();
+      renderOverview(); // อัปเดตการ์ดสรุปผลพิจารณา อศค. บนหน้าภาพรวมด้วย
       const doneEl = document.getElementById('import-finaldata-status');
       if (doneEl) doneEl.textContent = `นำเข้าสำเร็จ — เพิ่มใหม่ ${counts.new_count}, ปรับปรุง ${counts.matched_count}, กลับมาใช้งาน ${counts.reactivated_count}, นำออกจากรายการปัจจุบัน ${counts.deactivated_count}`;
     } catch (e) {
@@ -2829,6 +2865,13 @@ async function init() {
   await loadAllRecords();
   try { STATE.lastImportInfo = await fetchLastImportInfo(); }
   catch (e) { STATE.lastImportInfo = null; }
+  // Approved Data ต้องพร้อมใช้งานตั้งแต่โหลดหน้าแรก ไม่ใช่แค่ตอนเปิดแท็บของมันเอง
+  // เพราะการ์ดสรุปผลพิจารณา อศค. ในหน้าภาพรวมต้องใช้ข้อมูลชุดนี้ทันที
+  try {
+    await fetchFinalData();
+    STATE.finalDataLastImportInfo = await fetchLastFinalImportInfo();
+    STATE.finalDataLoaded = true;
+  } catch (e) { /* การ์ด อศค. จะแสดง ฿0 — ส่วนอื่นของแอปยังใช้งานได้ปกติ */ }
   initTheme();
 
   document.querySelectorAll('.tab-btn').forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
