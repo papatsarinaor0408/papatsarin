@@ -480,9 +480,8 @@ table.approved-data-table tbody tr:hover { background: #D1E9C0; }
   transition: opacity .15s, box-shadow .15s;
 }
 .final-review-card.btn-ghost { background: var(--surface-2); color: var(--text-secondary); border: 1px solid var(--border); }
-.final-review-btn:not(.active):not(.btn-ghost) { opacity: .55; }
-.final-review-btn:not(.active):not(.btn-ghost):hover { opacity: .85; }
-.final-review-btn.active { box-shadow: inset 0 0 0 2px color-mix(in srgb, black 25%, transparent); }
+.final-review-card:hover { filter: brightness(1.1); box-shadow: 0 1px 5px rgba(0,0,0,.22); }
+.final-review-btn.active { box-shadow: inset 0 0 0 2px color-mix(in srgb, black 30%, transparent); font-weight: 800; }
 .final-review-remark-input {
   width: 180px; padding: 6px 9px; border-radius: var(--radius-sm);
   border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary);
