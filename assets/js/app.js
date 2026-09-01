@@ -1754,7 +1754,9 @@ const FINAL_REVIEW_META = {
   rejected: { label: 'อศค.ไม่เห็นชอบ', icon: '✕', btnClass: 'btn-critical' },
   revise:   { label: 'อศค.ให้ปรับปรุงข้อมูล', icon: '✎', btnClass: 'btn-warning' },
 };
-const FINAL_REVIEW_COLOR = { approved: 'var(--status-good)', rejected: 'var(--status-critical)', revise: 'var(--status-warning)' };
+// เห็นชอบ = เขียว (ต่างจาก --status-good ของแอปหลักที่เป็นม่วง) ตามคำขอผู้ใช้
+// เฉพาะสำหรับข้อความ/การ์ดของ Approved Data — ปุ่มพิจารณาจริง (.btn-good) ยังคงสีเดิม
+const FINAL_REVIEW_COLOR = { approved: '#16A34A', rejected: 'var(--status-critical)', revise: 'var(--status-warning)' };
 
 function finalReviewBadge(decision, remark) {
   if (!decision || decision === 'pending') return '<span class="cell-muted">-</span>';
@@ -1999,30 +2001,34 @@ function renderFinalDataTab() {
       </table>
     </div>
 
-    <div class="subheading-label" style="font-size:14px;margin:20px 0 8px;text-transform:none;">ตารางสรุปผลพิจารณา อศค. — Approved Data</div>
+    <div class="print-summary-toolbar no-print" style="margin-top:20px;">
+      <div class="subheading-label" style="font-size:14px;margin:0;text-transform:none;">ตารางสรุปผลพิจารณา อศค. — Approved Data (แยกตามผลการพิจารณา)</div>
+      <button class="btn btn-primary btn-sm" id="fd-print-summary-btn">🖨 พิมพ์</button>
+    </div>
     <div id="final-summary-section">
-      <div class="print-summary-toolbar no-print">
-        <span class="filter-count">พบ ${fmtNum(filtered.length)} หลักสูตร (ตามตัวกรองปัจจุบัน)</span>
-        <button class="btn btn-primary btn-sm" id="fd-print-summary-btn">🖨 พิมพ์</button>
-      </div>
-      <div class="table-wrap">
-        <table class="data-table print-summary-table">
-          <thead><tr><th>รหัส</th><th>ชื่อหลักสูตร</th><th class="num">งบประมาณ</th><th>ผลพิจารณา อศค.</th><th>หมายเหตุ</th></tr></thead>
-          <tbody>
-            ${filtered.length ? filtered.map((r) => `
-              <tr>
-                <td>${escapeHtml(r.id)}</td>
-                <td>${escapeHtml(r.nameTh || '-')}</td>
-                <td class="num">${r.budgetTotal ? fmtBaht(r.budgetTotal) : '-'}</td>
-                <td>${r.finalReviewDecision && FINAL_REVIEW_META[r.finalReviewDecision]
-                  ? `<span style="color:${FINAL_REVIEW_COLOR[r.finalReviewDecision]};font-weight:700;">${escapeHtml(FINAL_REVIEW_META[r.finalReviewDecision].label)}</span>`
-                  : '<span class="cell-muted">ยังไม่พิจารณา</span>'}</td>
-                <td>${escapeHtml(r.finalReviewRemark || '-')}</td>
-              </tr>
-            `).join('') : `<tr><td colspan="5">ไม่พบข้อมูล</td></tr>`}
-          </tbody>
-        </table>
-      </div>
+      ${Object.entries(FINAL_REVIEW_META).map(([key, meta]) => {
+        const rows = filtered.filter((r) => r.finalReviewDecision === key);
+        const groupTotal = rows.reduce((s, r) => s + (r.budgetTotal || 0), 0);
+        return `
+        <div class="print-summary-group">
+          <div class="print-summary-group-title" style="color:${FINAL_REVIEW_COLOR[key]};">${escapeHtml(meta.label)} — ${fmtNum(rows.length)} หลักสูตร · ${fmtBaht(groupTotal)}</div>
+          <div class="table-wrap">
+            <table class="data-table print-summary-table">
+              <thead><tr><th>รหัส</th><th>ชื่อหลักสูตร</th><th class="num">งบประมาณ</th><th>หมายเหตุ</th></tr></thead>
+              <tbody>
+                ${rows.length ? rows.map((r) => `
+                  <tr>
+                    <td>${escapeHtml(r.id)}</td>
+                    <td>${escapeHtml(r.nameTh || '-')}</td>
+                    <td class="num">${r.budgetTotal ? fmtBaht(r.budgetTotal) : '-'}</td>
+                    <td>${escapeHtml(r.finalReviewRemark || '-')}</td>
+                  </tr>
+                `).join('') : `<tr><td colspan="4">ไม่พบหลักสูตร</td></tr>`}
+              </tbody>
+            </table>
+          </div>
+        </div>`;
+      }).join('')}
     </div>
     ` : `<div class="empty-state"><div class="big">📄</div>ยังไม่มี Approved Data — กด "นำเข้า Approved Data" เพื่ออัปโหลดไฟล์</div>`}
   `;
