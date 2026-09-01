@@ -1963,6 +1963,7 @@ function renderFinalDataTab() {
       </div>
       <button class="btn btn-ghost btn-sm" id="fd-clear" style="align-self:flex-end;">ล้างตัวกรอง</button>
     </div>
+    ${isAdmin() ? `
     <div class="filter-count" style="margin-bottom:10px;">พบ ${fmtNum(filtered.length)} หลักสูตร จากทั้งหมด ${fmtNum(courses.length)} หลักสูตร — คลิกแถวเพื่อดูรายละเอียด</div>
     <div class="table-wrap">
       <table class="data-table approved-data-table">
@@ -1980,17 +1981,15 @@ function renderFinalDataTab() {
               <td class="num">${fmtNum(r.participants)}</td>
               <td class="num">${r.budgetTotal ? fmtBaht(r.budgetTotal) : '<span class="cell-muted">-</span>'}</td>
               <td>${finalStatusBadge(r.sourceStatus)}</td>
-              <td>${isAdmin() ? `
+              <td>
                 <div class="final-review-actions">
                   ${Object.entries(FINAL_REVIEW_META).map(([key, meta]) => `
                     <button type="button" class="final-review-card final-review-btn ${meta.btnClass}${r.finalReviewDecision === key ? ' active' : ''}" data-course-id="${escapeAttr(r.id)}" data-decision="${key}">${escapeHtml(meta.label)}</button>
                   `).join('')}
                   <button type="button" class="final-review-card final-review-btn btn-ghost" data-course-id="${escapeAttr(r.id)}" data-decision="">ล้างผลพิจารณา</button>
                 </div>
-              ` : finalReviewBadge(r.finalReviewDecision)}</td>
-              <td>${isAdmin()
-                ? `<input type="text" class="final-review-remark-input" data-course-id="${escapeAttr(r.id)}" value="${escapeAttr(r.finalReviewRemark || '')}" placeholder="หมายเหตุ...">`
-                : (r.finalReviewRemark ? escapeHtml(r.finalReviewRemark) : '<span class="cell-muted">-</span>')}</td>
+              </td>
+              <td><input type="text" class="final-review-remark-input" data-course-id="${escapeAttr(r.id)}" value="${escapeAttr(r.finalReviewRemark || '')}" placeholder="หมายเหตุ..."></td>
             </tr>
           `).join('') : `<tr><td colspan="9"><div class="empty-state"><div class="big">🔍</div>ไม่พบหลักสูตรที่ตรงกับตัวกรอง</div></td></tr>`}
         </tbody>
@@ -2004,6 +2003,7 @@ function renderFinalDataTab() {
         </tr></tfoot>` : ''}
       </table>
     </div>
+    ` : ''}
 
     <div class="print-summary-toolbar no-print" style="margin-top:20px;">
       <div class="subheading-label" style="font-size:14px;margin:0;text-transform:none;">ตารางสรุปผลพิจารณา อศค. — Approved Data (แยกตามผลการพิจารณา)</div>
@@ -2016,12 +2016,22 @@ function renderFinalDataTab() {
       ${Object.entries(FINAL_REVIEW_META).map(([key, meta]) => {
         const rows = filtered.filter((r) => r.finalReviewDecision === key);
         const groupTotal = rows.reduce((s, r) => s + (r.budgetTotal || 0), 0);
+        // สีหัวตารางของทั้ง 3 ตารางสรุป — เขียว/แดง/เหลือง ตามคำขอผู้ใช้
+        // (ใช้สีเข้มชัดเจนกว่า FINAL_REVIEW_COLOR ซึ่งออกแบบไว้สำหรับข้อความ/
+        // วงแหวนการ์ด ไม่ใช่พื้นหลังทึบ)
+        const headerBg = { approved: '#16A34A', rejected: '#DC2626', revise: '#EAB308' }[key];
+        const headerText = key === 'revise' ? '#3F2D00' : '#fff';
         return `
         <div class="print-summary-group">
           <div class="print-summary-group-title" style="color:${FINAL_REVIEW_COLOR[key]};">${escapeHtml(meta.label)} — ${fmtNum(rows.length)} หลักสูตร · ${fmtBaht(groupTotal)}</div>
           <div class="table-wrap">
             <table class="data-table print-summary-table">
-              <thead><tr><th>รหัส</th><th>ชื่อหลักสูตร</th><th class="num">งบประมาณ</th><th>หมายเหตุ</th></tr></thead>
+              <thead><tr>
+                <th style="background:${headerBg};color:${headerText};">รหัส</th>
+                <th style="background:${headerBg};color:${headerText};">ชื่อหลักสูตร</th>
+                <th class="num" style="background:${headerBg};color:${headerText};">งบประมาณ</th>
+                <th style="background:${headerBg};color:${headerText};">หมายเหตุ</th>
+              </tr></thead>
               <tbody>
                 ${rows.length ? rows.map((r) => `
                   <tr>
