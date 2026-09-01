@@ -600,6 +600,21 @@ tr.row-status-central { background: color-mix(in srgb, var(--status-central) 7%,
   display: none; align-items: stretch; justify-content: flex-end;
 }
 .modal-backdrop.show { display: flex; }
+.print-summary-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.print-summary-table th, .print-summary-table td { font-size: 12.5px; }
+@media print {
+  body.printing-final-summary > *:not(#chart-detail-backdrop) { display: none !important; }
+  body.printing-final-summary #chart-detail-backdrop {
+    position: static !important; background: none !important; display: block !important;
+  }
+  body.printing-final-summary .drawer {
+    width: 100% !important; height: auto !important; box-shadow: none !important; animation: none !important;
+  }
+  body.printing-final-summary .no-print { display: none !important; }
+  body.printing-final-summary .print-summary-table th {
+    background: #eee !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+}
 .drawer {
   /* A bit over half the screen on desktop (60vw), full-width on mobile
      (the trailing 100% term), capped so it doesn't get absurdly wide on
