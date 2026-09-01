@@ -1855,7 +1855,7 @@ function renderFinalDataTab() {
         </tr></thead>
         <tbody>
           ${filtered.length ? filtered.map((r) => `
-            <tr class="clickable" data-id="${escapeAttr(r.id)}">
+            <tr class="clickable${r.finalReviewDecision && r.finalReviewDecision !== 'pending' ? ' final-reviewed' : ''}" data-id="${escapeAttr(r.id)}">
               <td class="cell-muted">${escapeHtml(r.id)}</td>
               <td class="cell-name">${escapeHtml(r.nameTh || '-')}</td>
               <td>${escapeHtml(r.courseType || '-')}</td>
