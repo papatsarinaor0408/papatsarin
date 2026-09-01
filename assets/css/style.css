@@ -313,6 +313,34 @@ select:focus, input:focus, textarea:focus {
 .bfh-footnote { margin-top: 12px; font-size: 12.5px; color: var(--text-secondary); }
 .bfh-footnote b { color: var(--series-1); font-weight: 700; }
 .bfh-value-badge { display: inline-block; padding: 2px 10px; border-radius: 6px; color: #fff; font-weight: 700; }
+
+/* ---------- Budget-frame hero v2 (icon-badge/card pattern) ---------- */
+.bfh2-title { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.bfh2-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.bfh2-title-text { font-size: 17px; font-weight: 700; color: var(--text-primary); }
+.bfh2-stats-row { display: flex; align-items: stretch; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+.bfh2-stat-card, .bfh2-diff-card {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface-2); border-radius: var(--radius-md);
+  padding: 14px 18px; flex: 1 1 220px; min-width: 200px;
+}
+.bfh2-diff-card { flex: 0 1 260px; }
+.bfh2-stat-icon { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+.bfh2-stat-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+.bfh2-stat-value { font-size: 26px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; line-height: 1.2; }
+.bfh2-diff-value { font-size: 15.5px; font-weight: 700; line-height: 1.3; }
+.bfh2-vs-connector { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 12.5px; flex-shrink: 0; }
+.bfh2-vs-connector span { display: inline-block; width: 20px; border-top: 1px dashed var(--border); }
+.bfh2-bar-labels { position: relative; display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; padding: 0 2px; }
+.bfh2-bar-labels b { color: var(--text-primary); }
+.bfh2-bar-frame-label { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; font-weight: 700; color: var(--text-primary); }
+.bfh2-frame-marker { position: absolute; top: 0; height: 100%; width: 0; border-left: 2px dashed color-mix(in srgb, var(--text-primary) 45%, transparent); transform: translateX(-1px); }
+.bfh2-footnote-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; font-size: 12.5px; color: var(--text-secondary); }
+.bfh2-footnote-icon { width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+.bfh2-footnote-arrow { color: var(--text-muted); }
+@media (max-width: 720px) {
+  .bfh2-bar-frame-label { position: static; transform: none; display: block; text-align: center; margin: 2px 0; }
+}
 @media (max-width: 640px) {
   .bfh-diff { margin-left: 0; text-align: left; }
 }

@@ -681,9 +681,13 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
     const domesticPctRaw = BUDGET_FRAME_2570 > 0 ? (approvedDomesticBudget / BUDGET_FRAME_2570) * 100 : 0;
     const overseasPctRaw = BUDGET_FRAME_2570 > 0 ? (approvedOverseasBudget / BUDGET_FRAME_2570) * 100 : 0;
     const totalPctRaw = domesticPctRaw + overseasPctRaw;
-    const barScale = totalPctRaw > 100 ? 100 / totalPctRaw : 1;
-    const domesticBarWidth = Math.max(domesticPctRaw * barScale, 0);
-    const overseasBarWidth = Math.max(overseasPctRaw * barScale, 0);
+    // แถบทั้งเส้นแทน max(ใช้จริง, 100%) ของกรอบ — ถ้าเกินกรอบ เส้นทั้งแถบ = ยอดใช้จริง
+    // (เกิน 100 ได้) พร้อมเส้นปะ "100% กรอบงบประมาณ" คั่นไว้ในตำแหน่งที่ถูกต้อง
+    // แทนที่จะบีบทุกอย่างให้พอดี 100% เสมอเหมือนเดิม
+    const containerMaxPct = Math.max(totalPctRaw, 100);
+    const domesticBarWidth = containerMaxPct > 0 ? Math.max((domesticPctRaw / containerMaxPct) * 100, 0) : 0;
+    const overseasBarWidth = containerMaxPct > 0 ? Math.max((overseasPctRaw / containerMaxPct) * 100, 0) : 0;
+    const frameMarkerPct = containerMaxPct > 0 ? (100 / containerMaxPct) * 100 : 100;
     const domesticBarColor = frameDiff > 0 ? '#0EA5E9' : '#16A34A'; // เกินกรอบ = ฟ้า, อยู่ในกรอบ = เขียว
     const overseasBarColor = frameDiff > 0 ? '#1E3A8A' : '#2563EB'; // เกินกรอบ = น้ำเงินเข้ม, อยู่ในกรอบ = ฟ้า
     // หลักสูตรต่างประเทศไม่นับรวมในยอดนี้ — งบของหลักสูตรเหล่านี้ไปอยู่ในการพิจารณาของ อศค. แยกต่างหาก
@@ -694,30 +698,70 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
       .filter((r) => (deliveryTypeOf(r) || '').indexOf('ต่างประเทศ') !== -1)
       .reduce((s, r) => s + (r.budgetTotal || 0), 0);
     const totalRequestedAll = totalProposedPlantWide + totalOverseasBudget;
+    const usedPct = BUDGET_FRAME_2570 > 0 ? (approvedBudgetPlantWide / BUDGET_FRAME_2570) * 100 : 0;
     frameHero.innerHTML = `
-      <div class="bfh-label">เปรียบเทียบงบประมาณพัฒนาบุคลากรที่ได้รับจัดสรร ปีงบประมาณ 2570</div>
-      <div class="bfh-row">
-        <div class="bfh-stat">
-          <div class="bfh-stat-label">กรอบงบประมาณที่ได้รับจัดสรร</div>
-          <div class="bfh-stat-value">${fmtBaht(BUDGET_FRAME_2570)}</div>
+      <div class="bfh2-title">
+        <span class="bfh2-icon" style="background:#1E293B;">📊</span>
+        <span class="bfh2-title-text">เปรียบเทียบงบประมาณพัฒนาบุคลากรที่ได้รับจัดสรร ปีงบประมาณ 2570</span>
+      </div>
+      <div class="bfh2-stats-row">
+        <div class="bfh2-stat-card">
+          <span class="bfh2-stat-icon" style="background:color-mix(in srgb, #3B82F6 15%, transparent);">🏦</span>
+          <div>
+            <div class="bfh2-stat-label">กรอบงบประมาณที่ได้รับจัดสรร</div>
+            <div class="bfh2-stat-value">${fmtBaht(BUDGET_FRAME_2570)}</div>
+          </div>
         </div>
-        <div class="bfh-vs">เทียบกับ</div>
-        <div class="bfh-stat">
-          <div class="bfh-stat-label">ใช้ไปแล้ว (หลักสูตรที่เห็นชอบ)</div>
-          <div class="bfh-stat-value">${fmtBaht(approvedBudgetPlantWide)}</div>
+        <div class="bfh2-vs-connector"><span></span>เทียบกับ<span></span></div>
+        <div class="bfh2-stat-card">
+          <span class="bfh2-stat-icon" style="background:color-mix(in srgb, #3B82F6 15%, transparent);">💰</span>
+          <div>
+            <div class="bfh2-stat-label">ใช้ไปแล้ว (หลักสูตรที่เห็นชอบ)</div>
+            <div class="bfh2-stat-value">${fmtBaht(approvedBudgetPlantWide)}</div>
+          </div>
         </div>
-        <div class="bfh-diff">
-          <div class="bfh-diff-label">ส่วนต่างจากกรอบ</div>
-          <div class="bfh-diff-value" style="color:${frameDiffColor};">${frameDiffIcon} ${frameDiff >= 0 ? 'เกินกรอบ ' : 'ต่ำกว่ากรอบ '}${fmtBaht(Math.abs(frameDiff))} (${framePct >= 0 ? '+' : ''}${framePct.toFixed(1)}%)</div>
+        <div class="bfh2-diff-card" style="background:color-mix(in srgb, ${frameDiffColor} 10%, transparent);">
+          <span class="bfh2-stat-icon" style="background:color-mix(in srgb, ${frameDiffColor} 20%, transparent);">${frameDiffIcon}</span>
+          <div>
+            <div class="bfh2-stat-label">ส่วนต่างงบประมาณ</div>
+            <div class="bfh2-diff-value" style="color:${frameDiffColor};">${frameDiffIcon} ${frameDiff >= 0 ? 'เกินกรอบ ' : 'ต่ำกว่ากรอบ '}${fmtBaht(Math.abs(frameDiff))} (${framePct >= 0 ? '+' : ''}${framePct.toFixed(1)}%)</div>
+          </div>
         </div>
       </div>
-      <div class="bfh-bar-track">
+      <div class="bfh2-bar-labels">
+        <span>กรอบงบประมาณที่ได้รับจัดสรร <b>${fmtBaht(BUDGET_FRAME_2570)}</b></span>
+        <span class="bfh2-bar-frame-label" style="left:${frameMarkerPct}%;">100% กรอบงบประมาณ</span>
+        <span>ใช้ไปแล้ว <b>${fmtBaht(approvedBudgetPlantWide)}</b> (${usedPct.toFixed(1)}%)</span>
+      </div>
+      <div class="bfh-bar-track" style="position:relative;">
         <div class="bfh-bar-fill" style="width:${domesticBarWidth}%;background:${domesticBarColor};" title="หลักสูตรในประเทศ (เห็นชอบ): ${fmtBaht(approvedDomesticBudget)}"></div>
         <div class="bfh-bar-fill" style="width:${overseasBarWidth}%;background:${overseasBarColor};" title="หลักสูตรต่างประเทศ (เห็นชอบ): ${fmtBaht(approvedOverseasBudget)}"></div>
+        <div class="bfh2-frame-marker" style="left:${frameMarkerPct}%;"></div>
       </div>
-      <div class="bfh-footnote" style="color:${domesticBarColor};font-weight:600;">งบประมาณที่เสนอมาทั้งหมด (ทุกสถานะ ไม่รวมหลักสูตรต่างประเทศ): <span class="bfh-value-badge" style="background:${domesticBarColor};">${fmtBaht(totalProposedPlantWide)}</span> → ได้รับอนุมัติ <span class="bfh-value-badge" style="background:${domesticBarColor};">${fmtBaht(approvedDomesticBudget)}</span></div>
-      <div class="bfh-footnote" style="color:${overseasBarColor};font-weight:600;">งบหลักสูตรต่างประเทศที่เสนอ: <span class="bfh-value-badge" style="background:${overseasBarColor};">${fmtBaht(totalOverseasBudget)}</span> → ได้รับอนุมัติ <span class="bfh-value-badge" style="background:${overseasBarColor};">${fmtBaht(approvedOverseasBudget)}</span></div>
-      <div class="bfh-footnote" style="color:#0F172A;font-weight:600;">งบที่เสนอขอรวมทั้งหมด: <span class="bfh-value-badge" style="background:#0F172A;">${fmtBaht(totalRequestedAll)}</span> → ได้รับอนุมัติ <span class="bfh-value-badge" style="background:#0F172A;">${fmtBaht(approvedBudgetPlantWide)}</span></div>
+      <div class="bfh2-footnote-row">
+        <span class="bfh2-footnote-icon" style="background:color-mix(in srgb, ${domesticBarColor} 18%, transparent);">📄</span>
+        <span class="bfh2-footnote-text">งบประมาณที่เสนอทั้งหมด (ทุกสถานะ ไม่รวมหลักสูตรต่างประเทศ):</span>
+        <span class="bfh-value-badge" style="background:${domesticBarColor};">${fmtBaht(totalProposedPlantWide)}</span>
+        <span class="bfh2-footnote-arrow">→</span>
+        <span class="bfh2-footnote-text">ได้รับอนุมัติ</span>
+        <span class="bfh-value-badge" style="background:${domesticBarColor};">${fmtBaht(approvedDomesticBudget)}</span>
+      </div>
+      <div class="bfh2-footnote-row">
+        <span class="bfh2-footnote-icon" style="background:color-mix(in srgb, ${overseasBarColor} 18%, transparent);">✈️</span>
+        <span class="bfh2-footnote-text">งบหลักสูตรต่างประเทศที่เสนอ:</span>
+        <span class="bfh-value-badge" style="background:${overseasBarColor};">${fmtBaht(totalOverseasBudget)}</span>
+        <span class="bfh2-footnote-arrow">→</span>
+        <span class="bfh2-footnote-text">ได้รับอนุมัติ</span>
+        <span class="bfh-value-badge" style="background:${overseasBarColor};">${fmtBaht(approvedOverseasBudget)}</span>
+      </div>
+      <div class="bfh2-footnote-row">
+        <span class="bfh2-footnote-icon" style="background:color-mix(in srgb, #0F172A 18%, transparent);">📦</span>
+        <span class="bfh2-footnote-text">งบที่เสนอขอรวมทั้งหมด:</span>
+        <span class="bfh-value-badge" style="background:#0F172A;">${fmtBaht(totalRequestedAll)}</span>
+        <span class="bfh2-footnote-arrow">→</span>
+        <span class="bfh2-footnote-text">ได้รับอนุมัติ</span>
+        <span class="bfh-value-badge" style="background:#0F172A;">${fmtBaht(approvedBudgetPlantWide)}</span>
+      </div>
     `;
   }
 
