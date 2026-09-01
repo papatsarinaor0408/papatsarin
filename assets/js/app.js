@@ -36,7 +36,7 @@ const STATE = {
   // import button is).
   finalCourses: [],
   finalDataLoaded: false, finalDataLastImportInfo: null,
-  finalDataFilters: { search: '', courseType: '', sourceStatus: '' },
+  finalDataFilters: { search: '', courseType: '', sourceStatus: '', deliveryType: '', orgLevel: 'deptName', orgValue: '', budgetMin: '', budgetMax: '' },
 };
 
 /* ---------------- persistence (central database — see dataClient.js) ---------------- */
@@ -1737,6 +1737,37 @@ async function commitFinalCourseReview(courseId, decision, remark) {
   renderFinalDataTab();
 }
 
+// สายบังคับบัญชาของ Approved Data เอง (รอง/ผู้ช่วย/ฝ่าย/คณะทำงาน) — คนละ
+// โครงสร้างกับ ORG_LEVELS ของแผน (ฝ่าย/กอง/แผนก) จึงแยกชุดต่างหาก
+const FINAL_ORG_LEVELS = [
+  { key: 'deputyLine',        label: 'รอง' },
+  { key: 'assistantGovernor', label: 'ผู้ช่วย' },
+  { key: 'deptName',          label: 'ฝ่าย' },
+  { key: 'workingGroup',      label: 'คณะทำงาน' },
+];
+
+/** ตัวกรองของแท็บ Approved Data เอง — คนละชุดกับ matchesFiltersExcept (แผน) ด้านบน ไม่รวม "ร่าง" (กรองออกไปแล้วเสมอ) */
+function matchesFinalFiltersExcept(r, exceptKey) {
+  const f = STATE.finalDataFilters;
+  if (exceptKey !== 'orgValue' && f.orgValue && r[f.orgLevel] !== f.orgValue) return false;
+  if (exceptKey !== 'courseType' && f.courseType && r.courseType !== f.courseType) return false;
+  if (exceptKey !== 'deliveryType' && f.deliveryType && r.deliveryType !== f.deliveryType) return false;
+  if (exceptKey !== 'sourceStatus' && f.sourceStatus && r.sourceStatus !== f.sourceStatus) return false;
+  if (exceptKey !== 'search' && f.search) {
+    const q = f.search.toLowerCase();
+    if (!((r.nameTh || '').toLowerCase().includes(q) || (r.id || '').toLowerCase().includes(q))) return false;
+  }
+  if (exceptKey !== 'budget' && (f.budgetMin !== '' || f.budgetMax !== '')) {
+    const b = r.budgetTotal || 0;
+    if (f.budgetMin !== '' && b < Number(f.budgetMin)) return false;
+    if (f.budgetMax !== '' && b > Number(f.budgetMax)) return false;
+  }
+  return true;
+}
+function getFinalFilteredExcept(exceptKey) {
+  return STATE.finalCourses.filter((r) => r.sourceStatus !== 'ร่าง' && matchesFinalFiltersExcept(r, exceptKey));
+}
+
 function renderFinalDataTab() {
   const root = document.getElementById('panel-finaldata');
   if (!root) return;
@@ -1745,17 +1776,19 @@ function renderFinalDataTab() {
   // explicit instruction, not just from the dashboard's aggregate math.
   const courses = STATE.finalCourses.filter((r) => r.sourceStatus !== 'ร่าง');
   const f = STATE.finalDataFilters;
+  const filtered = courses.filter((r) => matchesFinalFiltersExcept(r, null));
 
-  let filtered = courses;
-  if (f.search) {
-    const q = f.search.toLowerCase();
-    filtered = filtered.filter((r) => (r.nameTh || '').toLowerCase().includes(q) || (r.id || '').toLowerCase().includes(q));
-  }
-  if (f.courseType) filtered = filtered.filter((r) => r.courseType === f.courseType);
-  if (f.sourceStatus) filtered = filtered.filter((r) => r.sourceStatus === f.sourceStatus);
-
-  const courseTypes = uniqueValues(courses, 'courseType');
-  const sourceStatuses = uniqueValues(courses, 'sourceStatus');
+  // ตัวเลือกแบบ cascading — แต่ละดรอปดาวน์แสดงเฉพาะค่าที่ยังเหลืออยู่จริงภายใต้
+  // ตัวกรองอื่นๆ ที่เลือกไว้ (เหมือนแถบตัวกรองหลักของแผน) ถ้าค่าที่เลือกไว้
+  // ไม่อยู่ในตัวเลือกที่แคบลงแล้ว ให้ล้างตัวกรองนั้นทิ้งเพื่อไม่ให้ UI ขัดกับ STATE
+  const orgOptions = uniqueValues(getFinalFilteredExcept('orgValue'), f.orgLevel);
+  if (f.orgValue && !orgOptions.includes(f.orgValue)) f.orgValue = '';
+  const courseTypes = uniqueValues(getFinalFilteredExcept('courseType'), 'courseType');
+  if (f.courseType && !courseTypes.includes(f.courseType)) f.courseType = '';
+  const deliveryTypes = uniqueValues(getFinalFilteredExcept('deliveryType'), 'deliveryType');
+  if (f.deliveryType && !deliveryTypes.includes(f.deliveryType)) f.deliveryType = '';
+  const sourceStatuses = uniqueValues(getFinalFilteredExcept('sourceStatus'), 'sourceStatus');
+  if (f.sourceStatus && !sourceStatuses.includes(f.sourceStatus)) f.sourceStatus = '';
 
   const totalBudget = courses.reduce((s, r) => s + (r.budgetTotal || 0), 0);
   const filteredBudgetTotal = filtered.reduce((s, r) => s + (r.budgetTotal || 0), 0);
@@ -1833,18 +1866,39 @@ function renderFinalDataTab() {
         </div>`).join('')}
     </div>
     <div class="filter-bar" style="margin-bottom:14px;">
-      <div class="filter-field filter-search">
-        <label>ค้นหา</label>
-        <input type="search" id="fd-search" placeholder="ชื่อหลักสูตร / รหัส" value="${escapeAttr(f.search)}" />
+      <div class="filter-field">
+        <label>มุมมองหน่วยงาน</label>
+        <select id="fd-orglevel">${FINAL_ORG_LEVELS.map((o) => `<option value="${o.key}"${o.key === f.orgLevel ? ' selected' : ''}>${o.label}</option>`).join('')}</select>
+      </div>
+      <div class="filter-field">
+        <label>หน่วยงาน</label>
+        <select id="fd-orgvalue"><option value="">ทั้งหมด</option>${orgOptions.map((v) => `<option value="${escapeAttr(v)}"${f.orgValue === v ? ' selected' : ''}>${escapeHtml(v)}</option>`).join('')}</select>
       </div>
       <div class="filter-field">
         <label>ประเภทหลักสูตร</label>
         <select id="fd-coursetype"><option value="">ทั้งหมด</option>${courseTypes.map((v) => `<option value="${escapeAttr(v)}"${f.courseType === v ? ' selected' : ''}>${escapeHtml(v)}</option>`).join('')}</select>
       </div>
       <div class="filter-field">
+        <label>ประเภทการส่งอบรม</label>
+        <select id="fd-deliverytype"><option value="">ทั้งหมด</option>${deliveryTypes.map((v) => `<option value="${escapeAttr(v)}"${f.deliveryType === v ? ' selected' : ''}>${escapeHtml(v)}</option>`).join('')}</select>
+      </div>
+      <div class="filter-field">
         <label>สถานะหลักสูตร</label>
         <select id="fd-status"><option value="">ทั้งหมด</option>${sourceStatuses.map((v) => `<option value="${escapeAttr(v)}"${f.sourceStatus === v ? ' selected' : ''}>${escapeHtml(v)}</option>`).join('')}</select>
       </div>
+      <div class="filter-field filter-search">
+        <label>ค้นหา</label>
+        <input type="search" id="fd-search" placeholder="ชื่อหลักสูตร / รหัส" value="${escapeAttr(f.search)}" />
+      </div>
+      <div class="filter-field">
+        <label>งบประมาณ/หลักสูตร (บาท)</label>
+        <div class="filter-range-row">
+          <input type="text" inputmode="numeric" id="fd-budget-min" placeholder="ต่ำสุด" value="${escapeAttr(f.budgetMin)}" />
+          <span class="filter-range-sep">–</span>
+          <input type="text" inputmode="numeric" id="fd-budget-max" placeholder="สูงสุด" value="${escapeAttr(f.budgetMax)}" />
+        </div>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="fd-clear" style="align-self:flex-end;">ล้างตัวกรอง</button>
     </div>
     <div class="filter-count" style="margin-bottom:10px;">พบ ${fmtNum(filtered.length)} หลักสูตร จากทั้งหมด ${fmtNum(courses.length)} หลักสูตร — คลิกแถวเพื่อดูรายละเอียด</div>
     <div class="table-wrap">
@@ -1916,9 +1970,23 @@ function renderFinalDataTab() {
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
   });
   if (courses.length) {
+    const bindFd = (id, key, evt) => document.getElementById(id).addEventListener(evt || 'change', (e) => {
+      STATE.finalDataFilters[key] = e.target.value;
+      if (key === 'orgLevel') STATE.finalDataFilters.orgValue = '';
+      renderFinalDataTab();
+    });
+    bindFd('fd-orglevel', 'orgLevel');
+    bindFd('fd-orgvalue', 'orgValue');
+    bindFd('fd-coursetype', 'courseType');
+    bindFd('fd-deliverytype', 'deliveryType');
+    bindFd('fd-status', 'sourceStatus');
     bindSearchInput('fd-search', (v) => { STATE.finalDataFilters.search = v; renderFinalDataTab(); });
-    document.getElementById('fd-coursetype').addEventListener('change', (e) => { STATE.finalDataFilters.courseType = e.target.value; renderFinalDataTab(); });
-    document.getElementById('fd-status').addEventListener('change', (e) => { STATE.finalDataFilters.sourceStatus = e.target.value; renderFinalDataTab(); });
+    bindSearchInput('fd-budget-min', (v) => { STATE.finalDataFilters.budgetMin = v.replace(/[^\d]/g, ''); renderFinalDataTab(); });
+    bindSearchInput('fd-budget-max', (v) => { STATE.finalDataFilters.budgetMax = v.replace(/[^\d]/g, ''); renderFinalDataTab(); });
+    document.getElementById('fd-clear').addEventListener('click', () => {
+      STATE.finalDataFilters = { search: '', courseType: '', sourceStatus: '', deliveryType: '', orgLevel: STATE.finalDataFilters.orgLevel, orgValue: '', budgetMin: '', budgetMax: '' };
+      renderFinalDataTab();
+    });
   }
   const importBtn = root.querySelector('#import-finaldata-btn');
   const importInput = root.querySelector('#import-finaldata-file-input');
