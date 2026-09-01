@@ -2014,7 +2014,9 @@ function renderFinalDataTab() {
                 <td>${escapeHtml(r.id)}</td>
                 <td>${escapeHtml(r.nameTh || '-')}</td>
                 <td class="num">${r.budgetTotal ? fmtBaht(r.budgetTotal) : '-'}</td>
-                <td>${r.finalReviewDecision && FINAL_REVIEW_META[r.finalReviewDecision] ? escapeHtml(FINAL_REVIEW_META[r.finalReviewDecision].label) : 'ยังไม่พิจารณา'}</td>
+                <td>${r.finalReviewDecision && FINAL_REVIEW_META[r.finalReviewDecision]
+                  ? `<span style="color:${FINAL_REVIEW_COLOR[r.finalReviewDecision]};font-weight:700;">${escapeHtml(FINAL_REVIEW_META[r.finalReviewDecision].label)}</span>`
+                  : '<span class="cell-muted">ยังไม่พิจารณา</span>'}</td>
                 <td>${escapeHtml(r.finalReviewRemark || '-')}</td>
               </tr>
             `).join('') : `<tr><td colspan="5">ไม่พบข้อมูล</td></tr>`}
