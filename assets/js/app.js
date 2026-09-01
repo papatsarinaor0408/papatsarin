@@ -2013,8 +2013,15 @@ function renderFinalDataTab() {
       </div>
     </div>
     <div id="final-summary-section">
-      ${Object.entries(FINAL_REVIEW_META).map(([key, meta]) => {
-        const rows = filtered.filter((r) => r.finalReviewDecision === key);
+      ${(() => {
+        // ตารางสรุปทั้ง 3 นี้แบ่งตามผลพิจารณาอยู่แล้วในตัว (แยกเป็นตารางตายตัว
+        // เห็นชอบ/ไม่เห็นชอบ/ให้ปรับปรุงข้อมูล) จึงไม่ควรผันแปรตามตัวกรอง
+        // "ผลพิจารณา" ที่ตั้งจากการคลิกการ์ด KPI (ไม่งั้นคลิกการ์ดใบเดียวจะทำให้
+        // อีก 2 ตารางว่างเปล่าไปด้วย ทั้งที่ควรเห็นข้อมูลจริงครบทุกกลุ่มเสมอ) —
+        // ยังคงกรองตามตัวกรองอื่น (หน่วยงาน/ประเภท/ค้นหา/งบประมาณ) ตามปกติ
+        const summaryBase = courses.filter((r) => matchesFinalFiltersExcept(r, 'reviewDecision'));
+        return Object.entries(FINAL_REVIEW_META).map(([key, meta]) => {
+        const rows = summaryBase.filter((r) => r.finalReviewDecision === key);
         const groupTotal = rows.reduce((s, r) => s + (r.budgetTotal || 0), 0);
         // สีหัวตารางของทั้ง 3 ตารางสรุป — เขียว/แดง/เหลือง ตามคำขอผู้ใช้
         // (ใช้สีเข้มชัดเจนกว่า FINAL_REVIEW_COLOR ซึ่งออกแบบไว้สำหรับข้อความ/
@@ -2045,7 +2052,8 @@ function renderFinalDataTab() {
             </table>
           </div>
         </div>`;
-      }).join('')}
+        }).join('');
+      })()}
     </div>
     ` : `<div class="empty-state"><div class="big">📄</div>ยังไม่มี Approved Data — กด "นำเข้า Approved Data" เพื่ออัปโหลดไฟล์</div>`}
   `;
