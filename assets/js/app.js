@@ -1844,17 +1844,22 @@ function renderFinalDataTab() {
 
   // การ์ดสีตามสถานะหลักสูตร (สถานะของระบบ อศค. เอง) — ไม่รวม "ร่าง" เลย (กรองออกแล้วด้านบน)
   // ใช้จานสี --kpi-fill-* ชุดเดียวกับการ์ดสถานะในหน้าภาพรวม เพื่อให้อ่านง่ายในสไตล์เดียวกัน
-  const statusColorMap = { 'รออนุมัติ': 'var(--kpi-fill-revise)', 'อนุมัติ': 'var(--kpi-fill-approved)', 'ไม่อนุมัติ': 'var(--kpi-fill-rejected)' };
-  const statusOrderPref = ['รออนุมัติ', 'อนุมัติ', 'ไม่อนุมัติ'];
+  // "รออนุมัติ" (สถานะนำเข้าจาก อศค.) ไม่ใช้เป็นการ์ดแยกอีกต่อไป — แทนที่ด้วยการ์ด
+  // "รอพิจารณาจาก อศค. (คงเหลือ)" ด้านล่าง ซึ่งนับจากผลพิจารณา อศค. ที่ Admin กด
+  // เองในระบบนี้แทน (ความหมายตรงกับที่ผู้ใช้ต้องการมากกว่า)
+  const statusColorMap = { 'อนุมัติ': 'var(--kpi-fill-approved)', 'ไม่อนุมัติ': 'var(--kpi-fill-rejected)' };
+  const statusOrderPref = ['อนุมัติ', 'ไม่อนุมัติ'];
   const statusCounts = {};
   courses.forEach((r) => { const s = (r.sourceStatus || '').trim() || 'ไม่ระบุ'; statusCounts[s] = (statusCounts[s] || 0) + 1; });
-  const orderedStatuses = statusOrderPref.filter((s) => statusCounts[s]).concat(Object.keys(statusCounts).filter((s) => !statusOrderPref.includes(s)));
+  const orderedStatuses = statusOrderPref.filter((s) => statusCounts[s]).concat(Object.keys(statusCounts).filter((s) => !statusOrderPref.includes(s) && s !== 'รออนุมัติ'));
   // การ์ดนับผลพิจารณาที่ Admin กำหนดเอง (เห็นชอบ/ไม่เห็นชอบ/ให้ปรับปรุงข้อมูล)
   // ตามปุ่มพิจารณาในตารางด้านล่าง — คนละชุดกับการ์ดสถานะ อศค. ด้านบน
   const reviewCounts = { approved: 0, rejected: 0, revise: 0 };
   courses.forEach((r) => { if (reviewCounts[r.finalReviewDecision] !== undefined) reviewCounts[r.finalReviewDecision]++; });
+  const pendingReviewCount = courses.length - reviewCounts.approved - reviewCounts.rejected - reviewCounts.revise;
   const statusKpis = [
     { label: 'หลักสูตรทั้งหมด', value: courses.length, color: '#239A91', filterType: 'all' },
+    { label: 'รอพิจารณาจาก อศค. (คงเหลือ)', value: pendingReviewCount, color: 'var(--kpi-fill-revise)', filterType: 'reviewDecision', filterValue: 'pending' },
     ...orderedStatuses.map((s) => ({ label: s, value: statusCounts[s], color: statusColorMap[s] || 'var(--kpi-fill-pending)', filterType: 'sourceStatus', filterValue: s })),
     ...Object.entries(FINAL_REVIEW_META).map(([key, meta]) => ({ label: meta.label, value: reviewCounts[key], color: FINAL_REVIEW_COLOR[key], filterType: 'reviewDecision', filterValue: key })),
   ];
