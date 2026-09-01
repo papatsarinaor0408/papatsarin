@@ -181,11 +181,13 @@ function finalCourseRowToRecord(row, reviewRow) {
 
   if (reviewRow) {
     rec.finalReviewDecision = reviewRow.decision;
+    rec.finalReviewRemark = reviewRow.remark || '';
     rec.finalReviewedByEmployeeId = reviewRow.reviewer_employee_id || '';
     rec.finalReviewedByPosition = reviewRow.reviewer_position || '';
     rec.finalReviewedAtRaw = reviewRow.reviewed_at || '';
   } else {
     rec.finalReviewDecision = 'pending';
+    rec.finalReviewRemark = '';
     rec.finalReviewedByEmployeeId = '';
     rec.finalReviewedByPosition = '';
     rec.finalReviewedAtRaw = '';
@@ -212,8 +214,8 @@ async function fetchFinalData() {
 }
 
 /** Admin-only (enforced server-side). decision = 'approved'|'rejected'|'revise'|null (null resets). */
-async function submitFinalCourseReviewRemote(courseId, decision) {
-  const { error } = await SB.rpc('submit_final_course_review', { p_course_id: courseId, p_decision: decision });
+async function submitFinalCourseReviewRemote(courseId, decision, remark) {
+  const { error } = await SB.rpc('submit_final_course_review', { p_course_id: courseId, p_decision: decision, p_remark: remark || null });
   if (error) throw error;
 }
 

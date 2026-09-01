@@ -1722,16 +1722,17 @@ const FINAL_REVIEW_META = {
 };
 const FINAL_REVIEW_COLOR = { approved: 'var(--status-good)', rejected: 'var(--status-critical)', revise: 'var(--status-warning)' };
 
-function finalReviewBadge(decision) {
+function finalReviewBadge(decision, remark) {
   if (!decision || decision === 'pending') return '<span class="cell-muted">-</span>';
   const meta = FINAL_REVIEW_META[decision];
   if (!meta) return '<span class="cell-muted">-</span>';
   const color = FINAL_REVIEW_COLOR[decision];
-  return `<span class="badge" style="background:color-mix(in srgb, ${color} 15%, transparent);color:${color};">${escapeHtml(meta.label)}</span>`;
+  const titleAttr = remark ? ` title="${escapeAttr(remark)}"` : '';
+  return `<span class="badge" style="background:color-mix(in srgb, ${color} 15%, transparent);color:${color};"${titleAttr}>${escapeHtml(meta.label)}</span>`;
 }
 
-async function commitFinalCourseReview(courseId, decision) {
-  await submitFinalCourseReviewRemote(courseId, decision);
+async function commitFinalCourseReview(courseId, decision, remark) {
+  await submitFinalCourseReviewRemote(courseId, decision, remark);
   await fetchFinalData();
   renderFinalDataTab();
 }
@@ -1869,7 +1870,7 @@ function renderFinalDataTab() {
                   `).join('')}
                   <button type="button" class="btn btn-sm btn-ghost final-review-btn" data-course-id="${escapeAttr(r.id)}" data-decision="" title="ล้างผลพิจารณา">↺</button>
                 </div>
-              ` : finalReviewBadge(r.finalReviewDecision)}</td>
+              ` : finalReviewBadge(r.finalReviewDecision, r.finalReviewRemark)}</td>
             </tr>
           `).join('') : `<tr><td colspan="8"><div class="empty-state"><div class="big">🔍</div>ไม่พบหลักสูตรที่ตรงกับตัวกรอง</div></td></tr>`}
         </tbody>
@@ -1891,7 +1892,13 @@ function renderFinalDataTab() {
   root.querySelectorAll('.final-review-btn').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation(); // ไม่ให้เปิด drawer ตามมาด้วยเมื่อกดปุ่มในแถว
-      commitFinalCourseReview(btn.dataset.courseId, btn.dataset.decision || null);
+      const courseId = btn.dataset.courseId;
+      const decision = btn.dataset.decision || null;
+      if (!decision) { commitFinalCourseReview(courseId, null, null); return; } // ปุ่ม reset — ไม่ต้องถามหมายเหตุ
+      const current = STATE.finalCourses.find((x) => x.id === courseId);
+      const remark = prompt('หมายเหตุ (ถ้ามี):', (current && current.finalReviewRemark) || '');
+      if (remark === null) return; // กด Cancel — ไม่บันทึกอะไรทั้งสิ้น
+      commitFinalCourseReview(courseId, decision, remark);
     });
   });
   if (courses.length) {
@@ -1980,6 +1987,8 @@ function renderFinalCourseSummarySection(r) {
         ${infoRow('🏢', 'หน่วยงานผู้สร้างหลักสูตร', r.creatorUnit)}
         ${infoRow('🪪', 'ผู้ประสานงานหลักสูตร', r.coordinator)}
         ${badgeRow('🏷️', 'สถานะหลักสูตร', finalStatusBadge(r.sourceStatus))}
+        ${r.finalReviewDecision && r.finalReviewDecision !== 'pending' ? badgeRow('📝', 'ผลพิจารณา อศค.', finalReviewBadge(r.finalReviewDecision)) : ''}
+        ${r.finalReviewRemark && String(r.finalReviewRemark).trim() ? infoRow('💬', 'หมายเหตุการพิจารณา', r.finalReviewRemark, 'numbered') : ''}
       </div>
     </div>
     <div class="psum-schedule-card">
