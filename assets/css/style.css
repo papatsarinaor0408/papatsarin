@@ -467,6 +467,7 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
 .cell-name { font-weight: 500; max-width: 320px; }
 .cell-muted { color: var(--text-muted); }
 .num, table.data-table th.num { font-variant-numeric: tabular-nums; text-align: right; }
+table.approved-data-table th { background: #6B9B37; }
 tr.clickable { cursor: pointer; }
 td.cell-clickable { cursor: pointer; transition: filter .12s; }
 td.cell-clickable:hover { filter: brightness(0.93); }

@@ -1818,7 +1818,7 @@ function renderFinalDataTab() {
     </div>
     <div class="filter-count" style="margin-bottom:10px;">พบ ${fmtNum(filtered.length)} หลักสูตร จากทั้งหมด ${fmtNum(courses.length)} หลักสูตร — คลิกแถวเพื่อดูรายละเอียด</div>
     <div class="table-wrap">
-      <table class="data-table">
+      <table class="data-table approved-data-table">
         <thead><tr>
           <th>รหัส</th><th>ชื่อหลักสูตร</th><th>ประเภทหลักสูตร</th><th>ประเภทการส่งอบรม</th>
           <th class="num">ผู้เข้าอบรม</th><th class="num">งบประมาณรวม</th><th>สถานะหลักสูตร</th>
