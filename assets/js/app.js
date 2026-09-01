@@ -1924,6 +1924,15 @@ function renderFinalDataTab() {
         </button>`;
       }).join('')}
     </div>
+    ${f.reviewDecision ? `
+    <div class="active-filter-bar no-print">
+      <span>กำลังกรองตามผลพิจารณา:</span>
+      <span class="active-filter-chip">
+        ${escapeHtml(f.reviewDecision === 'pending' ? 'รอพิจารณาจาก อศค. (คงเหลือ)' : (FINAL_REVIEW_META[f.reviewDecision] ? FINAL_REVIEW_META[f.reviewDecision].label : f.reviewDecision))}
+        <button type="button" class="active-filter-clear" id="fd-clear-review-filter" title="ล้างตัวกรองนี้">×</button>
+      </span>
+    </div>
+    ` : ''}
     <div class="filter-bar" style="margin-bottom:14px;">
       <div class="filter-field">
         <label>มุมมองหน่วยงาน</label>
@@ -2062,6 +2071,11 @@ function renderFinalDataTab() {
       }
       renderFinalDataTab();
     });
+  });
+  const clearReviewFilterBtn = root.querySelector('#fd-clear-review-filter');
+  if (clearReviewFilterBtn) clearReviewFilterBtn.addEventListener('click', () => {
+    STATE.finalDataFilters.reviewDecision = '';
+    renderFinalDataTab();
   });
   root.querySelectorAll('.final-review-remark-input').forEach((input) => {
     input.addEventListener('click', (e) => e.stopPropagation()); // ไม่ให้เปิด drawer ตอนโฟกัสกล่องข้อความ
