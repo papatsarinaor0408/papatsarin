@@ -739,7 +739,6 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
         <div class="bfh2-frame-marker" style="left:${frameMarkerPct}%;"></div>
       </div>
       <div class="bfh2-footnote-row">
-        <span class="bfh2-footnote-icon" style="background:color-mix(in srgb, ${domesticBarColor} 18%, transparent);">📄</span>
         <span class="bfh2-footnote-text">งบประมาณที่เสนอทั้งหมด (ทุกสถานะ ไม่รวมหลักสูตรต่างประเทศ):</span>
         <span class="bfh-value-badge" style="background:${domesticBarColor};">${fmtBaht(totalProposedPlantWide)}</span>
         <span class="bfh2-footnote-arrow">→</span>
@@ -747,7 +746,6 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
         <span class="bfh-value-badge" style="background:${domesticBarColor};">${fmtBaht(approvedDomesticBudget)}</span>
       </div>
       <div class="bfh2-footnote-row">
-        <span class="bfh2-footnote-icon" style="background:color-mix(in srgb, ${overseasBarColor} 18%, transparent);">✈️</span>
         <span class="bfh2-footnote-text">งบหลักสูตรต่างประเทศที่เสนอ:</span>
         <span class="bfh-value-badge" style="background:${overseasBarColor};">${fmtBaht(totalOverseasBudget)}</span>
         <span class="bfh2-footnote-arrow">→</span>
@@ -755,7 +753,6 @@ function renderBudgetExecutiveSection(data, orgLevel, orgNames) {
         <span class="bfh-value-badge" style="background:${overseasBarColor};">${fmtBaht(approvedOverseasBudget)}</span>
       </div>
       <div class="bfh2-footnote-row">
-        <span class="bfh2-footnote-icon" style="background:color-mix(in srgb, #0F172A 18%, transparent);">📦</span>
         <span class="bfh2-footnote-text">งบที่เสนอขอรวมทั้งหมด:</span>
         <span class="bfh-value-badge" style="background:#0F172A;">${fmtBaht(totalRequestedAll)}</span>
         <span class="bfh2-footnote-arrow">→</span>
