@@ -1790,7 +1790,17 @@ function renderFinalDataTab() {
   const sourceStatuses = uniqueValues(courses, 'sourceStatus');
 
   const totalBudget = courses.reduce((s, r) => s + (r.budgetTotal || 0), 0);
-  const totalParticipants = courses.reduce((s, r) => s + (r.participants || 0), 0);
+  // นับคนไม่ซ้ำจากรายชื่อจริง (ชื่อกลุ่มเป้าหมาย) ไม่ใช่บวกยอด participants
+  // ของแต่ละหลักสูตรตรงๆ — คนเดียวกันไปหลายหลักสูตรต้องนับเป็น 1 คน ใช้ตัวแยก
+  // ข้อความชุดเดียวกับแท็บ "บุคลากรในแผนพัฒนา" (splitPeopleText/parsePersonSegment)
+  const uniqueParticipantIds = new Set();
+  courses.forEach((r) => {
+    splitPeopleText(r.targetGroupNamesRaw).forEach((seg) => {
+      const person = parsePersonSegment(seg);
+      if (person) uniqueParticipantIds.add(person.employeeId);
+    });
+  });
+  const totalParticipants = uniqueParticipantIds.size;
   const centralCount = courses.filter((r) => r.courseType === 'หลักสูตรกลาง อศค. ดำเนินการ').length;
 
   // การ์ดสีตามสถานะหลักสูตร (สถานะของระบบ อศค. เอง) — ไม่รวม "ร่าง" เลย (กรองออกแล้วด้านบน)
@@ -1834,7 +1844,7 @@ function renderFinalDataTab() {
           <div class="bfh-stat-value">${fmtNum(courses.length)}</div>
         </div>
         <div class="bfh-stat">
-          <div class="bfh-stat-label">ผู้เข้าอบรมรวม</div>
+          <div class="bfh-stat-label">ผู้เข้าอบรมรวม (ไม่ซ้ำคน)</div>
           <div class="bfh-stat-value">${fmtNum(totalParticipants)} <span style="font-size:14px;font-weight:500;color:var(--text-muted);">คน</span></div>
         </div>
       </div>
