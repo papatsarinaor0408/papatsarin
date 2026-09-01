@@ -1755,7 +1755,7 @@ function renderFinalDataTab() {
   courses.forEach((r) => { const s = (r.sourceStatus || '').trim() || 'ไม่ระบุ'; statusCounts[s] = (statusCounts[s] || 0) + 1; });
   const orderedStatuses = statusOrderPref.filter((s) => statusCounts[s]).concat(Object.keys(statusCounts).filter((s) => !statusOrderPref.includes(s)));
   const statusKpis = [
-    { label: 'หลักสูตรทั้งหมด', value: courses.length, color: 'var(--kpi-fill-total)' },
+    { label: 'หลักสูตรทั้งหมด', value: courses.length, color: '#1B4332' },
     ...orderedStatuses.map((s) => ({ label: s, value: statusCounts[s], color: statusColorMap[s] || 'var(--kpi-fill-pending)' })),
   ];
 
