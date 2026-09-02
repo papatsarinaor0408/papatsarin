@@ -142,6 +142,13 @@
     if (!leaveRes.error && leaveRes.data) LEAVES = leaveRes.data;
   }
 
+  /* ---------------- Monthly to-do checklist (งานที่ต้องทำเดือนนี้) ---------------- */
+  let MONTHLY_TODOS = [];
+  async function loadMonthlyTodos() {
+    const { data, error } = await CAL_SB.from("calendar_monthly_todos").select("*").order("created_at", { ascending: true });
+    if (!error && data) MONTHLY_TODOS = data;
+  }
+
   function leaveOnDate(employeeName, iso) {
     return LEAVES.find(l => l.employee_name === employeeName && iso >= l.date_from && iso <= l.date_to) || null;
   }
@@ -276,6 +283,9 @@
   /* ---------------- DOM refs ---------------- */
   const $ = sel => document.querySelector(sel);
   const statRowEl = $("#stat-row");
+  const todoMonthLabelEl = $("#todo-month-label");
+  const todoListEl = $("#todo-list");
+  const todoAddFormEl = $("#todo-add-form");
   const periodLabelEl = $("#period-label");
   const viewSwitchEl = $("#view-switch");
   const filterGridEl = $("#filter-grid");
@@ -1721,10 +1731,105 @@
     }]);
   }
 
+  /* ---------------- Monthly to-do checklist panel ---------------- */
+  function fmtTodoDate(iso) {
+    if (!iso) return "";
+    const d = fromISO(iso);
+    return `${d.getDate()} ${THAI_MONTHS[d.getMonth()]} ${beYear(d)}`;
+  }
+  function todoRowHtml(item) {
+    return `
+      <div class="todo-row ${item.done ? "done" : ""}" data-id="${esc(item.id)}">
+        <div class="todo-row-main">
+          <span class="todo-status-dot ${item.done ? "done" : "pending"}"></span>
+          <span class="todo-row-title">${esc(item.title)}</span>
+          ${item.done
+            ? `<span class="todo-done-note">✓ ดำเนินการแล้ว${item.done_date ? " · " + fmtTodoDate(item.done_date) : ""}</span>`
+            : `<span class="todo-pending-note">รอดำเนินการ</span>`}
+        </div>
+        <div class="todo-row-actions admin-only">
+          ${item.done
+            ? `<button type="button" class="btn-secondary todo-undo-btn">ยกเลิกเครื่องหมาย</button>`
+            : `<span class="todo-mark-inline">
+                 <input type="date" class="todo-done-date-input" value="${TODAY_ISO}" />
+                 <button type="button" class="btn-primary todo-mark-btn">ดำเนินการแล้ว</button>
+               </span>`}
+          <button type="button" class="btn-danger todo-del-btn" title="ลบรายการ">🗑</button>
+        </div>
+      </div>`;
+  }
+  function renderTodoPanel() {
+    const year = state.cursor.getFullYear(), month = state.cursor.getMonth() + 1;
+    todoMonthLabelEl.textContent = `(${THAI_MONTHS[month - 1]} พ.ศ. ${beYear(state.cursor)})`;
+    const items = MONTHLY_TODOS
+      .filter(t => t.target_month === month && t.target_year === year)
+      .slice()
+      .sort((a, b) => (a.done === b.done ? a.created_at.localeCompare(b.created_at) : a.done ? 1 : -1));
+    todoListEl.innerHTML = items.length ? items.map(todoRowHtml).join("")
+      : `<div class="todo-empty">ยังไม่มีรายการงานที่ต้องทำเดือนนี้</div>`;
+    bindTodoPanelEvents(year, month);
+  }
+  function bindTodoPanelEvents(year, month) {
+    todoListEl.querySelectorAll(".todo-mark-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        if (!isAdmin()) return;
+        const row = btn.closest(".todo-row");
+        const id = row.getAttribute("data-id");
+        const dateVal = row.querySelector(".todo-done-date-input").value || TODAY_ISO;
+        btn.disabled = true;
+        const { error } = await CAL_SB.from("calendar_monthly_todos")
+          .update({ done: true, done_date: dateVal, updated_at: new Date().toISOString() }).eq("id", id);
+        if (error) { alert("บันทึกไม่สำเร็จ: " + error.message); btn.disabled = false; return; }
+        await loadMonthlyTodos();
+        renderTodoPanel();
+      });
+    });
+    todoListEl.querySelectorAll(".todo-undo-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        if (!isAdmin()) return;
+        const id = btn.closest(".todo-row").getAttribute("data-id");
+        btn.disabled = true;
+        const { error } = await CAL_SB.from("calendar_monthly_todos")
+          .update({ done: false, done_date: null, updated_at: new Date().toISOString() }).eq("id", id);
+        if (error) { alert("บันทึกไม่สำเร็จ: " + error.message); btn.disabled = false; return; }
+        await loadMonthlyTodos();
+        renderTodoPanel();
+      });
+    });
+    todoListEl.querySelectorAll(".todo-del-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        if (!isAdmin()) return;
+        if (!confirm("ลบรายการนี้ออกจากรายการที่ต้องทำ?")) return;
+        const id = btn.closest(".todo-row").getAttribute("data-id");
+        const { error } = await CAL_SB.from("calendar_monthly_todos").delete().eq("id", id);
+        if (error) { alert("ลบไม่สำเร็จ: " + error.message); return; }
+        await loadMonthlyTodos();
+        renderTodoPanel();
+      });
+    });
+    todoAddFormEl.onsubmit = async (ev) => {
+      ev.preventDefault();
+      if (!isAdmin()) return;
+      const fd = new FormData(todoAddFormEl);
+      const title = (fd.get("title") || "").trim();
+      if (!title) return;
+      const btn = todoAddFormEl.querySelector("button[type=submit]");
+      btn.disabled = true;
+      const { error } = await CAL_SB.from("calendar_monthly_todos")
+        .insert([{ title, target_month: month, target_year: year, done: false }]);
+      btn.disabled = false;
+      if (error) { alert("เพิ่มไม่สำเร็จ: " + error.message); return; }
+      todoAddFormEl.reset();
+      await loadMonthlyTodos();
+      renderTodoPanel();
+    };
+  }
+
   /* ---------------- Main render ---------------- */
   function renderAll() {
     renderToolbar();
     renderStatRow();
+    renderTodoPanel();
     renderFilterBar();
     if (state.view === "month") renderMonthView();
     else if (state.view === "week") renderWeekView();
@@ -1736,7 +1841,7 @@
   }
 
   async function init() {
-    await Promise.all([loadOptions(), loadTasks(), loadPeopleData()]);
+    await Promise.all([loadOptions(), loadTasks(), loadPeopleData(), loadMonthlyTodos()]);
     renderAll();
   }
 
