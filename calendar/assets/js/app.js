@@ -38,6 +38,14 @@
   function isSameDay(a, b) { return toISO(a) === toISO(b); }
   function beYear(d) { return d.getFullYear() + 543; }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+  function isValidTime24(s) { return /^([01]\d|2[0-3]):[0-5]\d$/.test(s); }
+  function attachTime24Formatter(input) {
+    // ป้อนเวลาแบบ 24 ชม. ล้วน ไม่มี AM/PM — พิมพ์ตัวเลขแล้วใส่ ":" ให้อัตโนมัติ
+    input.addEventListener("input", () => {
+      const digits = input.value.replace(/\D/g, "").slice(0, 4);
+      input.value = digits.length >= 3 ? digits.slice(0, 2) + ":" + digits.slice(2) : digits;
+    });
+  }
 
   const TODAY = new Date();
   const TODAY_ISO = toISO(TODAY);
@@ -699,12 +707,12 @@
               <select name="jobType" required>${JOB_TYPES.map(v => `<option value="${esc(v)}" ${t.jobType === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>
             </div>
             <div class="form-field">
-              <label>เวลาออกเดินทาง</label>
-              <input type="time" name="departTime" value="${esc(t.departTime)}" />
+              <label>เวลาออกเดินทาง (24 ชม.)</label>
+              <input type="text" inputmode="numeric" name="departTime" value="${esc(t.departTime)}" placeholder="เช่น 07:30" pattern="^([01]\\d|2[0-3]):[0-5]\\d$" maxlength="5" />
             </div>
             <div class="form-field">
-              <label>เวลานัดหมายหน้างาน</label>
-              <input type="time" name="appointTime" value="${esc(t.appointTime)}" />
+              <label>เวลานัดหมายหน้างาน (24 ชม.)</label>
+              <input type="text" inputmode="numeric" name="appointTime" value="${esc(t.appointTime)}" placeholder="เช่น 16:30" pattern="^([01]\\d|2[0-3]):[0-5]\\d$" maxlength="5" />
             </div>
             <div class="form-field">
               <label>พื้นที่ปฏิบัติงาน <span class="req">*</span></label>
@@ -818,6 +826,8 @@
     document.querySelectorAll("input[name=areaStatus]").forEach(r => r.addEventListener("change", () => syncAreaStatus(true)));
     syncAreaStatus(false);
 
+    document.querySelectorAll('input[name=departTime], input[name=appointTime]').forEach(attachTime24Formatter);
+
     // "PEA อำเภอบางปะกง" คือหน่วยงานต้นสังกัด — เลือกแล้วช่วยติ๊ก "ในพื้นที่" ให้ (แก้เองได้ทีหลัง)
     const targetPEAInput = document.querySelector('input[name=targetPEA]');
     targetPEAInput.addEventListener("change", () => {
@@ -851,6 +861,16 @@
       showFormError("กรุณากรอกชื่องาน วันที่ พื้นที่ปฏิบัติงาน และการไฟฟ้าปลายทางให้ครบ");
       return;
     }
+    const departTimeVal = (fd.get("departTime") || "").trim();
+    const appointTimeVal = (fd.get("appointTime") || "").trim();
+    if (departTimeVal && !isValidTime24(departTimeVal)) {
+      showFormError("รูปแบบเวลาออกเดินทางไม่ถูกต้อง กรุณากรอกแบบ 24 ชม. เช่น 07:30");
+      return;
+    }
+    if (appointTimeVal && !isValidTime24(appointTimeVal)) {
+      showFormError("รูปแบบเวลานัดหมายหน้างานไม่ถูกต้อง กรุณากรอกแบบ 24 ชม. เช่น 16:30");
+      return;
+    }
     const areaStatus = fd.get("areaStatus") || "in";
     const equipment = fd.getAll("equipment");
     const otherEquipment = (fd.get("equipmentOther") || "").split(",").map(s => s.trim()).filter(Boolean);
@@ -864,8 +884,8 @@
     const row = {
       title,
       task_date: date,
-      depart_time: fd.get("departTime") || null,
-      appoint_time: fd.get("appointTime") || null,
+      depart_time: departTimeVal || null,
+      appoint_time: appointTimeVal || null,
       job_type: fd.get("jobType"),
       work_area: workArea,
       target_pea: targetPEA,
