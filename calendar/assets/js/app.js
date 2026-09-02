@@ -279,6 +279,12 @@
   const equipmentPageBodyEl = $("#equipment-page-body");
   const equipmentBackBtnEl = $("#equipment-back-btn");
   const equipmentPageCountEl = $("#equipment-page-count");
+  const personPageEl = $("#person-page");
+  const personPageBodyEl = $("#person-page-body");
+  const personBackBtnEl = $("#person-back-btn");
+  const accessLogPageEl = $("#access-log-page");
+  const accessLogPageBodyEl = $("#access-log-page-body");
+  const accessLogBackBtnEl = $("#access-log-back-btn");
   const loginScreenEl = $("#login-screen");
   const appRootEl = $("#app-root");
   const loginFormEl = $("#login-form");
@@ -698,7 +704,7 @@
   function detailItem(label, value, mono) {
     return `<div class="detail-item"><div class="di-label">${esc(label)}</div><div class="di-value ${mono ? "mono" : ""}">${esc(value)}</div></div>`;
   }
-  function closeModal() { if (modalLocked) return; modalBackdropEl.classList.remove("open"); modalBodyEl.classList.remove("modal-wide"); }
+  function closeModal() { if (modalLocked) return; modalBackdropEl.classList.remove("open"); }
   modalBackdropEl.addEventListener("click", (ev) => { if (ev.target === modalBackdropEl) closeModal(); });
   document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") closeModal(); });
 
@@ -1271,14 +1277,6 @@
     const employeeLeaves = LEAVES.filter(l => l.employee_name === employee).sort((a, b) => b.date_from.localeCompare(a.date_from));
 
     return `
-      <div class="modal-head">
-        <div>
-          <div class="modal-id">ปฏิทินรายบุคคล</div>
-          <h2>ปฏิทิน / วันลา / สรุปโอทีรายบุคคล</h2>
-        </div>
-        <button class="modal-close" id="modal-close-btn">✕</button>
-      </div>
-      <div class="modal-body">
         ${EMPLOYEES.length ? `
         <div class="person-toolbar">
           <select id="person-select">${EMPLOYEES.map(e => `<option value="${esc(e.name)}" ${e.name === employee ? "selected" : ""}>${esc(e.name)}${e.position ? " (" + esc(e.position) + ")" : ""}</option>`).join("")}</select>
@@ -1361,43 +1359,46 @@
               <button type="button" class="btn-danger leave-del-btn admin-only" data-id="${l.id}">🗑</button>
             </div>`).join("")}</div>` : `<div class="form-hint">ยังไม่มีประวัติการลา</div>`}
         </div>
-        ` : `<div class="empty-state">ยังไม่มีรายชื่อพนักงานในระบบ</div>`}
-      </div>`;
+        ` : `<div class="empty-state">ยังไม่มีรายชื่อพนักงานในระบบ</div>`}`;
   }
 
-  function openPersonModal() {
-    modalLocked = false;
-    modalBodyEl.innerHTML = buildPersonModalHtml();
-    modalBackdropEl.classList.add("open");
+  function openPersonPage() {
+    personPageBodyEl.innerHTML = buildPersonModalHtml();
     bindPersonEvents();
+    appShellEl.classList.add("hidden");
+    personPageEl.classList.remove("hidden");
+    window.scrollTo(0, 0);
+  }
+  function closePersonPage() {
+    personPageEl.classList.add("hidden");
+    appShellEl.classList.remove("hidden");
   }
 
-  async function refreshPersonModal() {
+  async function refreshPersonPage() {
     await loadPeopleData();
-    modalBodyEl.innerHTML = buildPersonModalHtml();
+    personPageBodyEl.innerHTML = buildPersonModalHtml();
     bindPersonEvents();
   }
 
   function bindPersonEvents() {
-    $("#modal-close-btn").addEventListener("click", closeModal);
     if (!EMPLOYEES.length) return;
 
     $("#person-select").addEventListener("change", (ev) => {
       personState.employeeName = ev.target.value;
-      modalBodyEl.innerHTML = buildPersonModalHtml();
+      personPageBodyEl.innerHTML = buildPersonModalHtml();
       bindPersonEvents();
     });
     $("#person-prev").addEventListener("click", () => {
       personState.cursor = addMonths(personState.cursor, -1);
-      modalBodyEl.innerHTML = buildPersonModalHtml();
+      personPageBodyEl.innerHTML = buildPersonModalHtml();
       bindPersonEvents();
     });
     $("#person-next").addEventListener("click", () => {
       personState.cursor = addMonths(personState.cursor, 1);
-      modalBodyEl.innerHTML = buildPersonModalHtml();
+      personPageBodyEl.innerHTML = buildPersonModalHtml();
       bindPersonEvents();
     });
-    modalBodyEl.querySelectorAll(".person-day-cell[data-date]").forEach(cell => {
+    personPageBodyEl.querySelectorAll(".person-day-cell[data-date]").forEach(cell => {
       cell.addEventListener("click", () => {
         const iso = cell.getAttribute("data-date");
         $("#leave-date-from").value = iso;
@@ -1424,21 +1425,22 @@
       btn.disabled = true;
       const { error } = await CAL_SB.from("calendar_leaves").insert([row]);
       if (error) { showLeaveFormError("บันทึกไม่สำเร็จ: " + error.message); btn.disabled = false; return; }
-      await refreshPersonModal();
+      await refreshPersonPage();
     });
 
-    modalBodyEl.querySelectorAll(".leave-del-btn").forEach(btn => {
+    personPageBodyEl.querySelectorAll(".leave-del-btn").forEach(btn => {
       btn.addEventListener("click", async () => {
         if (!isAdmin()) return;
         if (!confirm("ลบวันลานี้ออกจากประวัติ?")) return;
         const { error } = await CAL_SB.from("calendar_leaves").delete().eq("id", btn.getAttribute("data-id"));
         if (error) { alert("ลบไม่สำเร็จ: " + error.message); return; }
-        await refreshPersonModal();
+        await refreshPersonPage();
       });
     });
   }
 
-  personBtnEl.addEventListener("click", openPersonModal);
+  personBtnEl.addEventListener("click", openPersonPage);
+  personBackBtnEl.addEventListener("click", closePersonPage);
 
   /* ---------------- Equipment manual (คู่มืออุปกรณ์) — ข้อมูลอ้างอิงคงที่ ดูได้ทุกสิทธิ์ ---------------- */
   function equipRowHtml(label, value, warn) {
@@ -1499,45 +1501,40 @@
     const d = new Date(iso);
     return `${d.getDate()} ${THAI_MONTHS[d.getMonth()]} ${beYear(d)} เวลา ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")} น.`;
   }
-  async function openAccessLogModal() {
+  async function openAccessLogPage() {
     if (!isAdmin()) return;
-    modalLocked = false;
-    modalBodyEl.classList.add("modal-wide");
-    modalBodyEl.innerHTML = `<div class="modal-body"><div class="empty-state">กำลังโหลดประวัติการใช้งาน...</div></div>`;
-    modalBackdropEl.classList.add("open");
+    accessLogPageBodyEl.innerHTML = `<div class="empty-state">กำลังโหลดประวัติการใช้งาน...</div>`;
+    appShellEl.classList.add("hidden");
+    accessLogPageEl.classList.remove("hidden");
+    window.scrollTo(0, 0);
     const { data, error } = await CAL_SB.from("calendar_access_log").select("*").order("created_at", { ascending: false });
     const rows = (!error && data) || [];
-    modalBodyEl.innerHTML = `
-      <div class="modal-head">
-        <div>
-          <div class="modal-id">สำหรับผู้ดูแลระบบ</div>
-          <h2>ประวัติการเข้าใช้งานเว็บ</h2>
-        </div>
-        <button class="modal-close" id="modal-close-btn">✕</button>
-      </div>
-      <div class="modal-body">
-        ${error ? `<div class="form-error">โหลดประวัติไม่สำเร็จ: ${esc(error.message)}</div>` : ""}
-        <div class="access-log-summary">พบทั้งหมด ${rows.length} รายการ${rows.length ? ` · เข้าใช้งานล่าสุด: ${esc(fmtLogTime(rows[0].created_at))}` : ""}</div>
-        <div class="access-log-table-wrap">
-          <table class="access-log-table">
-            <thead><tr><th>วันเวลา</th><th>เลขประจำตัว</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th>หน่วยงาน</th><th>สิทธิ์</th><th>ผลลัพธ์</th></tr></thead>
-            <tbody>
-              ${rows.length ? rows.map(r => `<tr>
-                <td>${esc(fmtLogTime(r.created_at))}</td>
-                <td>${esc(r.employee_no)}</td>
-                <td>${esc(r.employee_name)}</td>
-                <td>${esc(r.position || "-")}</td>
-                <td>${esc(r.department || "-")}</td>
-                <td><span class="access-log-role-text ${r.role === "admin" ? "admin" : "reviewer"}">${r.role === "admin" ? "ผู้ดูแลระบบ" : "ผู้ดูข้อมูล"}</span></td>
-                <td><span class="access-log-event-badge ${r.event === "logout" ? "logout" : "login"}">${r.event === "logout" ? "ออกจากระบบ" : "เข้าสู่ระบบ"}</span></td>
-              </tr>`).join("") : `<tr><td colspan="7" style="text-align:center; color:var(--text-faint);">ยังไม่มีประวัติการเข้าใช้งาน</td></tr>`}
-            </tbody>
-          </table>
-        </div>
+    accessLogPageBodyEl.innerHTML = `
+      ${error ? `<div class="form-error">โหลดประวัติไม่สำเร็จ: ${esc(error.message)}</div>` : ""}
+      <div class="access-log-summary">พบทั้งหมด ${rows.length} รายการ${rows.length ? ` · เข้าใช้งานล่าสุด: ${esc(fmtLogTime(rows[0].created_at))}` : ""}</div>
+      <div class="access-log-table-wrap">
+        <table class="access-log-table">
+          <thead><tr><th>วันเวลา</th><th>เลขประจำตัว</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th>หน่วยงาน</th><th>สิทธิ์</th><th>ผลลัพธ์</th></tr></thead>
+          <tbody>
+            ${rows.length ? rows.map(r => `<tr>
+              <td>${esc(fmtLogTime(r.created_at))}</td>
+              <td>${esc(r.employee_no)}</td>
+              <td>${esc(r.employee_name)}</td>
+              <td>${esc(r.position || "-")}</td>
+              <td>${esc(r.department || "-")}</td>
+              <td><span class="access-log-role-text ${r.role === "admin" ? "admin" : "reviewer"}">${r.role === "admin" ? "ผู้ดูแลระบบ" : "ผู้ดูข้อมูล"}</span></td>
+              <td><span class="access-log-event-badge ${r.event === "logout" ? "logout" : "login"}">${r.event === "logout" ? "ออกจากระบบ" : "เข้าสู่ระบบ"}</span></td>
+            </tr>`).join("") : `<tr><td colspan="7" style="text-align:center; color:var(--text-faint);">ยังไม่มีประวัติการเข้าใช้งาน</td></tr>`}
+          </tbody>
+        </table>
       </div>`;
-    $("#modal-close-btn").addEventListener("click", closeModal);
   }
-  accessLogBtnEl.addEventListener("click", openAccessLogModal);
+  function closeAccessLogPage() {
+    accessLogPageEl.classList.add("hidden");
+    appShellEl.classList.remove("hidden");
+  }
+  accessLogBtnEl.addEventListener("click", openAccessLogPage);
+  accessLogBackBtnEl.addEventListener("click", closeAccessLogPage);
 
   /* ---------------- Password change (บังคับเปลี่ยนตอนแรกเข้า / เปลี่ยนเองภายหลังได้) ---------------- */
   function buildPasswordChangeHtml(forced) {
