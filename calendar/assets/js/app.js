@@ -21,6 +21,8 @@
   // "PEA อำเภอบางปะกง" คือหน่วยงานต้นสังกัด — เลือกการไฟฟ้าปลายทางนี้แล้วฟอร์มจะช่วยติ๊ก "ในพื้นที่" ให้อัตโนมัติ
   const HOME_UNIT_PEA = "PEA อำเภอบางปะกง";
   const LEAVE_TYPES = ["ลาป่วย", "ลากิจส่วนตัว", "ลาพักผ่อน", "ลาคลอดบุตร", "ลาอุปสมบท", "อื่นๆ"];
+  // งานที่มีเวลานัดหมายหน้างาน (appointTime) ตั้งแต่เวลานี้เป็นต้นไป นับเป็นโอที แม้จะเป็นวันทำงานปกติ
+  const OT_AFTER_HOURS_TIME = "16:30";
 
   /* ---------------- Date helpers (local-time, no TZ surprises) ---------------- */
   function toISO(d) {
@@ -122,7 +124,9 @@
       const leave = leaveOnDate(employeeName, iso);
       const tasksForDay = tasksForEmployeeOnDate(employeeName, iso);
       const worked = tasksForDay.length > 0;
-      out.push({ iso, day, dow, holiday, isWeekend, leave, tasksForDay, worked, isOT: worked && (isWeekend || !!holiday) });
+      // นับเป็นวันโอที ถ้าเป็นวันเสาร์/อาทิตย์/วันหยุดนักขัตฤกษ์ หรือมีงานที่เวลานัดหมายหน้างานหลัง 16:30 น. (งานด่วนนอกเวลาราชการ)
+      const isOT = worked && (isWeekend || !!holiday || tasksForDay.some(t => t.appointTime && t.appointTime >= OT_AFTER_HOURS_TIME));
+      out.push({ iso, day, dow, holiday, isWeekend, leave, tasksForDay, worked, isOT });
     }
     return out;
   }
@@ -669,6 +673,7 @@
     const vehicleOpts = combinedOptions(VEHICLES, x => x.vehicle);
     const teamOpts = combinedOptions(Object.keys(TEAMS), x => x.team);
     const extraEquipment = t.equipment.filter(e => !EQUIPMENT_POOL.includes(e));
+    const extraMembers = (t.teamMembers || []).filter(m => !EMPLOYEES.some(e => m.includes(e.name)));
 
     return `
       <div class="modal-head">
@@ -725,17 +730,20 @@
               <select name="travelOrderStatus">${TRAVEL_ORDER_STATUS_OPTIONS.map(v => `<option value="${esc(v)}" ${t.travelOrderStatus === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>
             </div>
             <div class="form-field">
-              <label>ทีมปฏิบัติงาน</label>
-              <input type="text" name="team" id="team-input" list="dl-team" value="${esc(t.team)}" placeholder="เช่น ทีม A" />
+              <label>ชื่อทีม / ป้ายกำกับงานนี้</label>
+              <input type="text" name="team" id="team-input" list="dl-team" value="${esc(t.team)}" placeholder="เช่น ทีม A หรือ ตั้งชื่อเองได้ เช่น ทีมออกบางปะกง" />
+              <div class="form-hint">พิมพ์ชื่อทีมที่เคยมี แล้วออกจากช่อง ระบบจะช่วยติ๊กรายชื่อทีมนั้นให้ หรือจะตั้งชื่อเองก็ได้</div>
             </div>
             <div class="form-field">
               <label>รถที่ใช้</label>
               <input type="text" name="vehicle" list="dl-vehicle" value="${esc(t.vehicle)}" placeholder="เช่น รถกระเช้า ทะเบียน..." />
             </div>
             <div class="form-field span2">
-              <label>รายชื่อทีมปฏิบัติงาน (1 ชื่อต่อบรรทัด)</label>
-              <textarea name="teamMembers" id="team-members-input" placeholder="นายสมชาย ใจดี (หัวหน้าทีม)&#10;นายวิชัย รักงาน">${esc((t.teamMembers || []).join("\n"))}</textarea>
-              <div class="form-hint">พิมพ์ชื่อทีม (เช่น ทีม A) แล้วออกจากช่อง ระบบจะช่วยเติมรายชื่อทีมเริ่มต้นให้อัตโนมัติถ้าช่องนี้ว่าง</div>
+              <label>คนที่ไปงานนี้ (ติ๊กชื่อ — จัดทีมตามความเหมาะสมของแต่ละงานได้อิสระ)</label>
+              <div class="check-grid">
+                ${EMPLOYEES.map(e => `<label class="check-option"><input type="checkbox" name="teamMemberEmp" value="${esc(e.name)}" ${t.teamMembers.some(m => m.includes(e.name)) ? "checked" : ""}/> ${esc(e.name)}${e.position ? ` (${esc(e.position)})` : ""}</label>`).join("") || `<span class="form-hint">ยังไม่มีรายชื่อพนักงานในระบบ — เพิ่มได้ที่ปฏิทินรายบุคคล</span>`}
+              </div>
+              <input type="text" name="teamMembersOther" style="margin-top:6px" placeholder="ชื่อเพิ่มเติมนอกทะเบียนพนักงาน (คั่นด้วยจุลภาค)" value="${esc(extraMembers.join(", "))}" />
             </div>
             <div class="form-field span2">
               <label>อุปกรณ์ที่ต้องใช้ (ติ๊กได้มากกว่า 1 รายการ)</label>
@@ -820,10 +828,11 @@
     });
 
     $("#team-input").addEventListener("change", (ev) => {
-      const membersEl = $("#team-members-input");
-      if (!membersEl.value.trim() && TEAMS[ev.target.value]) {
-        membersEl.value = TEAMS[ev.target.value].join("\n");
-      }
+      const preset = TEAMS[ev.target.value];
+      if (!preset) return;
+      document.querySelectorAll('input[name=teamMemberEmp]').forEach(cb => {
+        cb.checked = preset.some(m => m.includes(cb.value));
+      });
     });
 
     $("#task-form").addEventListener("submit", (ev) => {
@@ -845,7 +854,12 @@
     const areaStatus = fd.get("areaStatus") || "in";
     const equipment = fd.getAll("equipment");
     const otherEquipment = (fd.get("equipmentOther") || "").split(",").map(s => s.trim()).filter(Boolean);
-    const teamMembers = (fd.get("teamMembers") || "").split("\n").map(s => s.trim()).filter(Boolean);
+    const checkedMembers = fd.getAll("teamMemberEmp").map(name => {
+      const e = EMPLOYEES.find(x => x.name === name);
+      return e && e.position ? `${e.name} (${e.position})` : name;
+    });
+    const otherMembers = (fd.get("teamMembersOther") || "").split(",").map(s => s.trim()).filter(Boolean);
+    const teamMembers = [...checkedMembers, ...otherMembers];
 
     const row = {
       title,
