@@ -1213,7 +1213,9 @@
   function buildTeamSummaryHtml(year, month0) {
     if (!EMPLOYEES.length) return `<div class="empty-state">ยังไม่มีรายชื่อพนักงานในระบบ</div>`;
     const bizDays = businessDaysProgress(year, month0);
-    const rows = EMPLOYEES.map(e => ({ e, stats: computeEmployeeMonthStats(e.name, year, month0) }));
+    // หัวหน้าชุด (role_title) ให้อยู่แถวบนสุดเสมอ ไม่ว่าชื่อจะเรียงตามตัวอักษรตรงไหน
+    const sortedEmployees = EMPLOYEES.slice().sort((a, b) => (b.role_title ? 1 : 0) - (a.role_title ? 1 : 0));
+    const rows = sortedEmployees.map(e => ({ e, stats: computeEmployeeMonthStats(e.name, year, month0) }));
     return `
       <div class="team-summary-wrap">
         <table class="team-summary-table">
