@@ -57,6 +57,37 @@
     TASKS.forEach(t => { taskById[t.id] = t; });
   }
 
+  /* พื้นที่ปฏิบัติงาน / การไฟฟ้าปลายทาง / รถ / ทีม — โหลดจาก calendar_options + calendar_teams
+     เก็บทั้งค่าดิบ (มี id ไว้ลบ/แก้) และค่าที่แปลงเป็นรายการชื่อไว้ใช้กับฟอร์ม/ตัวกรอง */
+  let OPTION_ROWS = [];
+  let TEAM_ROWS = [];
+  let WORK_AREAS = [];
+  let TARGET_PEA_OFFICES = [];
+  let VEHICLES = [];
+  let TEAMS = {};
+
+  function optionValuesFor(category) {
+    return OPTION_ROWS.filter(o => o.category === category).map(o => o.value).sort((a, b) => a.localeCompare(b, "th"));
+  }
+
+  async function loadOptions() {
+    const [optRes, teamRes] = await Promise.all([
+      CAL_SB.from("calendar_options").select("*"),
+      CAL_SB.from("calendar_teams").select("*")
+    ]);
+    if (!optRes.error && optRes.data) {
+      OPTION_ROWS = optRes.data;
+      WORK_AREAS = optionValuesFor("work_area");
+      TARGET_PEA_OFFICES = optionValuesFor("target_pea");
+      VEHICLES = optionValuesFor("vehicle");
+    }
+    if (!teamRes.error && teamRes.data) {
+      TEAM_ROWS = teamRes.data.slice().sort((a, b) => a.name.localeCompare(b.name, "th"));
+      TEAMS = {};
+      TEAM_ROWS.forEach(t => { TEAMS[t.name] = t.members || []; });
+    }
+  }
+
   function rowToTask(r) {
     return {
       id: r.id,
@@ -160,6 +191,7 @@
   const todayBadgeEl = $("#today-badge");
   const loadNoteEl = $("#load-note");
   const addTaskBtnEl = $("#add-task-btn");
+  const settingsBtnEl = $("#settings-btn");
 
   /* ---------------- Header today badge ---------------- */
   todayBadgeEl.textContent = `วันนี้ ${WD_FULL[TODAY.getDay()]} ${TODAY.getDate()} ${THAI_MONTHS[TODAY.getMonth()]} พ.ศ. ${beYear(TODAY)}`;
@@ -239,22 +271,27 @@
   $("#nav-today").addEventListener("click", goToday);
 
   /* ---------------- Filter bar ---------------- */
-  const FILTER_DEFS = [
-    { key: "dateFrom", label: "จากวันที่", type: "date" },
-    { key: "dateTo", label: "ถึงวันที่", type: "date" },
-    { key: "month", label: "เดือน", type: "select", options: THAI_MONTHS.map((m, i) => [String(i + 1), m]) },
-    { key: "year", label: "ปี (พ.ศ.)", type: "select", options: [2025, 2026, 2027].map(y => [String(y), String(y + 543)]) },
-    { key: "jobType", label: "ประเภทงาน", type: "select", options: JOB_TYPES.map(v => [v, v]) },
-    { key: "workArea", label: "พื้นที่ปฏิบัติงาน", type: "select", options: WORK_AREAS.map(v => [v, v]) },
-    { key: "targetPEA", label: "การไฟฟ้าปลายทาง", type: "select", options: TARGET_PEA_OFFICES.map(v => [v, v]) },
-    { key: "team", label: "ทีมปฏิบัติงาน", type: "select", options: Object.keys(TEAMS).map(v => [v, v]) },
-    { key: "vehicle", label: "รถ", type: "select", options: VEHICLES.map(v => [v, v]) },
-    { key: "travelOrderStatus", label: "สถานะคำสั่งเดินทาง", type: "select", options: TRAVEL_ORDER_STATUS_OPTIONS.map(v => [v, v]) },
-    { key: "status", label: "สถานะงาน", type: "select", options: STATUS_OPTIONS.map(v => [v, v]) }
-  ];
+  function getFilterDefs() {
+    // A function (not a computed-once const) so it always reflects the current
+    // WORK_AREAS/TARGET_PEA_OFFICES/VEHICLES/TEAMS after loadOptions() runs or
+    // the settings modal adds/removes an option.
+    return [
+      { key: "dateFrom", label: "จากวันที่", type: "date" },
+      { key: "dateTo", label: "ถึงวันที่", type: "date" },
+      { key: "month", label: "เดือน", type: "select", options: THAI_MONTHS.map((m, i) => [String(i + 1), m]) },
+      { key: "year", label: "ปี (พ.ศ.)", type: "select", options: [2025, 2026, 2027].map(y => [String(y), String(y + 543)]) },
+      { key: "jobType", label: "ประเภทงาน", type: "select", options: JOB_TYPES.map(v => [v, v]) },
+      { key: "workArea", label: "พื้นที่ปฏิบัติงาน", type: "select", options: WORK_AREAS.map(v => [v, v]) },
+      { key: "targetPEA", label: "การไฟฟ้าปลายทาง", type: "select", options: TARGET_PEA_OFFICES.map(v => [v, v]) },
+      { key: "team", label: "ทีมปฏิบัติงาน", type: "select", options: Object.keys(TEAMS).map(v => [v, v]) },
+      { key: "vehicle", label: "รถ", type: "select", options: VEHICLES.map(v => [v, v]) },
+      { key: "travelOrderStatus", label: "สถานะคำสั่งเดินทาง", type: "select", options: TRAVEL_ORDER_STATUS_OPTIONS.map(v => [v, v]) },
+      { key: "status", label: "สถานะงาน", type: "select", options: STATUS_OPTIONS.map(v => [v, v]) }
+    ];
+  }
 
   function renderFilterBar() {
-    filterGridEl.innerHTML = FILTER_DEFS.map(f => {
+    filterGridEl.innerHTML = getFilterDefs().map(f => {
       if (f.type === "date") {
         return `<div class="filter-field"><label>${f.label}</label>
           <input type="date" data-filter="${f.key}" value="${esc(state.filters[f.key])}" /></div>`;
@@ -817,6 +854,169 @@
 
   addTaskBtnEl.addEventListener("click", () => openFormModal(null));
 
+  /* ---------------- Settings modal: manage work areas / target PEA / vehicles / teams ---------------- */
+  function renderOptSectionHtml(category, label) {
+    const rows = OPTION_ROWS.filter(o => o.category === category).sort((a, b) => a.value.localeCompare(b.value, "th"));
+    return `
+      <div class="detail-section opt-section" data-category="${esc(category)}">
+        <div class="detail-section-title">${esc(label)} (${rows.length} รายการ)</div>
+        <div class="opt-list">
+          ${rows.length ? rows.map(r => `<span class="opt-chip">${esc(r.value)}<button type="button" class="opt-del-btn" data-id="${r.id}" title="ลบ">✕</button></span>`).join("") : `<span class="form-hint">ยังไม่มีรายการ</span>`}
+        </div>
+        <div class="opt-add-row">
+          <input type="text" class="opt-add-input" placeholder="เพิ่ม${esc(label)}ใหม่..." />
+          <button type="button" class="btn-secondary opt-add-btn">+ เพิ่ม</button>
+        </div>
+        <details class="opt-import">
+          <summary>นำเข้าหลายรายการพร้อมกัน</summary>
+          <div class="form-hint" style="margin:6px 0;">พิมพ์ทีละบรรทัด รายการที่มีอยู่แล้วจะถูกข้าม ของเดิมจะไม่ถูกลบหรือถูกแทนที่</div>
+          <textarea class="opt-import-text" placeholder="เช่น&#10;บางปะกง&#10;ฉะเชิงเทรา"></textarea>
+          <div class="opt-import-actions">
+            <span class="opt-import-note form-hint"></span>
+            <button type="button" class="btn-primary opt-import-btn">นำเข้ารายการ</button>
+          </div>
+        </details>
+      </div>`;
+  }
+
+  function renderTeamSectionHtml() {
+    return `
+      <div class="detail-section">
+        <div class="detail-section-title">ทีมปฏิบัติงาน (${TEAM_ROWS.length} ทีม)</div>
+        ${TEAM_ROWS.map(t => `
+          <div class="team-card">
+            <div class="team-card-head">
+              <input type="text" class="team-name-input" value="${esc(t.name)}" />
+              <button type="button" class="btn-danger team-del-btn" data-id="${t.id}">🗑 ลบทีม</button>
+            </div>
+            <textarea class="team-members-input" placeholder="1 ชื่อต่อบรรทัด">${esc((t.members || []).join("\n"))}</textarea>
+            <div class="form-actions" style="margin-top:8px;">
+              <span class="form-hint">แก้ชื่อ/รายชื่อแล้วกดบันทึก</span>
+              <div class="form-actions-right"><button type="button" class="btn-secondary team-save-btn" data-id="${t.id}">บันทึกทีมนี้</button></div>
+            </div>
+          </div>`).join("")}
+        <div class="team-card">
+          <div class="team-card-head"><input type="text" class="team-name-input" id="new-team-name" placeholder="ชื่อทีมใหม่ เช่น ทีม D" /></div>
+          <textarea class="team-members-input" id="new-team-members" placeholder="รายชื่อสมาชิก 1 ชื่อต่อบรรทัด"></textarea>
+          <div class="form-actions" style="margin-top:8px;">
+            <span class="form-hint">เพิ่มทีมใหม่พร้อมรายชื่อ</span>
+            <div class="form-actions-right"><button type="button" class="btn-primary" id="new-team-save-btn">+ เพิ่มทีมใหม่</button></div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function buildSettingsHtml() {
+    return `
+      <div class="modal-head">
+        <div>
+          <div class="modal-id">การตั้งค่า</div>
+          <h2>จัดการตัวเลือก: พื้นที่ปฏิบัติงาน / การไฟฟ้าปลายทาง / รถ / ทีม</h2>
+        </div>
+        <button class="modal-close" id="modal-close-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-hint" style="margin-bottom:14px;">รายการเหล่านี้ใช้เติมตัวเลือกในฟอร์มเพิ่ม/แก้ไขงานและตัวกรอง — แก้ไขที่นี่ที่เดียว มีผลทั้งระบบ และงานที่กรอกไว้เดิมจะไม่เปลี่ยนแปลง</div>
+        ${renderOptSectionHtml("work_area", "พื้นที่ปฏิบัติงาน")}
+        ${renderOptSectionHtml("target_pea", "การไฟฟ้าปลายทาง")}
+        ${renderOptSectionHtml("vehicle", "รถ")}
+        ${renderTeamSectionHtml()}
+      </div>`;
+  }
+
+  function openSettingsModal() {
+    modalBodyEl.innerHTML = buildSettingsHtml();
+    modalBackdropEl.classList.add("open");
+    bindSettingsEvents();
+  }
+
+  async function refreshSettingsModal() {
+    await loadOptions();
+    modalBodyEl.innerHTML = buildSettingsHtml();
+    bindSettingsEvents();
+    renderFilterBar();
+  }
+
+  function bindSettingsEvents() {
+    $("#modal-close-btn").addEventListener("click", closeModal);
+
+    modalBodyEl.querySelectorAll(".opt-section").forEach(section => {
+      const category = section.getAttribute("data-category");
+      const addInput = section.querySelector(".opt-add-input");
+      const addBtn = section.querySelector(".opt-add-btn");
+      addBtn.addEventListener("click", async () => {
+        const val = addInput.value.trim();
+        if (!val) return;
+        addBtn.disabled = true;
+        const { error } = await CAL_SB.from("calendar_options").insert([{ category, value: val }]);
+        if (error) { alert("เพิ่มไม่สำเร็จ: " + error.message); addBtn.disabled = false; return; }
+        await refreshSettingsModal();
+      });
+      addInput.addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); addBtn.click(); } });
+
+      section.querySelectorAll(".opt-del-btn").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          if (!confirm("ลบรายการนี้ออกจากตัวเลือก? งานที่เคยกรอกไว้เดิมจะไม่ถูกลบหรือเปลี่ยนแปลง")) return;
+          const { error } = await CAL_SB.from("calendar_options").delete().eq("id", btn.getAttribute("data-id"));
+          if (error) { alert("ลบไม่สำเร็จ: " + error.message); return; }
+          await refreshSettingsModal();
+        });
+      });
+
+      const importBtn = section.querySelector(".opt-import-btn");
+      const importText = section.querySelector(".opt-import-text");
+      const importNote = section.querySelector(".opt-import-note");
+      importBtn.addEventListener("click", async () => {
+        const values = Array.from(new Set(importText.value.split("\n").map(s => s.trim()).filter(Boolean)));
+        const existing = new Set(OPTION_ROWS.filter(o => o.category === category).map(o => o.value));
+        const rows = values.filter(v => !existing.has(v)).map(v => ({ category, value: v }));
+        if (!rows.length) { importNote.textContent = values.length ? "ทุกรายการมีอยู่แล้ว ไม่มีรายการใหม่" : "กรุณาพิมพ์รายการก่อนนำเข้า"; return; }
+        importBtn.disabled = true;
+        importBtn.textContent = "กำลังนำเข้า...";
+        const { error } = await CAL_SB.from("calendar_options").insert(rows);
+        if (error) {
+          alert("นำเข้าไม่สำเร็จ: " + error.message);
+          importBtn.disabled = false;
+          importBtn.textContent = "นำเข้ารายการ";
+          return;
+        }
+        await refreshSettingsModal();
+      });
+    });
+
+    modalBodyEl.querySelectorAll(".team-save-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const card = btn.closest(".team-card");
+        const name = card.querySelector(".team-name-input").value.trim();
+        const members = card.querySelector(".team-members-input").value.split("\n").map(s => s.trim()).filter(Boolean);
+        if (!name) { alert("กรุณากรอกชื่อทีม"); return; }
+        const { error } = await CAL_SB.from("calendar_teams").update({ name, members }).eq("id", btn.getAttribute("data-id"));
+        if (error) { alert("บันทึกไม่สำเร็จ: " + error.message); return; }
+        await refreshSettingsModal();
+      });
+    });
+    modalBodyEl.querySelectorAll(".team-del-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        if (!confirm("ลบทีมนี้ออกจากตัวเลือก? งานที่เคยกรอกไว้เดิมจะไม่ถูกลบหรือเปลี่ยนแปลง")) return;
+        const { error } = await CAL_SB.from("calendar_teams").delete().eq("id", btn.getAttribute("data-id"));
+        if (error) { alert("ลบไม่สำเร็จ: " + error.message); return; }
+        await refreshSettingsModal();
+      });
+    });
+    const newTeamBtn = $("#new-team-save-btn");
+    if (newTeamBtn) newTeamBtn.addEventListener("click", async () => {
+      const name = $("#new-team-name").value.trim();
+      const members = $("#new-team-members").value.split("\n").map(s => s.trim()).filter(Boolean);
+      if (!name) { alert("กรุณากรอกชื่อทีม"); return; }
+      newTeamBtn.disabled = true;
+      const { error } = await CAL_SB.from("calendar_teams").insert([{ name, members }]);
+      if (error) { alert("เพิ่มไม่สำเร็จ: " + error.message); newTeamBtn.disabled = false; return; }
+      await refreshSettingsModal();
+    });
+  }
+
+  settingsBtnEl.addEventListener("click", openSettingsModal);
+
   /* ---------------- Main render ---------------- */
   function renderAll() {
     renderToolbar();
@@ -832,7 +1032,7 @@
   }
 
   async function init() {
-    await loadTasks();
+    await Promise.all([loadOptions(), loadTasks()]);
     renderAll();
   }
   init();
