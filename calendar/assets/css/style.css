@@ -601,14 +601,18 @@ body.role-reviewer .admin-only { display: none !important; }
 .person-nav { display: flex; align-items: center; gap: 8px; }
 .person-month-label { font-size: 14px; font-weight: 600; color: var(--ink); min-width: 130px; text-align: center; }
 
-.person-stat-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
+.person-stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 10px; }
 .person-stat { background: var(--pea-purple-light); border-radius: var(--radius-sm); padding: 10px 12px; }
 .person-stat-label { font-size: 11.5px; color: var(--pea-purple-dark); margin-bottom: 4px; }
-.person-stat-value { font-size: 20px; font-weight: 700; color: var(--pea-purple-dark); }
+.person-stat-value { font-size: 20px; font-weight: 700; color: var(--pea-purple-dark); font-variant-numeric: tabular-nums; }
 .person-stat.ot { background: var(--urgent-bg); }
 .person-stat.ot .person-stat-label, .person-stat.ot .person-stat-value { color: var(--urgent); }
 .person-stat.leave { background: var(--orange-bg); }
 .person-stat.leave .person-stat-label, .person-stat.leave .person-stat-value { color: var(--orange); }
+.person-stat.travel { background: var(--pea-purple-soft); }
+.person-stat.travel .person-stat-label, .person-stat.travel .person-stat-value { color: var(--pea-purple-dark); }
+.person-stat.workday { background: var(--green-bg); }
+.person-stat.workday .person-stat-label, .person-stat.workday .person-stat-value { color: var(--green); }
 
 .person-leave-breakdown { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .leave-type-chip { font-size: 11.5px; background: var(--orange-bg); color: var(--orange); border: 1px solid var(--orange-border); border-radius: 999px; padding: 3px 10px; font-weight: 500; }

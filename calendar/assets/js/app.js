@@ -148,6 +148,22 @@
   function tasksForEmployeeOnDate(employeeName, iso) {
     return TASKS.filter(t => t.date === iso && (t.teamMembers || []).some(m => m.includes(employeeName)));
   }
+  // นับ "วันทำการ" (จันทร์-ศุกร์ ไม่ใช่วันหยุดนักขัตฤกษ์) ทั้งเดือน เทียบกับที่ผ่านไปแล้วถึงวันนี้
+  // (เดือนที่ผ่านไปแล้วทั้งเดือน = ผ่านครบทุกวันทำการ, เดือนในอนาคต = ยังไม่ผ่านสักวัน)
+  function businessDaysProgress(year, month0) {
+    const daysInMonth = new Date(year, month0 + 1, 0).getDate();
+    const isPastMonth = year < TODAY.getFullYear() || (year === TODAY.getFullYear() && month0 < TODAY.getMonth());
+    const isCurrentMonth = year === TODAY.getFullYear() && month0 === TODAY.getMonth();
+    let total = 0, elapsed = 0;
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dow = new Date(year, month0, day).getDay();
+      const iso = `${year}-${String(month0 + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      if (dow === 0 || dow === 6 || HOLIDAYS[iso]) continue;
+      total++;
+      if (isPastMonth || (isCurrentMonth && day <= TODAY.getDate())) elapsed++;
+    }
+    return { total, elapsed };
+  }
   function getPersonMonthData(employeeName, year, month0) {
     const daysInMonth = new Date(year, month0 + 1, 0).getDate();
     const out = [];
@@ -161,7 +177,8 @@
       const worked = tasksForDay.length > 0;
       // นับเป็นวันโอที ถ้าเป็นวันเสาร์/อาทิตย์/วันหยุดนักขัตฤกษ์ หรือมีงานที่เวลานัดหมายหน้างานหลัง 16:30 น. (งานด่วนนอกเวลาราชการ)
       const isOT = worked && (isWeekend || !!holiday || tasksForDay.some(t => t.appointTime && t.appointTime >= OT_AFTER_HOURS_TIME));
-      out.push({ iso, day, dow, holiday, isWeekend, leave, tasksForDay, worked, isOT });
+      const hasTravelOrder = tasksForDay.some(t => t.travelOrder);
+      out.push({ iso, day, dow, holiday, isWeekend, leave, tasksForDay, worked, isOT, hasTravelOrder });
     }
     return out;
   }
@@ -1168,6 +1185,8 @@
     const workDays = monthData.filter(d => d.worked).length;
     const leaveDays = monthData.filter(d => d.leave);
     const otDays = monthData.filter(d => d.isOT).length;
+    const travelOrderDays = monthData.filter(d => d.hasTravelOrder).length;
+    const bizDays = businessDaysProgress(year, month0);
 
     const leaveByType = {};
     leaveDays.forEach(d => { leaveByType[d.leave.leave_type] = (leaveByType[d.leave.leave_type] || 0) + 1; });
@@ -1203,7 +1222,9 @@
           ${empObj.duties ? `<div class="person-duties-title">หน้าที่รับผิดชอบ</div><ul class="person-duties-list">${empObj.duties.split("\n").map(d => d.trim()).filter(Boolean).map(d => `<li>${esc(d)}</li>`).join("")}</ul>` : ""}
         </div>` : ""}
         <div class="person-stat-row">
+          <div class="person-stat workday"><div class="person-stat-label">วันทำการ (ทั้งเดือน/ผ่านมาแล้ว)</div><div class="person-stat-value">${bizDays.total}/${bizDays.elapsed}</div></div>
           <div class="person-stat"><div class="person-stat-label">วันที่มีงาน (เดือนนี้)</div><div class="person-stat-value">${workDays}</div></div>
+          <div class="person-stat travel"><div class="person-stat-label">วันมีคำสั่งเดินทาง</div><div class="person-stat-value">${travelOrderDays}</div></div>
           <div class="person-stat ot"><div class="person-stat-label">วัน OT (เสาร์-อาทิตย์-นักขัตฤกษ์)</div><div class="person-stat-value">${otDays}</div></div>
           <div class="person-stat leave"><div class="person-stat-label">วันลา</div><div class="person-stat-value">${leaveDays.length}</div></div>
         </div>
