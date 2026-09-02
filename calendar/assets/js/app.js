@@ -183,7 +183,7 @@
       travelOrderStatus: r.travel_order_status,
       team: r.team || "",
       teamMembers: r.team_members || [],
-      vehicle: r.vehicle || "",
+      vehicles: r.vehicle_assignments || [],
       circuits: r.circuits || [],
       equipment: r.equipment || [],
       equipmentOwner: r.equipment_owner || "",
@@ -221,7 +221,7 @@
       if (f.workArea && t.workArea !== f.workArea) return false;
       if (f.targetPEA && t.targetPEA !== f.targetPEA) return false;
       if (f.team && t.team !== f.team) return false;
-      if (f.vehicle && t.vehicle !== f.vehicle) return false;
+      if (f.vehicle && !(t.vehicles || []).some(v => v.vehicle === f.vehicle)) return false;
       if (f.travelOrderStatus && t.travelOrderStatus !== f.travelOrderStatus) return false;
       if (f.status && t.status !== f.status) return false;
       return true;
@@ -673,7 +673,10 @@
               <div class="di-label">ทีมปฏิบัติงาน (${esc(t.team)})</div>
               <div class="detail-list">${(t.teamMembers || []).map(m => `<div>${esc(m)}</div>`).join("") || "-"}</div>
             </div>
-            ${detailItem("รถที่ใช้", t.vehicle)}
+            <div class="detail-item" style="grid-column:1/-1">
+              <div class="di-label">รถที่ใช้</div>
+              <div class="detail-list">${(t.vehicles || []).length ? t.vehicles.map(v => `<div>${esc(v.vehicle)}${v.driver ? ` — คนขับ: ${esc(v.driver)}` : ""}</div>`).join("") : "-"}</div>
+            </div>
             ${detailItem("ผู้รับผิดชอบเตรียมอุปกรณ์", t.equipmentOwner)}
             <div class="detail-item" style="grid-column:1/-1">
               <div class="di-label">อุปกรณ์ที่ต้องใช้</div>
@@ -777,17 +780,33 @@
     const t = task || {
       title: "", date: toISO(state.selectedDate), departTime: "08:00", appointTime: "08:30",
       jobType: JOB_TYPES[0], workArea: "", targetPEA: "", areaStatus: "in", priority: "ตามแผน",
-      travelOrderNo: "", travelOrderStatus: "ไม่ต้องขอคำสั่ง", team: "", teamMembers: [], vehicle: "",
+      travelOrderNo: "", travelOrderStatus: "ไม่ต้องขอคำสั่ง", team: "", teamMembers: [], vehicles: [],
       circuits: [], equipment: [], equipmentOwner: "", coordinator: "", coordinatorPhone: "", status: "วางแผน", note: ""
     };
-    const workAreaOpts = combinedOptions(WORK_AREAS, x => x.workArea);
+    // พื้นที่ปฏิบัติงานเป็นดรอปดาวเลือกอย่างเดียว (ห้ามพิมพ์เอง กันเลือกผิด) — ถ้างานเดิมมีค่าที่ไม่อยู่ใน
+    // รายการปัจจุบันแล้ว (เช่นตัวเลือกถูกลบไปทีหลัง) ให้แทรกไว้เป็นตัวเลือกพิเศษ กันข้อมูลเดิมหาย
+    const workAreaOptsForSelect = t.workArea && !WORK_AREAS.includes(t.workArea) ? [...WORK_AREAS, t.workArea] : WORK_AREAS;
     const targetPEAOpts = combinedOptions(TARGET_PEA_OFFICES, x => x.targetPEA);
-    const vehicleOpts = combinedOptions(VEHICLES, x => x.vehicle);
+    const vehicleOptsForSelect = Array.from(new Set([...VEHICLES, ...TASKS.flatMap(x => (x.vehicles || []).map(v => v.vehicle))]));
     const teamOpts = combinedOptions(Object.keys(TEAMS), x => x.team);
     const extraEquipment = t.equipment.filter(e => !EQUIPMENT_POOL.includes(e));
     const extraMembers = (t.teamMembers || []).filter(m => !EMPLOYEES.some(e => m.includes(e.name)));
     const circuitOpts = Array.from(new Set([...CIRCUITS, ...TASKS.flatMap(x => x.circuits || [])]));
     const extraCircuits = (t.circuits || []).filter(c => !circuitOpts.includes(c));
+
+    function vehicleAssignRowHtml(i) {
+      const existing = (t.vehicles || [])[i] || {};
+      return `
+        <div class="vehicle-assign-row" data-row="${i + 1}">
+          <select name="vehicle${i + 1}" class="va-vehicle-select">
+            <option value="">— รถคันที่ ${i + 1}: ไม่ใช้ —</option>
+            ${vehicleOptsForSelect.map(v => `<option value="${esc(v)}" ${existing.vehicle === v ? "selected" : ""}>${esc(v)}</option>`).join("")}
+          </select>
+          <select name="driver${i + 1}" class="va-driver-select" ${existing.vehicle ? "" : "disabled"}>
+            <option value="">— ระบุคนขับ —</option>
+          </select>
+        </div>`;
+    }
 
     return `
       <div class="modal-head">
@@ -822,7 +841,10 @@
             </div>
             <div class="form-field">
               <label>พื้นที่ปฏิบัติงาน <span class="req">*</span></label>
-              <input type="text" name="workArea" list="dl-workarea" required value="${esc(t.workArea)}" placeholder="เช่น ชลบุรี, ฉะเชิงเทรา" />
+              <select name="workArea" required>
+                <option value="" ${t.workArea ? "" : "selected"} disabled>— เลือกพื้นที่ปฏิบัติงาน —</option>
+                ${workAreaOptsForSelect.map(v => `<option value="${esc(v)}" ${t.workArea === v ? "selected" : ""}>${esc(v)}</option>`).join("")}
+              </select>
             </div>
             <div class="form-field">
               <label>การไฟฟ้าปลายทาง <span class="req">*</span></label>
@@ -849,10 +871,6 @@
               <input type="text" name="team" id="team-input" list="dl-team" value="${esc(t.team)}" placeholder="เช่น ทีม A หรือ ตั้งชื่อเองได้ เช่น ทีมออกบางปะกง" />
               <div class="form-hint">พิมพ์ชื่อทีมที่เคยมี แล้วออกจากช่อง ระบบจะช่วยติ๊กรายชื่อทีมนั้นให้ หรือจะตั้งชื่อเองก็ได้</div>
             </div>
-            <div class="form-field">
-              <label>รถที่ใช้</label>
-              <input type="text" name="vehicle" list="dl-vehicle" value="${esc(t.vehicle)}" placeholder="เช่น รถกระเช้า ทะเบียน..." />
-            </div>
             <div class="form-field span2">
               <label>ชื่อวงจรที่ปฏิบัติงาน (ติ๊กได้มากกว่า 1 วงจร) <span class="circuit-sum-badge" id="circuit-sum-badge">รวม ${t.circuits.length} วงจร</span></label>
               <div id="circuit-check-grid">
@@ -862,10 +880,18 @@
             </div>
             <div class="form-field span2">
               <label>คนที่ไปงานนี้ (ติ๊กชื่อ — จัดทีมตามความเหมาะสมของแต่ละงานได้อิสระ)</label>
-              <div class="check-grid">
+              <div class="check-grid" id="team-check-grid">
                 ${EMPLOYEES.map(e => `<label class="check-option"><input type="checkbox" name="teamMemberEmp" value="${esc(e.name)}" ${t.teamMembers.some(m => m.includes(e.name)) ? "checked" : ""}/> ${esc(e.name)}${e.position ? ` (${esc(e.position)})` : ""}</label>`).join("") || `<span class="form-hint">ยังไม่มีรายชื่อพนักงานในระบบ — เพิ่มได้ที่ปฏิทินรายบุคคล</span>`}
               </div>
               <input type="text" name="teamMembersOther" style="margin-top:6px" placeholder="ชื่อเพิ่มเติมนอกทะเบียนพนักงาน (คั่นด้วยจุลภาค)" value="${esc(extraMembers.join(", "))}" />
+            </div>
+            <div class="form-field span2">
+              <label>รถที่ใช้ (เลือกได้สูงสุด 2 คัน)</label>
+              <div class="vehicle-assign-rows" id="vehicle-assign-rows">
+                ${vehicleAssignRowHtml(0)}
+                ${vehicleAssignRowHtml(1)}
+              </div>
+              <div class="form-hint">ติ๊กชื่อ "คนที่ไปงานนี้" ก่อน แล้วรายชื่อคนขับจะดึงมาให้เลือกอัตโนมัติ — เลือกคนขับให้รถคันหนึ่งแล้ว ชื่อนั้นจะไม่ขึ้นให้เลือกซ้ำกับอีกคัน</div>
             </div>
             <div class="form-field span2">
               <label>อุปกรณ์ที่ต้องใช้ (ติ๊กได้มากกว่า 1 รายการ)</label>
@@ -908,9 +934,7 @@
           </div>
         </form>
       </div>
-      ${datalistHtml("dl-workarea", workAreaOpts)}
       ${datalistHtml("dl-targetpea", targetPeaOptionsForWorkArea(targetPEAOpts, t.workArea))}
-      ${datalistHtml("dl-vehicle", vehicleOpts)}
       ${datalistHtml("dl-team", teamOpts)}
     `;
   }
@@ -955,14 +979,57 @@
       });
     }
 
-    // เลือก/พิมพ์ "พื้นที่ปฏิบัติงาน" เป็นจังหวัดที่รู้จัก แล้วกรองรายการ "การไฟฟ้าปลายทาง" ให้เหลือเฉพาะจังหวัดนั้น
-    const workAreaInputForFilter = document.querySelector('input[name=workArea]');
+    // เลือก "พื้นที่ปฏิบัติงาน" เป็นจังหวัด แล้วกรองรายการ "การไฟฟ้าปลายทาง" ให้เหลือเฉพาะจังหวัดนั้น
+    const workAreaSelectForFilter = document.querySelector('select[name=workArea]');
     const targetPeaDatalistEl = $("#dl-targetpea");
-    workAreaInputForFilter.addEventListener("input", () => {
+    workAreaSelectForFilter.addEventListener("change", () => {
       if (!targetPeaDatalistEl) return;
       const allOpts = combinedOptions(TARGET_PEA_OFFICES, x => x.targetPEA);
-      targetPeaDatalistEl.innerHTML = datalistOptionsHtml(targetPeaOptionsForWorkArea(allOpts, workAreaInputForFilter.value));
+      targetPeaDatalistEl.innerHTML = datalistOptionsHtml(targetPeaOptionsForWorkArea(allOpts, workAreaSelectForFilter.value));
     });
+
+    // รถที่ใช้ + คนขับ: ดึงรายชื่อคนขับจาก "คนที่ไปงานนี้" ที่ติ๊กไว้ ห้ามเลือกรถซ้ำคันหรือคนขับซ้ำคนระหว่าง 2 แถว
+    const teamCheckGridEl = $("#team-check-grid");
+    function currentTeamMemberNames() {
+      return Array.from(document.querySelectorAll('input[name=teamMemberEmp]:checked')).map(cb => cb.value);
+    }
+    function vehicleDriverRows() {
+      return [1, 2].map(i => ({
+        vSel: document.querySelector(`select[name=vehicle${i}]`),
+        dSel: document.querySelector(`select[name=driver${i}]`)
+      }));
+    }
+    function populateDriverOptions(forceValues) {
+      const names = currentTeamMemberNames();
+      vehicleDriverRows().forEach((row, idx) => {
+        const want = forceValues && forceValues[idx] !== undefined ? forceValues[idx] : row.dSel.value;
+        const candidates = want && !names.includes(want) ? [...names, want] : names;
+        row.dSel.innerHTML = `<option value="">— ระบุคนขับ —</option>` +
+          candidates.map(n => `<option value="${esc(n)}" ${want === n ? "selected" : ""}>${esc(n)}${names.includes(n) ? "" : " (ไม่ได้อยู่ในทีมแล้ว)"}</option>`).join("");
+      });
+      syncVehicleDriverRows();
+    }
+    function syncVehicleDriverRows() {
+      const rows = vehicleDriverRows();
+      rows.forEach((row, idx) => {
+        const other = rows[1 - idx];
+        Array.from(row.vSel.options).forEach(opt => { if (opt.value) opt.disabled = opt.value === other.vSel.value; });
+        Array.from(row.dSel.options).forEach(opt => { if (opt.value) opt.disabled = opt.value === other.dSel.value; });
+        const hasVehicle = !!row.vSel.value;
+        row.dSel.disabled = !hasVehicle;
+        if (!hasVehicle && row.dSel.value) row.dSel.value = "";
+      });
+    }
+    if (teamCheckGridEl) {
+      teamCheckGridEl.addEventListener("change", () => populateDriverOptions());
+    }
+    document.querySelectorAll(".va-vehicle-select, .va-driver-select").forEach(sel => {
+      sel.addEventListener("change", () => syncVehicleDriverRows());
+    });
+    populateDriverOptions([
+      ((task && task.vehicles) || [])[0] ? task.vehicles[0].driver || "" : "",
+      ((task && task.vehicles) || [])[1] ? task.vehicles[1].driver || "" : ""
+    ]);
 
     // "PEA อำเภอบางปะกง" คือหน่วยงานต้นสังกัด — เลือกแล้วช่วยติ๊ก "ในพื้นที่" ให้ (แก้เองได้ทีหลัง)
     const targetPEAInput = document.querySelector('input[name=targetPEA]');
@@ -1020,6 +1087,10 @@
     const checkedCircuits = fd.getAll("circuit");
     const otherCircuits = (fd.get("circuitOther") || "").split(",").map(s => s.trim()).filter(Boolean);
     const circuits = [...checkedCircuits, ...otherCircuits];
+    const vehicleAssignments = [1, 2]
+      .map(i => ({ vehicle: (fd.get(`vehicle${i}`) || "").trim(), driver: (fd.get(`driver${i}`) || "").trim() }))
+      .filter(v => v.vehicle)
+      .map(v => ({ vehicle: v.vehicle, driver: v.driver || null }));
 
     const row = {
       title,
@@ -1036,7 +1107,7 @@
       travel_order_status: areaStatus === "out" ? fd.get("travelOrderStatus") : "ไม่ต้องขอคำสั่ง",
       team: (fd.get("team") || "").trim() || null,
       team_members: teamMembers,
-      vehicle: (fd.get("vehicle") || "").trim() || null,
+      vehicle_assignments: vehicleAssignments,
       circuits,
       equipment: [...equipment, ...otherEquipment],
       equipment_owner: (fd.get("equipmentOwner") || "").trim() || null,
