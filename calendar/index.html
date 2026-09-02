@@ -11,6 +11,33 @@
 </head>
 <body>
 
+<div class="login-screen" id="login-screen">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="app-brand-mark">⚡</div>
+      <div>
+        <h1>ระบบปฏิทินงาน Hotline PEA BPK</h1>
+        <div class="sub">Team Calendar การไฟฟ้าส่วนภูมิภาค บางปะกง</div>
+      </div>
+    </div>
+    <form id="login-form">
+      <div class="form-field">
+        <label>รหัสประจำตัว (User) <span class="req">*</span></label>
+        <input type="text" name="employeeNo" inputmode="numeric" autocomplete="username" required placeholder="เช่น 502244" />
+      </div>
+      <div class="form-field">
+        <label>รหัสผ่าน <span class="req">*</span></label>
+        <input type="password" name="password" autocomplete="current-password" required placeholder="รหัสผ่าน" />
+      </div>
+      <div id="login-error"></div>
+      <button type="submit" class="btn-primary login-submit-btn">เข้าสู่ระบบ</button>
+    </form>
+    <div class="login-hint">ใช้รหัสประจำตัวพนักงานเป็น User · รหัสผ่านแรกเข้าคือ <b>12345</b> (ระบบจะให้ตั้งรหัสผ่านใหม่ทันทีหลังเข้าสู่ระบบครั้งแรก)</div>
+  </div>
+</div>
+
+<div id="app-root" class="hidden">
+
 <header class="app-header">
   <div class="app-header-inner">
     <div class="app-brand">
@@ -20,7 +47,14 @@
         <div class="sub">ภาพรวมแผนปฏิบัติงานทีม Hotline การไฟฟ้าส่วนภูมิภาค บางปะกง</div>
       </div>
     </div>
-    <div class="app-header-today" id="today-badge"></div>
+    <div class="app-header-right">
+      <div class="app-header-today" id="today-badge"></div>
+      <div class="app-header-user" id="user-badge">
+        <span class="user-name-label" id="user-name-label"></span>
+        <button type="button" class="user-icon-btn" id="change-password-btn" title="เปลี่ยนรหัสผ่าน">🔑</button>
+        <button type="button" class="user-icon-btn" id="logout-btn" title="ออกจากระบบ">ออกจากระบบ</button>
+      </div>
+    </div>
   </div>
 </header>
 
@@ -47,8 +81,10 @@
     <div class="toolbar-right">
       <div class="view-switch" id="view-switch"></div>
       <button class="person-btn" id="person-btn">👤 รายบุคคล / ลา / โอที</button>
-      <button class="settings-btn" id="settings-btn">⚙ จัดการตัวเลือก</button>
-      <button class="add-task-btn" id="add-task-btn">+ เพิ่มงาน</button>
+      <button class="person-btn" id="equipment-btn">📖 คู่มืออุปกรณ์</button>
+      <button class="settings-btn admin-only" id="access-log-btn">🕒 ประวัติการใช้งาน</button>
+      <button class="settings-btn admin-only" id="settings-btn">⚙ จัดการตัวเลือก</button>
+      <button class="add-task-btn admin-only" id="add-task-btn">+ เพิ่มงาน</button>
     </div>
   </div>
 
@@ -65,6 +101,8 @@
 
 <div class="modal-backdrop" id="modal-backdrop">
   <div class="modal" id="modal-body"></div>
+</div>
+
 </div>
 
 <script src="assets/js/vendor/supabase-js.min.js"></script>

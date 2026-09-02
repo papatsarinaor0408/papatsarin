@@ -50,6 +50,31 @@
   const TODAY = new Date();
   const TODAY_ISO = toISO(TODAY);
 
+  /* ---------------- Auth: login by employee number, sha256(salt+password) ----------------
+     ไม่มีเซิร์ฟเวอร์ auth จริง (แอปนี้เป็น static SPA คุยกับ Supabase ตรงๆ) — เช็ครหัสผ่านฝั่ง
+     เบราว์เซอร์เทียบกับ hash ที่เก็บไว้ เหมาะกับทีมเล็กใช้ภายในเท่านั้น ไม่ใช่ระดับความปลอดภัย
+     สาธารณะ (ผู้ที่เข้าถึง Supabase โดยตรงยังเห็น hash ได้ เพราะ RLS ยังเปิดกว้างเหมือนตารางอื่น) */
+  const AUTH_STORAGE_KEY = "pea_cal_auth_session";
+  let CURRENT_USER = null; // { id, name, position, employeeNo, role }
+  let modalLocked = false; // true ระหว่างบังคับให้ตั้งรหัสผ่านใหม่ — ปิด modal ด้วยวิธีอื่นไม่ได้
+
+  async function sha256Hex(str) {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+  function randomHex(nBytes) {
+    const arr = new Uint8Array(nBytes);
+    crypto.getRandomValues(arr);
+    return Array.from(arr).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+  function hashPassword(password, salt) { return sha256Hex(salt + ":" + password); }
+  function loadSession() {
+    try { const raw = sessionStorage.getItem(AUTH_STORAGE_KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+  }
+  function saveSession(user) { try { sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user)); } catch (e) {} }
+  function clearSession() { try { sessionStorage.removeItem(AUTH_STORAGE_KEY); } catch (e) {} }
+  function isAdmin() { return !!CURRENT_USER && CURRENT_USER.role === "admin"; }
+
   /* ---------------- State ---------------- */
   const state = {
     view: "month",
@@ -247,6 +272,15 @@
   const addTaskBtnEl = $("#add-task-btn");
   const settingsBtnEl = $("#settings-btn");
   const personBtnEl = $("#person-btn");
+  const equipmentBtnEl = $("#equipment-btn");
+  const accessLogBtnEl = $("#access-log-btn");
+  const loginScreenEl = $("#login-screen");
+  const appRootEl = $("#app-root");
+  const loginFormEl = $("#login-form");
+  const loginErrorEl = $("#login-error");
+  const userNameLabelEl = $("#user-name-label");
+  const changePasswordBtnEl = $("#change-password-btn");
+  const logoutBtnEl = $("#logout-btn");
 
   /* ---------------- Header today badge ---------------- */
   todayBadgeEl.textContent = `วันนี้ ${WD_FULL[TODAY.getDay()]} ${TODAY.getDate()} ${THAI_MONTHS[TODAY.getMonth()]} พ.ศ. ${beYear(TODAY)}`;
@@ -646,10 +680,11 @@
         </div>
         ${t.note ? `<div class="detail-section"><div class="detail-section-title">หมายเหตุ</div><div class="note-box">${esc(t.note)}</div></div>` : ""}
       </div>
-      <div class="detail-actions">
+      <div class="detail-actions admin-only">
         <button class="btn-secondary" id="edit-task-btn">✎ แก้ไขงาน</button>
         <button class="btn-danger" id="delete-task-btn">🗑 ลบงาน</button>
       </div>`;
+    modalLocked = false;
     modalBackdropEl.classList.add("open");
     $("#modal-close-btn").addEventListener("click", closeModal);
     $("#edit-task-btn").addEventListener("click", () => openFormModal(t));
@@ -658,7 +693,7 @@
   function detailItem(label, value, mono) {
     return `<div class="detail-item"><div class="di-label">${esc(label)}</div><div class="di-value ${mono ? "mono" : ""}">${esc(value)}</div></div>`;
   }
-  function closeModal() { modalBackdropEl.classList.remove("open"); }
+  function closeModal() { if (modalLocked) return; modalBackdropEl.classList.remove("open"); modalBodyEl.classList.remove("modal-wide"); }
   modalBackdropEl.addEventListener("click", (ev) => { if (ev.target === modalBackdropEl) closeModal(); });
   document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") closeModal(); });
 
@@ -850,6 +885,8 @@
   }
 
   function openFormModal(task) {
+    if (!isAdmin()) return;
+    modalLocked = false;
     modalBodyEl.innerHTML = buildFormHtml(task);
     modalBackdropEl.classList.add("open");
     $("#modal-close-btn").addEventListener("click", closeModal);
@@ -911,6 +948,7 @@
   }
 
   async function submitTaskForm(form, existingTask) {
+    if (!isAdmin()) return;
     const fd = new FormData(form);
     const title = (fd.get("title") || "").trim();
     const date = fd.get("date");
@@ -990,6 +1028,7 @@
   }
 
   async function deleteTask(t) {
+    if (!isAdmin()) return;
     if (!confirm(`ยืนยันลบงาน "${t.title}" วันที่ ${t.date} ใช่หรือไม่?`)) return;
     const { error } = await CAL_SB.from("calendar_tasks").delete().eq("id", t.id);
     if (error) { alert("ลบไม่สำเร็จ: " + error.message); return; }
@@ -1072,6 +1111,8 @@
   }
 
   function openSettingsModal() {
+    if (!isAdmin()) return;
+    modalLocked = false;
     modalBodyEl.innerHTML = buildSettingsHtml();
     modalBackdropEl.classList.add("open");
     bindSettingsEvents();
@@ -1248,7 +1289,7 @@
           }).join("")}
         </div>
 
-        <div class="detail-section" style="margin-top:18px;">
+        <div class="detail-section admin-only" style="margin-top:18px;">
           <div class="detail-section-title">บันทึกวันลาใหม่ (คลิกวันที่ในปฏิทินด้านบนเพื่อเติมวันที่ให้อัตโนมัติ)</div>
           <form id="leave-form">
             <div class="form-grid">
@@ -1282,7 +1323,7 @@
           ${employeeLeaves.length ? `<div class="leave-history-list">${employeeLeaves.map(l => `
             <div class="leave-history-row">
               <div><b>${esc(l.leave_type)}</b> · ${esc(l.date_from)}${l.date_from !== l.date_to ? " ถึง " + esc(l.date_to) : ""}${l.note ? " · " + esc(l.note) : ""}</div>
-              <button type="button" class="btn-danger leave-del-btn" data-id="${l.id}">🗑</button>
+              <button type="button" class="btn-danger leave-del-btn admin-only" data-id="${l.id}">🗑</button>
             </div>`).join("")}</div>` : `<div class="form-hint">ยังไม่มีประวัติการลา</div>`}
         </div>
         ` : `<div class="empty-state">ยังไม่มีรายชื่อพนักงานในระบบ</div>`}
@@ -1290,6 +1331,7 @@
   }
 
   function openPersonModal() {
+    modalLocked = false;
     modalBodyEl.innerHTML = buildPersonModalHtml();
     modalBackdropEl.classList.add("open");
     bindPersonEvents();
@@ -1330,6 +1372,7 @@
 
     $("#leave-form").addEventListener("submit", async (ev) => {
       ev.preventDefault();
+      if (!isAdmin()) return;
       const fd = new FormData(ev.target);
       const dateFrom = fd.get("dateFrom");
       const dateTo = fd.get("dateTo") || dateFrom;
@@ -1351,6 +1394,7 @@
 
     modalBodyEl.querySelectorAll(".leave-del-btn").forEach(btn => {
       btn.addEventListener("click", async () => {
+        if (!isAdmin()) return;
         if (!confirm("ลบวันลานี้ออกจากประวัติ?")) return;
         const { error } = await CAL_SB.from("calendar_leaves").delete().eq("id", btn.getAttribute("data-id"));
         if (error) { alert("ลบไม่สำเร็จ: " + error.message); return; }
@@ -1360,6 +1404,231 @@
   }
 
   personBtnEl.addEventListener("click", openPersonModal);
+
+  /* ---------------- Equipment manual (คู่มืออุปกรณ์) — ข้อมูลอ้างอิงคงที่ ดูได้ทุกสิทธิ์ ---------------- */
+  function equipRowHtml(label, value, warn) {
+    if (!value) return "";
+    return `<div class="equip-detail-row ${warn ? "warn" : ""}"><div class="edr-label">${esc(label)}</div><div class="edr-value">${esc(value)}</div></div>`;
+  }
+  function equipmentManualGroupsHtml() {
+    const groups = {};
+    EQUIPMENT_MANUAL.forEach(e => { (groups[e.group] = groups[e.group] || []).push(e); });
+    const groupNames = Object.keys(groups).sort((a, b) => a.localeCompare(b));
+    return groupNames.map(g => `
+      <div class="equip-group">
+        <div class="equip-group-title">${esc(g)} (${groups[g].length} รายการ)</div>
+        <div class="equip-card-list">
+          ${groups[g].map(e => `
+            <div class="equip-card" data-equip="${esc(e.id)}">
+              <button type="button" class="equip-card-head">
+                <div>
+                  <div class="equip-card-name"><span class="equip-id">${esc(e.id)}</span>${esc(e.name_th)}</div>
+                  <div class="equip-card-name-en">${esc(e.name_en)}</div>
+                </div>
+                <span class="equip-card-chevron">›</span>
+              </button>
+              <div class="equip-card-body">
+                <div class="equip-detail-grid">
+                  ${equipRowHtml("ใช้กับงาน/สถานการณ์", e.use_case)}
+                  ${equipRowHtml("หน้าที่/การใช้งาน", e.function)}
+                  ${equipRowHtml("ตรวจสอบก่อนใช้", e.pre_check)}
+                  ${equipRowHtml("ห้ามใช้ / เงื่อนไขหยุดงาน", e.stop_conditions, true)}
+                  ${equipRowHtml("การดูแลหลังใช้งาน", e.care_after)}
+                  ${equipRowHtml("ข้อกำหนดความปลอดภัย", e.safety_requirement, true)}
+                  ${equipRowHtml("หมายเหตุ", e.online_note)}
+                </div>
+              </div>
+            </div>`).join("")}
+        </div>
+      </div>`).join("");
+  }
+  function openEquipmentModal() {
+    modalLocked = false;
+    modalBodyEl.innerHTML = `
+      <div class="modal-head">
+        <div>
+          <div class="modal-id">คู่มืออุปกรณ์</div>
+          <h2>คู่มืออุปกรณ์ฮอทไลน์ (${EQUIPMENT_MANUAL.length} รายการ)</h2>
+        </div>
+        <button class="modal-close" id="modal-close-btn">✕</button>
+      </div>
+      <div class="modal-body">${equipmentManualGroupsHtml()}</div>`;
+    modalBackdropEl.classList.add("open");
+    $("#modal-close-btn").addEventListener("click", closeModal);
+    modalBodyEl.querySelectorAll(".equip-card-head").forEach(btn => {
+      btn.addEventListener("click", () => btn.closest(".equip-card").classList.toggle("open"));
+    });
+  }
+  equipmentBtnEl.addEventListener("click", openEquipmentModal);
+
+  /* ---------------- Access log (ประวัติการใช้งาน) — เฉพาะผู้ดูแลระบบ ---------------- */
+  function fmtLogTime(iso) {
+    const d = new Date(iso);
+    return `${d.getDate()} ${THAI_MONTHS[d.getMonth()]} ${beYear(d)} เวลา ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")} น.`;
+  }
+  async function openAccessLogModal() {
+    if (!isAdmin()) return;
+    modalLocked = false;
+    modalBodyEl.classList.add("modal-wide");
+    modalBodyEl.innerHTML = `<div class="modal-body"><div class="empty-state">กำลังโหลดประวัติการใช้งาน...</div></div>`;
+    modalBackdropEl.classList.add("open");
+    const { data, error } = await CAL_SB.from("calendar_access_log").select("*").order("created_at", { ascending: false });
+    const rows = (!error && data) || [];
+    modalBodyEl.innerHTML = `
+      <div class="modal-head">
+        <div>
+          <div class="modal-id">สำหรับผู้ดูแลระบบ</div>
+          <h2>ประวัติการเข้าใช้งานเว็บ</h2>
+        </div>
+        <button class="modal-close" id="modal-close-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        ${error ? `<div class="form-error">โหลดประวัติไม่สำเร็จ: ${esc(error.message)}</div>` : ""}
+        <div class="access-log-summary">พบทั้งหมด ${rows.length} รายการ${rows.length ? ` · เข้าใช้งานล่าสุด: ${esc(fmtLogTime(rows[0].created_at))}` : ""}</div>
+        <div class="access-log-table-wrap">
+          <table class="access-log-table">
+            <thead><tr><th>วันเวลา</th><th>เลขประจำตัว</th><th>ชื่อ-นามสกุล</th><th>ตำแหน่ง</th><th>หน่วยงาน</th><th>สิทธิ์</th><th>ผลลัพธ์</th></tr></thead>
+            <tbody>
+              ${rows.length ? rows.map(r => `<tr>
+                <td>${esc(fmtLogTime(r.created_at))}</td>
+                <td>${esc(r.employee_no)}</td>
+                <td>${esc(r.employee_name)}</td>
+                <td>${esc(r.position || "-")}</td>
+                <td>${esc(r.department || "-")}</td>
+                <td><span class="access-log-role-text ${r.role === "admin" ? "admin" : "reviewer"}">${r.role === "admin" ? "ผู้ดูแลระบบ" : "ผู้ดูข้อมูล"}</span></td>
+                <td><span class="access-log-event-badge ${r.event === "logout" ? "logout" : "login"}">${r.event === "logout" ? "ออกจากระบบ" : "เข้าสู่ระบบ"}</span></td>
+              </tr>`).join("") : `<tr><td colspan="7" style="text-align:center; color:var(--text-faint);">ยังไม่มีประวัติการเข้าใช้งาน</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+    $("#modal-close-btn").addEventListener("click", closeModal);
+  }
+  accessLogBtnEl.addEventListener("click", openAccessLogModal);
+
+  /* ---------------- Password change (บังคับเปลี่ยนตอนแรกเข้า / เปลี่ยนเองภายหลังได้) ---------------- */
+  function buildPasswordChangeHtml(forced) {
+    return `
+      <div class="modal-head">
+        <div>
+          <div class="modal-id">${forced ? "ต้องตั้งรหัสผ่านใหม่ก่อนใช้งาน" : "เปลี่ยนรหัสผ่าน"}</div>
+          <h2>ตั้งรหัสผ่านใหม่สำหรับ ${esc(CURRENT_USER.name)}</h2>
+        </div>
+        ${forced ? "" : `<button class="modal-close" id="modal-close-btn">✕</button>`}
+      </div>
+      <div class="modal-body">
+        ${forced ? `<div class="form-hint" style="margin-bottom:12px;">นี่คือการเข้าสู่ระบบครั้งแรกด้วยรหัสผ่านเริ่มต้น (12345) กรุณาตั้งรหัสผ่านใหม่ของตัวเองก่อนใช้งานต่อ</div>` : ""}
+        <form id="password-change-form">
+          <div class="form-grid full">
+            <div class="form-field">
+              <label>รหัสผ่านใหม่ <span class="req">*</span></label>
+              <input type="password" name="newPassword" required minlength="4" autocomplete="new-password" />
+            </div>
+            <div class="form-field">
+              <label>ยืนยันรหัสผ่านใหม่ <span class="req">*</span></label>
+              <input type="password" name="confirmPassword" required minlength="4" autocomplete="new-password" />
+            </div>
+          </div>
+          <div id="password-change-error"></div>
+          <div class="form-actions">
+            <span class="form-hint">ตั้งรหัสผ่านอย่างน้อย 4 ตัวอักษร</span>
+            <div class="form-actions-right">
+              ${forced ? "" : `<button type="button" class="btn-secondary" id="password-cancel-btn">ยกเลิก</button>`}
+              <button type="submit" class="btn-primary">บันทึกรหัสผ่านใหม่</button>
+            </div>
+          </div>
+        </form>
+      </div>`;
+  }
+  function openPasswordChangeModal(forced) {
+    modalBodyEl.innerHTML = buildPasswordChangeHtml(forced);
+    modalBackdropEl.classList.add("open");
+    modalLocked = !!forced;
+    if (!forced) {
+      $("#modal-close-btn").addEventListener("click", closeModal);
+      $("#password-cancel-btn").addEventListener("click", closeModal);
+    }
+    $("#password-change-form").addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const fd = new FormData(ev.target);
+      const p1 = fd.get("newPassword") || "";
+      const p2 = fd.get("confirmPassword") || "";
+      const errEl = $("#password-change-error");
+      errEl.innerHTML = "";
+      if (p1.length < 4) { errEl.innerHTML = `<div class="form-error">รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร</div>`; return; }
+      if (p1 !== p2) { errEl.innerHTML = `<div class="form-error">รหัสผ่านทั้งสองช่องไม่ตรงกัน</div>`; return; }
+      const btn = ev.target.querySelector("button[type=submit]");
+      btn.disabled = true;
+      btn.textContent = "กำลังบันทึก...";
+      const salt = randomHex(16);
+      const hash = await hashPassword(p1, salt);
+      const { error } = await CAL_SB.from("calendar_employees")
+        .update({ password_salt: salt, password_hash: hash, must_change_password: false }).eq("id", CURRENT_USER.id);
+      if (error) {
+        errEl.innerHTML = `<div class="form-error">บันทึกไม่สำเร็จ: ${esc(error.message)}</div>`;
+        btn.disabled = false;
+        btn.textContent = "บันทึกรหัสผ่านใหม่";
+        return;
+      }
+      const wasForced = modalLocked;
+      modalLocked = false;
+      closeModal();
+      if (wasForced) init();
+    });
+  }
+  changePasswordBtnEl.addEventListener("click", () => openPasswordChangeModal(false));
+
+  /* ---------------- Login / logout ---------------- */
+  function showLoginError(msg) { loginErrorEl.innerHTML = `<div class="form-error">${esc(msg)}</div>`; }
+  function enterApp(mustChangePassword) {
+    loginScreenEl.classList.add("hidden");
+    appRootEl.classList.remove("hidden");
+    document.body.classList.toggle("role-reviewer", !isAdmin());
+    userNameLabelEl.textContent = `${CURRENT_USER.name}${CURRENT_USER.position ? " (" + CURRENT_USER.position + ")" : ""} · ${isAdmin() ? "ผู้ดูแลระบบ" : "ผู้ดูข้อมูล"}`;
+    if (mustChangePassword) openPasswordChangeModal(true);
+    else init();
+  }
+  loginFormEl.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    loginErrorEl.innerHTML = "";
+    const fd = new FormData(loginFormEl);
+    const employeeNo = (fd.get("employeeNo") || "").trim();
+    const password = fd.get("password") || "";
+    if (!employeeNo || !password) { showLoginError("กรุณากรอกรหัสประจำตัวและรหัสผ่าน"); return; }
+    const submitBtn = loginFormEl.querySelector("button[type=submit]");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "กำลังเข้าสู่ระบบ...";
+    const { data, error } = await CAL_SB.from("calendar_employees").select("*").eq("employee_no", employeeNo);
+    const row = !error && data && data[0];
+    if (!row || !row.password_hash || !row.password_salt) {
+      showLoginError("ไม่พบผู้ใช้นี้ในระบบ");
+      submitBtn.disabled = false; submitBtn.textContent = "เข้าสู่ระบบ";
+      return;
+    }
+    const hash = await hashPassword(password, row.password_salt);
+    if (hash !== row.password_hash) {
+      showLoginError("รหัสผ่านไม่ถูกต้อง");
+      submitBtn.disabled = false; submitBtn.textContent = "เข้าสู่ระบบ";
+      return;
+    }
+    CURRENT_USER = { id: row.id, name: row.name, position: row.position, employeeNo: row.employee_no, role: row.role };
+    saveSession(CURRENT_USER);
+    await logAccessEvent("login");
+    enterApp(row.must_change_password);
+  });
+  logoutBtnEl.addEventListener("click", async () => {
+    if (!confirm("ยืนยันออกจากระบบ?")) return;
+    await logAccessEvent("logout");
+    clearSession();
+    location.reload();
+  });
+  function logAccessEvent(event) {
+    if (!CURRENT_USER) return Promise.resolve();
+    return CAL_SB.from("calendar_access_log").insert([{
+      employee_no: CURRENT_USER.employeeNo, employee_name: CURRENT_USER.name, position: CURRENT_USER.position || null,
+      department: HOME_UNIT_PEA, role: CURRENT_USER.role, event
+    }]);
+  }
 
   /* ---------------- Main render ---------------- */
   function renderAll() {
@@ -1379,5 +1648,14 @@
     await Promise.all([loadOptions(), loadTasks(), loadPeopleData()]);
     renderAll();
   }
-  init();
+
+  function boot() {
+    const session = loadSession();
+    if (session && session.employeeNo && session.role) {
+      CURRENT_USER = session;
+      enterApp(false);
+    }
+    // ไม่มีเซสชันที่บันทึกไว้ — คงหน้าล็อกอินไว้เฉยๆ จนกว่าจะกรอกฟอร์มสำเร็จ
+  }
+  boot();
 })();

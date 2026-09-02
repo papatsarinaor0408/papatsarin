@@ -101,6 +101,79 @@ button { font-family: inherit; }
   border-radius: 999px;
   white-space: nowrap;
 }
+.app-header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.app-header-user { display: flex; align-items: center; gap: 6px; font-size: 12.5px; }
+.user-name-label { font-weight: 600; white-space: nowrap; }
+.user-icon-btn {
+  border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.14); color: #fff;
+  border-radius: var(--radius-sm); padding: 5px 10px; font-size: 12px; cursor: pointer; white-space: nowrap;
+}
+.user-icon-btn:hover { background: rgba(255,255,255,0.26); }
+
+/* ---------------- Role gating: reviewer accounts cannot see edit/admin controls ---------------- */
+body.role-reviewer .admin-only { display: none !important; }
+
+/* ---------------- Login screen ---------------- */
+.login-screen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--pea-purple-darker), var(--pea-purple) 60%, var(--pea-purple-dark));
+  padding: 24px;
+}
+.login-card {
+  background: var(--white); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+  padding: 32px 30px; width: 100%; max-width: 380px;
+}
+.login-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+.login-brand .app-brand-mark { background: var(--pea-purple-light); color: var(--pea-purple); }
+.login-brand h1 { font-size: 16px; margin: 0; font-weight: 700; color: var(--ink); line-height: 1.3; }
+.login-brand .sub { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+#login-form { display: flex; flex-direction: column; gap: 12px; }
+.login-submit-btn { width: 100%; margin-top: 4px; }
+.login-hint { font-size: 11.5px; color: var(--text-muted); line-height: 1.6; margin-top: 16px; text-align: center; }
+
+/* ---------------- Equipment manual ---------------- */
+.equip-group { margin-bottom: 14px; }
+.equip-group-title { font-size: 12.5px; font-weight: 700; color: var(--pea-purple-dark); text-transform: uppercase; letter-spacing: .03em; margin-bottom: 8px; }
+.equip-card-list { display: flex; flex-direction: column; gap: 8px; }
+.equip-card {
+  border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--white); overflow: hidden;
+}
+.equip-card-head {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 11px 14px; background: none; border: none; cursor: pointer; text-align: left; font-family: inherit;
+}
+.equip-card-head:hover { background: var(--pea-purple-light); }
+.equip-card-name { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.equip-card-name .equip-id { font-size: 11px; font-weight: 500; color: var(--pea-purple); margin-right: 6px; }
+.equip-card-name-en { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; font-weight: 400; }
+.equip-card-chevron { font-size: 12px; color: var(--text-faint); transition: transform .15s; flex-shrink: 0; }
+.equip-card.open .equip-card-chevron { transform: rotate(90deg); }
+.equip-card-body { display: none; padding: 0 14px 14px; }
+.equip-card.open .equip-card-body { display: block; }
+.equip-detail-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.equip-detail-row { border-radius: var(--radius-sm); padding: 8px 10px; background: var(--bg); }
+.equip-detail-row .edr-label { font-size: 10.5px; font-weight: 700; color: var(--pea-purple-dark); text-transform: uppercase; letter-spacing: .03em; margin-bottom: 2px; }
+.equip-detail-row .edr-value { font-size: 12.5px; color: var(--text); line-height: 1.6; }
+.equip-detail-row.warn { background: var(--urgent-bg); }
+.equip-detail-row.warn .edr-label { color: var(--urgent); }
+
+/* ---------------- Access log (admin only) ---------------- */
+.access-log-summary { font-size: 12.5px; color: var(--text-muted); margin-bottom: 10px; }
+.access-log-table-wrap { overflow-x: auto; }
+.access-log-table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.access-log-table th {
+  text-align: left; font-size: 11px; color: var(--text-muted); font-weight: 600; padding: 8px 10px;
+  border-bottom: 1px solid var(--border); white-space: nowrap; position: sticky; top: 0; background: var(--white);
+}
+.access-log-table td { padding: 8px 10px; border-bottom: 1px solid var(--border-soft); white-space: nowrap; }
+.access-log-table tr:last-child td { border-bottom: none; }
+.access-log-table tr:hover td { background: var(--pea-purple-light); }
+.access-log-role-text { font-weight: 700; }
+.access-log-role-text.admin { color: var(--pea-purple); }
+.access-log-role-text.reviewer { color: var(--orange); }
+.access-log-event-badge { font-size: 10.5px; font-weight: 700; padding: 2px 9px; border-radius: 999px; }
+.access-log-event-badge.login { background: var(--green-bg); color: var(--green); }
+.access-log-event-badge.logout { background: var(--border-soft); color: var(--text-muted); }
 
 /* ---------------- Shell / layout ---------------- */
 .app-shell {
@@ -402,6 +475,7 @@ button { font-family: inherit; }
   max-height: 88vh; overflow-y: auto; box-shadow: var(--shadow-lg);
   transform: translateY(8px); transition: transform .15s;
 }
+.modal.modal-wide { max-width: 920px; }
 .modal-backdrop.open .modal { transform: translateY(0); }
 .modal-head {
   background: linear-gradient(120deg, var(--pea-purple-dark), var(--pea-purple));
