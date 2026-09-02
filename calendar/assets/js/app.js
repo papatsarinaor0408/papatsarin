@@ -671,6 +671,37 @@
   function datalistHtml(id, values) {
     return `<datalist id="${id}">${values.map(v => `<option value="${esc(v)}"></option>`).join("")}</datalist>`;
   }
+
+  // ชื่อวงจรส่วนใหญ่เป็นรูปแบบ "รหัส-เลข" (เช่น BWA-01..BWA-10) — จัดกลุ่มตามรหัสแล้วโชว์แค่ตัวเลข
+  // เพื่อลดความลายตา/เสี่ยงติ๊กผิดวงจรตอนหน้างาน แทนที่จะแสดงชื่อเต็มซ้ำๆ กันเป็นสิบรายการ
+  function groupCircuitOptions(circuitOpts) {
+    const groups = {};
+    const others = [];
+    circuitOpts.forEach(c => {
+      const m = /^([A-Za-z]+)-(\d+)$/.exec(c);
+      if (m) { (groups[m[1]] = groups[m[1]] || []).push({ value: c, num: m[2] }); }
+      else others.push(c);
+    });
+    Object.values(groups).forEach(arr => arr.sort((a, b) => Number(a.num) - Number(b.num)));
+    return { groups, others };
+  }
+  function circuitPickerHtml(circuitOpts, selected) {
+    const { groups, others } = groupCircuitOptions(circuitOpts);
+    const codes = Object.keys(groups).sort((a, b) => a.localeCompare(b));
+    let html = codes.length ? `<div class="circuit-groups">` + codes.map(code => {
+      const items = groups[code];
+      return `<div class="circuit-group">
+        <div class="circuit-group-title"><span>${esc(code)}</span><span class="circuit-group-count">${items.length} วงจร</span></div>
+        <div class="circuit-num-grid">
+          ${items.map(it => `<label class="circuit-num-chip ${selected.includes(it.value) ? "is-checked" : ""}" title="${esc(it.value)}"><input type="checkbox" name="circuit" value="${esc(it.value)}" ${selected.includes(it.value) ? "checked" : ""}/>${esc(it.num)}</label>`).join("")}
+        </div>
+      </div>`;
+    }).join("") + `</div>` : "";
+    if (others.length) {
+      html += `<div class="check-grid" style="margin-top:${codes.length ? "8px" : "0"}">${others.map(c => `<label class="check-option"><input type="checkbox" name="circuit" value="${esc(c)}" ${selected.includes(c) ? "checked" : ""}/> ${esc(c)}</label>`).join("")}</div>`;
+    }
+    return html;
+  }
   function showFormError(msg) {
     const el = $("#form-error");
     if (el) el.innerHTML = `<div class="form-error">${esc(msg)}</div>`;
@@ -758,8 +789,8 @@
             </div>
             <div class="form-field span2">
               <label>ชื่อวงจรที่ปฏิบัติงาน (ติ๊กได้มากกว่า 1 วงจร) <span class="circuit-sum-badge" id="circuit-sum-badge">รวม ${t.circuits.length} วงจร</span></label>
-              <div class="check-grid" id="circuit-check-grid">
-                ${circuitOpts.length ? circuitOpts.map(c => `<label class="check-option"><input type="checkbox" name="circuit" value="${esc(c)}" ${t.circuits.includes(c) ? "checked" : ""}/> ${esc(c)}</label>`).join("") : `<span class="form-hint">ยังไม่มีรายชื่อวงจรในระบบ — เพิ่มได้ที่ "⚙ จัดการตัวเลือก"</span>`}
+              <div id="circuit-check-grid">
+                ${circuitOpts.length ? circuitPickerHtml(circuitOpts, t.circuits) : `<span class="form-hint">ยังไม่มีรายชื่อวงจรในระบบ — เพิ่มได้ที่ "⚙ จัดการตัวเลือก"</span>`}
               </div>
               <input type="text" name="circuitOther" style="margin-top:6px" placeholder="ชื่อวงจรอื่นๆ นอกเหนือรายการ (คั่นด้วยจุลภาค)" value="${esc(extraCircuits.join(", "))}" />
             </div>
@@ -848,9 +879,11 @@
     const circuitGrid = $("#circuit-check-grid");
     const circuitSumBadge = $("#circuit-sum-badge");
     if (circuitGrid && circuitSumBadge) {
-      circuitGrid.addEventListener("change", () => {
+      circuitGrid.addEventListener("change", (ev) => {
         const n = circuitGrid.querySelectorAll('input[name=circuit]:checked').length;
         circuitSumBadge.textContent = `รวม ${n} วงจร`;
+        const chip = ev.target.closest(".circuit-num-chip");
+        if (chip) chip.classList.toggle("is-checked", ev.target.checked);
       });
     }
 
