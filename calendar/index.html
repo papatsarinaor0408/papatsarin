@@ -44,8 +44,13 @@
       <button class="nav-btn" id="nav-next">›</button>
       <span class="period-label" id="period-label"></span>
     </div>
-    <div class="view-switch" id="view-switch"></div>
+    <div class="toolbar-right">
+      <div class="view-switch" id="view-switch"></div>
+      <button class="add-task-btn" id="add-task-btn">+ เพิ่มงาน</button>
+    </div>
   </div>
+
+  <div class="load-note hidden" id="load-note"></div>
 
   <div class="main-cols" id="main-cols">
     <div class="calendar-col" id="calendar-view"></div>
@@ -60,6 +65,8 @@
   <div class="modal" id="modal-body"></div>
 </div>
 
+<script src="assets/js/vendor/supabase-js.min.js"></script>
+<script src="assets/js/supabaseClient.js"></script>
 <script src="assets/js/data.js"></script>
 <script src="assets/js/app.js"></script>
 </body>

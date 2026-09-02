@@ -49,9 +49,55 @@
     }
   };
 
-  /* ---------------- Data lookups by task ---------------- */
-  const taskById = {};
-  TASKS.forEach(t => { taskById[t.id] = t; });
+  /* ---------------- Data (loaded from Supabase) ---------------- */
+  let TASKS = [];
+  let taskById = {};
+  function rebuildTaskIndex() {
+    taskById = {};
+    TASKS.forEach(t => { taskById[t.id] = t; });
+  }
+
+  function rowToTask(r) {
+    return {
+      id: r.id,
+      title: r.title,
+      date: r.task_date,
+      departTime: (r.depart_time || "00:00").slice(0, 5),
+      appointTime: (r.appoint_time || "00:00").slice(0, 5),
+      jobType: r.job_type,
+      workArea: r.work_area,
+      targetPEA: r.target_pea,
+      areaStatus: r.area_status,
+      priority: r.priority,
+      travelOrder: r.travel_order,
+      travelOrderNo: r.travel_order_no || "-",
+      travelOrderStatus: r.travel_order_status,
+      team: r.team || "",
+      teamMembers: r.team_members || [],
+      vehicle: r.vehicle || "",
+      equipment: r.equipment || [],
+      equipmentOwner: r.equipment_owner || "",
+      coordinator: r.coordinator || "",
+      coordinatorPhone: r.coordinator_phone || "",
+      status: r.status,
+      note: r.note || ""
+    };
+  }
+
+  async function loadTasks() {
+    loadNoteEl.classList.remove("hidden", "error");
+    loadNoteEl.textContent = "กำลังโหลดข้อมูลงานจากฐานข้อมูล...";
+    const { data, error } = await CAL_SB.from("calendar_tasks").select("*")
+      .order("task_date", { ascending: true }).order("depart_time", { ascending: true });
+    if (error) {
+      loadNoteEl.classList.add("error");
+      loadNoteEl.textContent = "โหลดข้อมูลไม่สำเร็จ: " + error.message;
+      return;
+    }
+    TASKS = (data || []).map(rowToTask);
+    rebuildTaskIndex();
+    loadNoteEl.classList.add("hidden");
+  }
 
   /* ---------------- Filtering ---------------- */
   function applyFieldFilters(tasks) {
@@ -112,6 +158,8 @@
   const modalBackdropEl = $("#modal-backdrop");
   const modalBodyEl = $("#modal-body");
   const todayBadgeEl = $("#today-badge");
+  const loadNoteEl = $("#load-note");
+  const addTaskBtnEl = $("#add-task-btn");
 
   /* ---------------- Header today badge ---------------- */
   todayBadgeEl.textContent = `วันนี้ ${WD_FULL[TODAY.getDay()]} ${TODAY.getDate()} ${THAI_MONTHS[TODAY.getMonth()]} พ.ศ. ${beYear(TODAY)}`;
@@ -482,7 +530,7 @@
           <div class="detail-grid">
             <div class="detail-item" style="grid-column:1/-1">
               <div class="di-label">ทีมปฏิบัติงาน (${esc(t.team)})</div>
-              <div class="detail-list">${(TEAMS[t.team] || []).map(m => `<div>${esc(m)}</div>`).join("")}</div>
+              <div class="detail-list">${(t.teamMembers || []).map(m => `<div>${esc(m)}</div>`).join("") || "-"}</div>
             </div>
             ${detailItem("รถที่ใช้", t.vehicle)}
             ${detailItem("ผู้รับผิดชอบเตรียมอุปกรณ์", t.equipmentOwner)}
@@ -500,9 +548,15 @@
           </div>
         </div>
         ${t.note ? `<div class="detail-section"><div class="detail-section-title">หมายเหตุ</div><div class="note-box">${esc(t.note)}</div></div>` : ""}
+      </div>
+      <div class="detail-actions">
+        <button class="btn-secondary" id="edit-task-btn">✎ แก้ไขงาน</button>
+        <button class="btn-danger" id="delete-task-btn">🗑 ลบงาน</button>
       </div>`;
     modalBackdropEl.classList.add("open");
     $("#modal-close-btn").addEventListener("click", closeModal);
+    $("#edit-task-btn").addEventListener("click", () => openFormModal(t));
+    $("#delete-task-btn").addEventListener("click", () => deleteTask(t));
   }
   function detailItem(label, value, mono) {
     return `<div class="detail-item"><div class="di-label">${esc(label)}</div><div class="di-value ${mono ? "mono" : ""}">${esc(value)}</div></div>`;
@@ -510,6 +564,258 @@
   function closeModal() { modalBackdropEl.classList.remove("open"); }
   modalBackdropEl.addEventListener("click", (ev) => { if (ev.target === modalBackdropEl) closeModal(); });
   document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") closeModal(); });
+
+  /* ---------------- Task form (add / edit) ---------------- */
+  function combinedOptions(constList, getter) {
+    const s = new Set(constList);
+    TASKS.forEach(t => { const v = getter(t); if (v) s.add(v); });
+    return Array.from(s);
+  }
+  function datalistHtml(id, values) {
+    return `<datalist id="${id}">${values.map(v => `<option value="${esc(v)}"></option>`).join("")}</datalist>`;
+  }
+  function showFormError(msg) {
+    const el = $("#form-error");
+    if (el) el.innerHTML = `<div class="form-error">${esc(msg)}</div>`;
+  }
+
+  function buildFormHtml(task) {
+    const isEdit = !!task;
+    const t = task || {
+      title: "", date: toISO(state.selectedDate), departTime: "08:00", appointTime: "08:30",
+      jobType: JOB_TYPES[0], workArea: "", targetPEA: "", areaStatus: "in", priority: "ตามแผน",
+      travelOrderNo: "", travelOrderStatus: "ไม่ต้องขอคำสั่ง", team: "", teamMembers: [], vehicle: "",
+      equipment: [], equipmentOwner: "", coordinator: "", coordinatorPhone: "", status: "วางแผน", note: ""
+    };
+    const workAreaOpts = combinedOptions(WORK_AREAS, x => x.workArea);
+    const targetPEAOpts = combinedOptions(TARGET_PEA_OFFICES, x => x.targetPEA);
+    const vehicleOpts = combinedOptions(VEHICLES, x => x.vehicle);
+    const teamOpts = combinedOptions(Object.keys(TEAMS), x => x.team);
+    const extraEquipment = t.equipment.filter(e => !EQUIPMENT_POOL.includes(e));
+
+    return `
+      <div class="modal-head">
+        <div>
+          <div class="modal-id">${isEdit ? "แก้ไขงาน " + esc(t.id) : "เพิ่มงานใหม่"}</div>
+          <h2>${isEdit ? "แก้ไขข้อมูลงาน" : "เพิ่มงานปฏิบัติงานใหม่"}</h2>
+        </div>
+        <button class="modal-close" id="modal-close-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="task-form">
+          <div class="form-grid">
+            <div class="form-field span2">
+              <label>ชื่องาน <span class="req">*</span></label>
+              <input type="text" name="title" required value="${esc(t.title)}" placeholder="เช่น ปฏิบัติงาน Hotline เปลี่ยนลูกถ้วยแขวนชำรุด" />
+            </div>
+            <div class="form-field">
+              <label>วันที่ปฏิบัติงาน <span class="req">*</span></label>
+              <input type="date" name="date" required value="${esc(t.date)}" />
+            </div>
+            <div class="form-field">
+              <label>ประเภทงาน <span class="req">*</span></label>
+              <select name="jobType" required>${JOB_TYPES.map(v => `<option value="${esc(v)}" ${t.jobType === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>
+            </div>
+            <div class="form-field">
+              <label>เวลาออกเดินทาง</label>
+              <input type="time" name="departTime" value="${esc(t.departTime)}" />
+            </div>
+            <div class="form-field">
+              <label>เวลานัดหมายหน้างาน</label>
+              <input type="time" name="appointTime" value="${esc(t.appointTime)}" />
+            </div>
+            <div class="form-field">
+              <label>พื้นที่ปฏิบัติงาน <span class="req">*</span></label>
+              <input type="text" name="workArea" list="dl-workarea" required value="${esc(t.workArea)}" placeholder="เช่น บางปะกง" />
+            </div>
+            <div class="form-field">
+              <label>การไฟฟ้าปลายทาง <span class="req">*</span></label>
+              <input type="text" name="targetPEA" list="dl-targetpea" required value="${esc(t.targetPEA)}" placeholder="เช่น กฟฟ.บางปะกง" />
+            </div>
+            <div class="form-field span2">
+              <label>สถานะพื้นที่ปฏิบัติงาน</label>
+              <div class="radio-group" id="area-status-group">
+                <label class="radio-option ${t.areaStatus === "in" ? "checked-in" : ""}"><input type="radio" name="areaStatus" value="in" ${t.areaStatus === "in" ? "checked" : ""}/> 🟢 ในพื้นที่ต้นสังกัด</label>
+                <label class="radio-option ${t.areaStatus === "out" ? "checked-out" : ""}"><input type="radio" name="areaStatus" value="out" ${t.areaStatus === "out" ? "checked" : ""}/> 🟠 นอกพื้นที่ (มีคำสั่งเดินทาง)</label>
+              </div>
+            </div>
+            <div class="form-field" id="travel-no-field">
+              <label>เลขคำสั่งเดินทาง</label>
+              <input type="text" name="travelOrderNo" value="${esc(t.travelOrderNo === "-" ? "" : t.travelOrderNo)}" placeholder="เช่น คส.นอกพื้นที่ 001/2569" />
+            </div>
+            <div class="form-field" id="travel-status-field">
+              <label>สถานะคำสั่งเดินทาง</label>
+              <select name="travelOrderStatus">${TRAVEL_ORDER_STATUS_OPTIONS.map(v => `<option value="${esc(v)}" ${t.travelOrderStatus === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>
+            </div>
+            <div class="form-field">
+              <label>ทีมปฏิบัติงาน</label>
+              <input type="text" name="team" id="team-input" list="dl-team" value="${esc(t.team)}" placeholder="เช่น ทีม A" />
+            </div>
+            <div class="form-field">
+              <label>รถที่ใช้</label>
+              <input type="text" name="vehicle" list="dl-vehicle" value="${esc(t.vehicle)}" placeholder="เช่น รถกระเช้า ทะเบียน..." />
+            </div>
+            <div class="form-field span2">
+              <label>รายชื่อทีมปฏิบัติงาน (1 ชื่อต่อบรรทัด)</label>
+              <textarea name="teamMembers" id="team-members-input" placeholder="นายสมชาย ใจดี (หัวหน้าทีม)&#10;นายวิชัย รักงาน">${esc((t.teamMembers || []).join("\n"))}</textarea>
+              <div class="form-hint">พิมพ์ชื่อทีม (เช่น ทีม A) แล้วออกจากช่อง ระบบจะช่วยเติมรายชื่อทีมเริ่มต้นให้อัตโนมัติถ้าช่องนี้ว่าง</div>
+            </div>
+            <div class="form-field span2">
+              <label>อุปกรณ์ที่ต้องใช้ (ติ๊กได้มากกว่า 1 รายการ)</label>
+              <div class="check-grid">
+                ${EQUIPMENT_POOL.map(item => `<label class="check-option"><input type="checkbox" name="equipment" value="${esc(item)}" ${t.equipment.includes(item) ? "checked" : ""}/> ${esc(item)}</label>`).join("")}
+              </div>
+              <input type="text" name="equipmentOther" style="margin-top:6px" placeholder="อุปกรณ์อื่นๆ นอกเหนือรายการ (คั่นด้วยจุลภาค)" value="${esc(extraEquipment.join(", "))}" />
+            </div>
+            <div class="form-field">
+              <label>ผู้รับผิดชอบเตรียมอุปกรณ์</label>
+              <input type="text" name="equipmentOwner" value="${esc(t.equipmentOwner)}" />
+            </div>
+            <div class="form-field">
+              <label>สถานะงาน</label>
+              <select name="status">${STATUS_OPTIONS.map(v => `<option value="${esc(v)}" ${t.status === v ? "selected" : ""}>${esc(v)}</option>`).join("")}</select>
+            </div>
+            <div class="form-field">
+              <label>ผู้ประสานงาน/เจ้าของงาน</label>
+              <input type="text" name="coordinator" value="${esc(t.coordinator)}" />
+            </div>
+            <div class="form-field">
+              <label>เบอร์โทรผู้ประสานงาน</label>
+              <input type="tel" name="coordinatorPhone" value="${esc(t.coordinatorPhone)}" placeholder="08x-xxx-xxxx" />
+            </div>
+            <div class="form-field span2">
+              <label class="urgent-toggle"><input type="checkbox" name="urgent" ${t.priority === "ด่วน" ? "checked" : ""}/> ⚡ ติ๊กถ้าเป็นงานด่วน (ไม่ติ๊ก = งานตามแผน)</label>
+            </div>
+            <div class="form-field span2">
+              <label>หมายเหตุ</label>
+              <textarea name="note">${esc(t.note)}</textarea>
+            </div>
+          </div>
+          <div id="form-error"></div>
+          <div class="form-actions">
+            <span class="form-hint">${isEdit ? "แก้ไขแล้วกด “บันทึกการแก้ไข”" : "กรอกข้อมูลแล้วกด “บันทึกงาน” เพื่อเพิ่มลงปฏิทินทันที"}</span>
+            <div class="form-actions-right">
+              <button type="button" class="btn-secondary" id="form-cancel-btn">ยกเลิก</button>
+              <button type="submit" class="btn-primary">${isEdit ? "บันทึกการแก้ไข" : "บันทึกงาน"}</button>
+            </div>
+          </div>
+        </form>
+      </div>
+      ${datalistHtml("dl-workarea", workAreaOpts)}
+      ${datalistHtml("dl-targetpea", targetPEAOpts)}
+      ${datalistHtml("dl-vehicle", vehicleOpts)}
+      ${datalistHtml("dl-team", teamOpts)}
+    `;
+  }
+
+  function openFormModal(task) {
+    modalBodyEl.innerHTML = buildFormHtml(task);
+    modalBackdropEl.classList.add("open");
+    $("#modal-close-btn").addEventListener("click", closeModal);
+    $("#form-cancel-btn").addEventListener("click", closeModal);
+
+    const travelNoField = $("#travel-no-field");
+    const travelStatusField = $("#travel-status-field");
+    const travelStatusSelect = travelStatusField.querySelector("select[name=travelOrderStatus]");
+    function syncAreaStatus(userTriggered) {
+      const val = document.querySelector("input[name=areaStatus]:checked").value;
+      document.querySelectorAll("#area-status-group .radio-option").forEach(o => o.classList.remove("checked-in", "checked-out"));
+      document.querySelector(`input[name=areaStatus][value=${val}]`).closest(".radio-option").classList.add(val === "in" ? "checked-in" : "checked-out");
+      travelNoField.style.display = val === "out" ? "" : "none";
+      travelStatusField.style.display = val === "out" ? "" : "none";
+      // Keep the travel-order-status select consistent with the radio choice so a
+      // "out of area" task never gets saved with the "no order needed" status.
+      if (userTriggered) {
+        if (val === "out" && travelStatusSelect.value === "ไม่ต้องขอคำสั่ง") travelStatusSelect.value = "รออนุมัติ";
+        if (val === "in") travelStatusSelect.value = "ไม่ต้องขอคำสั่ง";
+      }
+    }
+    document.querySelectorAll("input[name=areaStatus]").forEach(r => r.addEventListener("change", () => syncAreaStatus(true)));
+    syncAreaStatus(false);
+
+    $("#team-input").addEventListener("change", (ev) => {
+      const membersEl = $("#team-members-input");
+      if (!membersEl.value.trim() && TEAMS[ev.target.value]) {
+        membersEl.value = TEAMS[ev.target.value].join("\n");
+      }
+    });
+
+    $("#task-form").addEventListener("submit", (ev) => {
+      ev.preventDefault();
+      submitTaskForm(ev.target, task);
+    });
+  }
+
+  async function submitTaskForm(form, existingTask) {
+    const fd = new FormData(form);
+    const title = (fd.get("title") || "").trim();
+    const date = fd.get("date");
+    const workArea = (fd.get("workArea") || "").trim();
+    const targetPEA = (fd.get("targetPEA") || "").trim();
+    if (!title || !date || !workArea || !targetPEA) {
+      showFormError("กรุณากรอกชื่องาน วันที่ พื้นที่ปฏิบัติงาน และการไฟฟ้าปลายทางให้ครบ");
+      return;
+    }
+    const areaStatus = fd.get("areaStatus") || "in";
+    const equipment = fd.getAll("equipment");
+    const otherEquipment = (fd.get("equipmentOther") || "").split(",").map(s => s.trim()).filter(Boolean);
+    const teamMembers = (fd.get("teamMembers") || "").split("\n").map(s => s.trim()).filter(Boolean);
+
+    const row = {
+      title,
+      task_date: date,
+      depart_time: fd.get("departTime") || null,
+      appoint_time: fd.get("appointTime") || null,
+      job_type: fd.get("jobType"),
+      work_area: workArea,
+      target_pea: targetPEA,
+      area_status: areaStatus,
+      priority: fd.get("urgent") ? "ด่วน" : "ตามแผน",
+      travel_order: areaStatus === "out",
+      travel_order_no: areaStatus === "out" ? ((fd.get("travelOrderNo") || "").trim() || null) : null,
+      travel_order_status: areaStatus === "out" ? fd.get("travelOrderStatus") : "ไม่ต้องขอคำสั่ง",
+      team: (fd.get("team") || "").trim() || null,
+      team_members: teamMembers,
+      vehicle: (fd.get("vehicle") || "").trim() || null,
+      equipment: [...equipment, ...otherEquipment],
+      equipment_owner: (fd.get("equipmentOwner") || "").trim() || null,
+      coordinator: (fd.get("coordinator") || "").trim() || null,
+      coordinator_phone: (fd.get("coordinatorPhone") || "").trim() || null,
+      status: fd.get("status"),
+      note: (fd.get("note") || "").trim() || null
+    };
+
+    const submitBtn = form.querySelector("button[type=submit]");
+    submitBtn.disabled = true;
+    submitBtn.textContent = "กำลังบันทึก...";
+
+    const { error } = existingTask
+      ? await CAL_SB.from("calendar_tasks").update(row).eq("id", existingTask.id)
+      : await CAL_SB.from("calendar_tasks").insert([row]);
+
+    if (error) {
+      showFormError("บันทึกไม่สำเร็จ: " + error.message);
+      submitBtn.disabled = false;
+      submitBtn.textContent = existingTask ? "บันทึกการแก้ไข" : "บันทึกงาน";
+      return;
+    }
+
+    await loadTasks();
+    state.selectedDate = fromISO(date);
+    closeModal();
+    renderAll();
+  }
+
+  async function deleteTask(t) {
+    if (!confirm(`ยืนยันลบงาน "${t.title}" วันที่ ${t.date} ใช่หรือไม่?`)) return;
+    const { error } = await CAL_SB.from("calendar_tasks").delete().eq("id", t.id);
+    if (error) { alert("ลบไม่สำเร็จ: " + error.message); return; }
+    await loadTasks();
+    closeModal();
+    renderAll();
+  }
+
+  addTaskBtnEl.addEventListener("click", () => openFormModal(null));
 
   /* ---------------- Main render ---------------- */
   function renderAll() {
@@ -525,5 +831,9 @@
     if (state.view !== "day") renderSidePanel();
   }
 
-  renderAll();
+  async function init() {
+    await loadTasks();
+    renderAll();
+  }
+  init();
 })();
