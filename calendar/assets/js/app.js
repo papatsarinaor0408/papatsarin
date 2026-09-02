@@ -1142,6 +1142,7 @@
   function buildPersonModalHtml() {
     if (!personState.employeeName && EMPLOYEES.length) personState.employeeName = EMPLOYEES[0].name;
     const employee = personState.employeeName;
+    const empObj = EMPLOYEES.find(e => e.name === employee) || null;
     const cursor = personState.cursor;
     const year = cursor.getFullYear(), month0 = cursor.getMonth();
     const monthData = employee ? getPersonMonthData(employee, year, month0) : [];
@@ -1178,6 +1179,18 @@
             <button type="button" class="nav-btn" id="person-next">›</button>
           </div>
         </div>
+        ${empObj && (empObj.role_title || empObj.position || empObj.employee_no || empObj.duties) ? `
+        <div class="detail-section person-profile-card">
+          <div class="detail-section-title">ข้อมูลประจำตัว</div>
+          <div class="person-profile-head">
+            <div>
+              <b>${esc(empObj.name)}</b>${empObj.position ? ` <span class="form-hint">(${esc(empObj.position)})</span>` : ""}
+              ${empObj.employee_no ? `<div class="form-hint">รหัสพนักงาน ${esc(empObj.employee_no)}</div>` : ""}
+            </div>
+            ${empObj.role_title ? `<span class="role-title-badge">${esc(empObj.role_title)}</span>` : ""}
+          </div>
+          ${empObj.duties ? `<div class="person-duties-title">หน้าที่รับผิดชอบ</div><ul class="person-duties-list">${empObj.duties.split("\n").map(d => d.trim()).filter(Boolean).map(d => `<li>${esc(d)}</li>`).join("")}</ul>` : ""}
+        </div>` : ""}
         <div class="person-stat-row">
           <div class="person-stat"><div class="person-stat-label">วันที่มีงาน (เดือนนี้)</div><div class="person-stat-value">${workDays}</div></div>
           <div class="person-stat ot"><div class="person-stat-label">วันโอที (เสาร์-อาทิตย์-นักขัตฤกษ์)</div><div class="person-stat-value">${otDays}</div></div>
