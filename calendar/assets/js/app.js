@@ -708,10 +708,6 @@
               <div class="detail-list">${(t.vehicles || []).length ? t.vehicles.map(v => `<div>${esc(v.vehicle)}${v.driver ? ` — คนขับ: ${esc(v.driver)}` : ""}</div>`).join("") : "-"}</div>
             </div>
             ${detailItem("ผู้รับผิดชอบเตรียมอุปกรณ์", t.equipmentOwner)}
-            <div class="detail-item" style="grid-column:1/-1">
-              <div class="di-label">อุปกรณ์ที่ต้องใช้</div>
-              <div class="detail-list">${t.equipment.map(e => `<div>${esc(e)}</div>`).join("")}</div>
-            </div>
           </div>
         </div>
         <div class="detail-section">
