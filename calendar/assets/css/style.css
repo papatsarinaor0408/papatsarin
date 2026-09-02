@@ -156,6 +156,14 @@ body.role-reviewer .admin-only { display: none !important; }
 .equip-detail-row .edr-value { font-size: 12.5px; color: var(--text); line-height: 1.6; }
 .equip-detail-row.warn { background: var(--urgent-bg); }
 .equip-detail-row.warn .edr-label { color: var(--urgent); }
+@media (min-width: 760px) {
+  .equip-detail-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* ---------------- Equipment manual: dedicated page (not a modal) ---------------- */
+.equipment-page { max-width: 1000px; margin: 0 auto; padding: 24px 24px 60px; }
+.equipment-page-head { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+.equipment-page-title { font-size: 22px; font-weight: 700; color: var(--ink); margin: 2px 0 0; }
 
 /* ---------------- Access log (admin only) ---------------- */
 .access-log-summary { font-size: 12.5px; color: var(--text-muted); margin-bottom: 10px; }

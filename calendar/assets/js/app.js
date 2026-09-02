@@ -274,6 +274,11 @@
   const personBtnEl = $("#person-btn");
   const equipmentBtnEl = $("#equipment-btn");
   const accessLogBtnEl = $("#access-log-btn");
+  const appShellEl = $("#app-shell");
+  const equipmentPageEl = $("#equipment-page");
+  const equipmentPageBodyEl = $("#equipment-page-body");
+  const equipmentBackBtnEl = $("#equipment-back-btn");
+  const equipmentPageCountEl = $("#equipment-page-count");
   const loginScreenEl = $("#login-screen");
   const appRootEl = $("#app-root");
   const loginFormEl = $("#login-form");
@@ -1472,24 +1477,22 @@
         </div>
       </div>`).join("");
   }
-  function openEquipmentModal() {
-    modalLocked = false;
-    modalBodyEl.innerHTML = `
-      <div class="modal-head">
-        <div>
-          <div class="modal-id">คู่มืออุปกรณ์</div>
-          <h2>คู่มืออุปกรณ์ฮอทไลน์ (${EQUIPMENT_MANUAL.length} รายการ)</h2>
-        </div>
-        <button class="modal-close" id="modal-close-btn">✕</button>
-      </div>
-      <div class="modal-body">${equipmentManualGroupsHtml()}</div>`;
-    modalBackdropEl.classList.add("open");
-    $("#modal-close-btn").addEventListener("click", closeModal);
-    modalBodyEl.querySelectorAll(".equip-card-head").forEach(btn => {
+  function openEquipmentPage() {
+    equipmentPageCountEl.textContent = `คู่มืออุปกรณ์ (${EQUIPMENT_MANUAL.length} รายการ)`;
+    equipmentPageBodyEl.innerHTML = equipmentManualGroupsHtml();
+    equipmentPageBodyEl.querySelectorAll(".equip-card-head").forEach(btn => {
       btn.addEventListener("click", () => btn.closest(".equip-card").classList.toggle("open"));
     });
+    appShellEl.classList.add("hidden");
+    equipmentPageEl.classList.remove("hidden");
+    window.scrollTo(0, 0);
   }
-  equipmentBtnEl.addEventListener("click", openEquipmentModal);
+  function closeEquipmentPage() {
+    equipmentPageEl.classList.add("hidden");
+    appShellEl.classList.remove("hidden");
+  }
+  equipmentBtnEl.addEventListener("click", openEquipmentPage);
+  equipmentBackBtnEl.addEventListener("click", closeEquipmentPage);
 
   /* ---------------- Access log (ประวัติการใช้งาน) — เฉพาะผู้ดูแลระบบ ---------------- */
   function fmtLogTime(iso) {
