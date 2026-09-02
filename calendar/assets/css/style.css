@@ -132,33 +132,22 @@ body.role-reviewer .admin-only { display: none !important; }
 .login-hint { font-size: 11.5px; color: var(--text-muted); line-height: 1.6; margin-top: 16px; text-align: center; }
 
 /* ---------------- Equipment manual ---------------- */
-.equip-group { margin-bottom: 14px; }
+.equip-group { margin-bottom: 22px; }
 .equip-group-title { font-size: 12.5px; font-weight: 700; color: var(--pea-purple-dark); text-transform: uppercase; letter-spacing: .03em; margin-bottom: 8px; }
-.equip-card-list { display: flex; flex-direction: column; gap: 8px; }
-.equip-card {
-  border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--white); overflow: hidden;
+.equip-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); }
+.equip-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 880px; }
+.equip-table th {
+  text-align: left; font-size: 10.5px; font-weight: 700; color: var(--pea-purple-dark); text-transform: uppercase;
+  letter-spacing: .03em; background: var(--pea-purple-light); padding: 9px 10px; white-space: nowrap;
 }
-.equip-card-head {
-  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 11px 14px; background: none; border: none; cursor: pointer; text-align: left; font-family: inherit;
-}
-.equip-card-head:hover { background: var(--pea-purple-light); }
-.equip-card-name { font-size: 13.5px; font-weight: 600; color: var(--ink); }
-.equip-card-name .equip-id { font-size: 11px; font-weight: 500; color: var(--pea-purple); margin-right: 6px; }
-.equip-card-name-en { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; font-weight: 400; }
-.equip-card-chevron { font-size: 12px; color: var(--text-faint); transition: transform .15s; flex-shrink: 0; }
-.equip-card.open .equip-card-chevron { transform: rotate(90deg); }
-.equip-card-body { display: none; padding: 0 14px 14px; }
-.equip-card.open .equip-card-body { display: block; }
-.equip-detail-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
-.equip-detail-row { border-radius: var(--radius-sm); padding: 8px 10px; background: var(--bg); }
-.equip-detail-row .edr-label { font-size: 10.5px; font-weight: 700; color: var(--pea-purple-dark); text-transform: uppercase; letter-spacing: .03em; margin-bottom: 2px; }
-.equip-detail-row .edr-value { font-size: 12.5px; color: var(--text); line-height: 1.6; }
-.equip-detail-row.warn { background: var(--urgent-bg); }
-.equip-detail-row.warn .edr-label { color: var(--urgent); }
-@media (min-width: 760px) {
-  .equip-detail-grid { grid-template-columns: 1fr 1fr; }
-}
+.equip-table td { padding: 10px; border-bottom: 1px solid var(--border-soft); vertical-align: top; line-height: 1.55; color: var(--text); }
+.equip-table tr:last-child td { border-bottom: none; }
+.equip-table tr:hover td { background: var(--pea-purple-light); }
+.equip-table td.eq-name-cell { min-width: 180px; }
+.equip-table .equip-id { font-size: 11px; font-weight: 600; color: var(--pea-purple); display: block; }
+.equip-table .equip-name-th { font-size: 13px; font-weight: 600; color: var(--ink); }
+.equip-table .equip-name-en { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+.equip-table td.eq-warn { color: var(--urgent); background: var(--urgent-bg); }
 
 /* ---------------- Dedicated full pages (equipment manual / person / access log — not modals) ---------------- */
 .app-page { max-width: 1000px; margin: 0 auto; padding: 24px 24px 60px; }

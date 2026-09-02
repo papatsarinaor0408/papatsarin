@@ -1276,9 +1276,9 @@
   personBackBtnEl.addEventListener("click", closePersonPage);
 
   /* ---------------- Equipment manual (คู่มืออุปกรณ์) — ข้อมูลอ้างอิงคงที่ ดูได้ทุกสิทธิ์ ---------------- */
-  function equipRowHtml(label, value, warn) {
-    if (!value) return "";
-    return `<div class="equip-detail-row ${warn ? "warn" : ""}"><div class="edr-label">${esc(label)}</div><div class="edr-value">${esc(value)}</div></div>`;
+  function equipCellHtml(value, warn) {
+    if (!value) return `<td>-</td>`;
+    return `<td class="${warn ? "eq-warn" : ""}">${esc(value)}</td>`;
   }
   function equipmentManualGroupsHtml() {
     const groups = {};
@@ -1287,37 +1287,42 @@
     return groupNames.map(g => `
       <div class="equip-group">
         <div class="equip-group-title">${esc(g)} (${groups[g].length} รายการ)</div>
-        <div class="equip-card-list">
-          ${groups[g].map(e => `
-            <div class="equip-card" data-equip="${esc(e.id)}">
-              <button type="button" class="equip-card-head">
-                <div>
-                  <div class="equip-card-name"><span class="equip-id">${esc(e.id)}</span>${esc(e.name_th)}</div>
-                  <div class="equip-card-name-en">${esc(e.name_en)}</div>
-                </div>
-                <span class="equip-card-chevron">›</span>
-              </button>
-              <div class="equip-card-body">
-                <div class="equip-detail-grid">
-                  ${equipRowHtml("ใช้กับงาน/สถานการณ์", e.use_case)}
-                  ${equipRowHtml("หน้าที่/การใช้งาน", e.function)}
-                  ${equipRowHtml("ตรวจสอบก่อนใช้", e.pre_check)}
-                  ${equipRowHtml("ห้ามใช้ / เงื่อนไขหยุดงาน", e.stop_conditions, true)}
-                  ${equipRowHtml("การดูแลหลังใช้งาน", e.care_after)}
-                  ${equipRowHtml("ข้อกำหนดความปลอดภัย", e.safety_requirement, true)}
-                  ${equipRowHtml("หมายเหตุ", e.online_note)}
-                </div>
-              </div>
-            </div>`).join("")}
+        <div class="equip-table-wrap">
+          <table class="equip-table">
+            <thead>
+              <tr>
+                <th>อุปกรณ์</th>
+                <th>ใช้กับงาน/สถานการณ์</th>
+                <th>หน้าที่/การใช้งาน</th>
+                <th>ตรวจสอบก่อนใช้</th>
+                <th>ห้ามใช้ / เงื่อนไขหยุดงาน</th>
+                <th>การดูแลหลังใช้งาน</th>
+                <th>ข้อกำหนดความปลอดภัย</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${groups[g].map(e => `
+                <tr>
+                  <td class="eq-name-cell">
+                    <span class="equip-id">${esc(e.id)}</span>
+                    <div class="equip-name-th">${esc(e.name_th)}</div>
+                    <div class="equip-name-en">${esc(e.name_en)}</div>
+                  </td>
+                  ${equipCellHtml(e.use_case)}
+                  ${equipCellHtml(e.function)}
+                  ${equipCellHtml(e.pre_check)}
+                  ${equipCellHtml(e.stop_conditions, true)}
+                  ${equipCellHtml(e.care_after)}
+                  ${equipCellHtml(e.safety_requirement, true)}
+                </tr>`).join("")}
+            </tbody>
+          </table>
         </div>
       </div>`).join("");
   }
   function openEquipmentPage() {
     equipmentPageCountEl.textContent = `คู่มืออุปกรณ์ (${EQUIPMENT_MANUAL.length} รายการ)`;
     equipmentPageBodyEl.innerHTML = equipmentManualGroupsHtml();
-    equipmentPageBodyEl.querySelectorAll(".equip-card-head").forEach(btn => {
-      btn.addEventListener("click", () => btn.closest(".equip-card").classList.toggle("open"));
-    });
     appShellEl.classList.add("hidden");
     equipmentPageEl.classList.remove("hidden");
     window.scrollTo(0, 0);
