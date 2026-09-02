@@ -78,6 +78,7 @@
   let WORK_AREAS = [];
   let TARGET_PEA_OFFICES = [];
   let VEHICLES = [];
+  let CIRCUITS = [];
   let TEAMS = {};
 
   function optionValuesFor(category) {
@@ -94,6 +95,7 @@
       WORK_AREAS = optionValuesFor("work_area");
       TARGET_PEA_OFFICES = optionValuesFor("target_pea");
       VEHICLES = optionValuesFor("vehicle");
+      CIRCUITS = optionValuesFor("circuit");
     }
     if (!teamRes.error && teamRes.data) {
       TEAM_ROWS = teamRes.data.slice().sort((a, b) => a.name.localeCompare(b.name, "th"));
@@ -157,6 +159,7 @@
       team: r.team || "",
       teamMembers: r.team_members || [],
       vehicle: r.vehicle || "",
+      circuits: r.circuits || [],
       equipment: r.equipment || [],
       equipmentOwner: r.equipment_owner || "",
       coordinator: r.coordinator || "",
@@ -391,6 +394,7 @@
       <div class="tc-badges">
         <span class="pill ${t.areaStatus === "in" ? "pill-in" : "pill-out"}">${areaLabel(t)}</span>
         ${t.priority === "ด่วน" ? `<span class="pill pill-urgent">ด่วน</span>` : ""}
+        ${t.circuits.length ? `<span class="pill pill-circuit">${t.circuits.length} วงจร</span>` : ""}
       </div>
     </button>`;
   }
@@ -607,6 +611,10 @@
           </div>
         </div>
         <div class="detail-section">
+          <div class="detail-section-title">วงจรที่ปฏิบัติงาน (รวม ${t.circuits.length} วงจร)</div>
+          <div class="detail-list">${t.circuits.map(c => `<div>${esc(c)}</div>`).join("") || "-"}</div>
+        </div>
+        <div class="detail-section">
           <div class="detail-section-title">คำสั่งเดินทาง</div>
           <div class="detail-grid">
             ${detailItem("คำสั่งเดินทาง", t.travelOrder ? "มีคำสั่งเดินทาง (นอกพื้นที่)" : "ไม่มีคำสั่งเดินทาง (ในพื้นที่ต้นสังกัด)")}
@@ -674,7 +682,7 @@
       title: "", date: toISO(state.selectedDate), departTime: "08:00", appointTime: "08:30",
       jobType: JOB_TYPES[0], workArea: "", targetPEA: "", areaStatus: "in", priority: "ตามแผน",
       travelOrderNo: "", travelOrderStatus: "ไม่ต้องขอคำสั่ง", team: "", teamMembers: [], vehicle: "",
-      equipment: [], equipmentOwner: "", coordinator: "", coordinatorPhone: "", status: "วางแผน", note: ""
+      circuits: [], equipment: [], equipmentOwner: "", coordinator: "", coordinatorPhone: "", status: "วางแผน", note: ""
     };
     const workAreaOpts = combinedOptions(WORK_AREAS, x => x.workArea);
     const targetPEAOpts = combinedOptions(TARGET_PEA_OFFICES, x => x.targetPEA);
@@ -682,6 +690,8 @@
     const teamOpts = combinedOptions(Object.keys(TEAMS), x => x.team);
     const extraEquipment = t.equipment.filter(e => !EQUIPMENT_POOL.includes(e));
     const extraMembers = (t.teamMembers || []).filter(m => !EMPLOYEES.some(e => m.includes(e.name)));
+    const circuitOpts = Array.from(new Set([...CIRCUITS, ...TASKS.flatMap(x => x.circuits || [])]));
+    const extraCircuits = (t.circuits || []).filter(c => !circuitOpts.includes(c));
 
     return `
       <div class="modal-head">
@@ -745,6 +755,13 @@
             <div class="form-field">
               <label>รถที่ใช้</label>
               <input type="text" name="vehicle" list="dl-vehicle" value="${esc(t.vehicle)}" placeholder="เช่น รถกระเช้า ทะเบียน..." />
+            </div>
+            <div class="form-field span2">
+              <label>ชื่อวงจรที่ปฏิบัติงาน (ติ๊กได้มากกว่า 1 วงจร) <span class="circuit-sum-badge" id="circuit-sum-badge">รวม ${t.circuits.length} วงจร</span></label>
+              <div class="check-grid" id="circuit-check-grid">
+                ${circuitOpts.length ? circuitOpts.map(c => `<label class="check-option"><input type="checkbox" name="circuit" value="${esc(c)}" ${t.circuits.includes(c) ? "checked" : ""}/> ${esc(c)}</label>`).join("") : `<span class="form-hint">ยังไม่มีรายชื่อวงจรในระบบ — เพิ่มได้ที่ "⚙ จัดการตัวเลือก"</span>`}
+              </div>
+              <input type="text" name="circuitOther" style="margin-top:6px" placeholder="ชื่อวงจรอื่นๆ นอกเหนือรายการ (คั่นด้วยจุลภาค)" value="${esc(extraCircuits.join(", "))}" />
             </div>
             <div class="form-field span2">
               <label>คนที่ไปงานนี้ (ติ๊กชื่อ — จัดทีมตามความเหมาะสมของแต่ละงานได้อิสระ)</label>
@@ -828,6 +845,15 @@
 
     document.querySelectorAll('input[name=departTime], input[name=appointTime]').forEach(attachTime24Formatter);
 
+    const circuitGrid = $("#circuit-check-grid");
+    const circuitSumBadge = $("#circuit-sum-badge");
+    if (circuitGrid && circuitSumBadge) {
+      circuitGrid.addEventListener("change", () => {
+        const n = circuitGrid.querySelectorAll('input[name=circuit]:checked').length;
+        circuitSumBadge.textContent = `รวม ${n} วงจร`;
+      });
+    }
+
     // "PEA อำเภอบางปะกง" คือหน่วยงานต้นสังกัด — เลือกแล้วช่วยติ๊ก "ในพื้นที่" ให้ (แก้เองได้ทีหลัง)
     const targetPEAInput = document.querySelector('input[name=targetPEA]');
     targetPEAInput.addEventListener("change", () => {
@@ -880,6 +906,9 @@
     });
     const otherMembers = (fd.get("teamMembersOther") || "").split(",").map(s => s.trim()).filter(Boolean);
     const teamMembers = [...checkedMembers, ...otherMembers];
+    const checkedCircuits = fd.getAll("circuit");
+    const otherCircuits = (fd.get("circuitOther") || "").split(",").map(s => s.trim()).filter(Boolean);
+    const circuits = [...checkedCircuits, ...otherCircuits];
 
     const row = {
       title,
@@ -897,6 +926,7 @@
       team: (fd.get("team") || "").trim() || null,
       team_members: teamMembers,
       vehicle: (fd.get("vehicle") || "").trim() || null,
+      circuits,
       equipment: [...equipment, ...otherEquipment],
       equipment_owner: (fd.get("equipmentOwner") || "").trim() || null,
       coordinator: (fd.get("coordinator") || "").trim() || null,
@@ -1003,6 +1033,7 @@
         ${renderOptSectionHtml("work_area", "พื้นที่ปฏิบัติงาน")}
         ${renderOptSectionHtml("target_pea", "การไฟฟ้าปลายทาง")}
         ${renderOptSectionHtml("vehicle", "รถ")}
+        ${renderOptSectionHtml("circuit", "ชื่อวงจร")}
         ${renderTeamSectionHtml()}
       </div>`;
   }

@@ -337,6 +337,7 @@ button { font-family: inherit; }
 .pill-urgent { background: var(--urgent-bg); color: var(--urgent); }
 .pill-in { background: var(--green-bg); color: var(--green); border:1px solid var(--green-border); }
 .pill-out { background: var(--orange-bg); color: var(--orange); border:1px solid var(--orange-border); }
+.pill-circuit { background: var(--pea-purple-soft); color: var(--pea-purple-dark); border: 1px solid var(--pea-purple-border); }
 .week-empty { font-size: 11px; color: var(--text-faint); text-align:center; margin-top: 14px; }
 
 /* ---------------- Day view ---------------- */
@@ -438,6 +439,10 @@ button { font-family: inherit; }
 .form-field.span2 { grid-column: 1 / -1; }
 .form-field label { font-size: 12px; font-weight: 600; color: var(--text); }
 .form-field label .req { color: var(--urgent); }
+.circuit-sum-badge {
+  display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 700; color: var(--pea-purple);
+  background: var(--pea-purple-soft); border-radius: 999px; padding: 1px 9px;
+}
 .form-field input[type=text], .form-field input[type=date], .form-field input[type=time],
 .form-field input[type=tel], .form-field select, .form-field textarea {
   border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px;
