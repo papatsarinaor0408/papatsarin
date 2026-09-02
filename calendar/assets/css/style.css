@@ -339,7 +339,11 @@ body.role-reviewer .admin-only { display: none !important; }
 .side-col { width: 330px; flex-shrink: 0; }
 
 @media (max-width: 980px) {
-  .main-cols { flex-direction: column; }
+  /* align-items: flex-start ด้านบนตั้งใจไว้สำหรับ layout แนวนอน (จัดชิดบน ไม่ยืดความสูง) —
+     พอสลับเป็น flex-direction: column แกน align-items จะกลายเป็นแกนแนวนอนแทน ถ้าไม่ reset
+     เป็น stretch คอลัมน์ปฏิทินจะหดตัวชิดซ้ายแทนที่จะเต็มความกว้างจอ */
+  .main-cols { flex-direction: column; align-items: stretch; }
+  .calendar-col { width: 100%; }
   .side-col { width: 100%; }
   .stat-row { grid-template-columns: repeat(2, 1fr); }
 }
