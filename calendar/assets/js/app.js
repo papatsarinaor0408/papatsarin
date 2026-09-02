@@ -820,7 +820,10 @@
     const targetPeaFilteredOpts = targetPeaOptionsForWorkArea(targetPEAOpts, t.workArea);
     const targetPeaOptsForSelect = t.targetPEA && !targetPeaFilteredOpts.includes(t.targetPEA)
       ? [...targetPeaFilteredOpts, t.targetPEA] : targetPeaFilteredOpts;
-    const vehicleOptsForSelect = Array.from(new Set([...VEHICLES, ...TASKS.flatMap(x => (x.vehicles || []).map(v => v.vehicle))]));
+    // รายการรถให้เลือกเฉพาะรถในทะเบียนจริง (VEHICLES) เท่านั้น — ไม่ต้องมี safety net เหมือน
+    // workArea/targetPEA เพราะช่อง "อื่นๆ (ระบุเอง)" รองรับค่าที่ไม่อยู่ในทะเบียนอยู่แล้ว
+    // (ถ้าเผื่อค่าจากงานอื่นๆ ปนเข้ามาด้วย ชื่อรถที่เคยพิมพ์ในงานหนึ่งจะโผล่เป็นตัวเลือกถาวรของงานอื่น)
+    const vehicleOptsForSelect = VEHICLES;
     const teamOpts = combinedOptions(Object.keys(TEAMS), x => x.team);
     const extraEquipment = t.equipment.filter(e => !EQUIPMENT_POOL.includes(e));
     const extraMembers = (t.teamMembers || []).filter(m => !EMPLOYEES.some(e => m.includes(e.name)));
