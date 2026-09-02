@@ -703,8 +703,28 @@
     TASKS.forEach(t => { const v = getter(t); if (v) s.add(v); });
     return Array.from(s);
   }
+  function datalistOptionsHtml(values) {
+    return values.map(v => `<option value="${esc(v)}"></option>`).join("");
+  }
   function datalistHtml(id, values) {
-    return `<datalist id="${id}">${values.map(v => `<option value="${esc(v)}"></option>`).join("")}</datalist>`;
+    return `<datalist id="${id}">${datalistOptionsHtml(values)}</datalist>`;
+  }
+
+  // เลือก "พื้นที่ปฏิบัติงาน" เป็นจังหวัด (หรือชื่ออำเภอที่รู้จัก) แล้ว กรอง "การไฟฟ้าปลายทาง" ให้เหลือ
+  // เฉพาะของจังหวัดนั้น — ถ้าพื้นที่ที่พิมพ์ไม่ตรงกับจังหวัดที่รู้จัก จะโชว์ตัวเลือกทั้งหมดแทน (กันพลาด)
+  function provinceOfWorkArea(workAreaValue) {
+    const v = (workAreaValue || "").trim();
+    if (!v) return null;
+    if (TARGET_PEA_BY_PROVINCE[v]) return v;
+    if (PROVINCE_ALIASES[v]) return PROVINCE_ALIASES[v];
+    return null;
+  }
+  function targetPeaOptionsForWorkArea(allOpts, workAreaValue) {
+    const province = provinceOfWorkArea(workAreaValue);
+    if (!province) return allOpts;
+    const inProvince = new Set(TARGET_PEA_BY_PROVINCE[province] || []);
+    const filtered = allOpts.filter(v => inProvince.has(v));
+    return filtered.length ? filtered : allOpts;
   }
 
   // ชื่อวงจรส่วนใหญ่เป็นรูปแบบ "รหัส-เลข" (เช่น BWA-01..BWA-10) — จัดกลุ่มตามรหัสแล้วโชว์แค่ตัวเลข
@@ -792,11 +812,12 @@
             </div>
             <div class="form-field">
               <label>พื้นที่ปฏิบัติงาน <span class="req">*</span></label>
-              <input type="text" name="workArea" list="dl-workarea" required value="${esc(t.workArea)}" placeholder="เช่น บางปะกง" />
+              <input type="text" name="workArea" list="dl-workarea" required value="${esc(t.workArea)}" placeholder="เช่น ชลบุรี, ฉะเชิงเทรา" />
             </div>
             <div class="form-field">
               <label>การไฟฟ้าปลายทาง <span class="req">*</span></label>
               <input type="text" name="targetPEA" list="dl-targetpea" required value="${esc(t.targetPEA)}" placeholder="เช่น กฟฟ.บางปะกง" />
+              <div class="form-hint">พิมพ์/เลือกพื้นที่ปฏิบัติงานเป็นจังหวัดก่อน รายการตรงนี้จะกรองเหลือเฉพาะการไฟฟ้าในจังหวัดนั้นให้อัตโนมัติ</div>
             </div>
             <div class="form-field span2">
               <label>สถานะพื้นที่ปฏิบัติงาน</label>
@@ -878,7 +899,7 @@
         </form>
       </div>
       ${datalistHtml("dl-workarea", workAreaOpts)}
-      ${datalistHtml("dl-targetpea", targetPEAOpts)}
+      ${datalistHtml("dl-targetpea", targetPeaOptionsForWorkArea(targetPEAOpts, t.workArea))}
       ${datalistHtml("dl-vehicle", vehicleOpts)}
       ${datalistHtml("dl-team", teamOpts)}
     `;
@@ -923,6 +944,15 @@
         if (chip) chip.classList.toggle("is-checked", ev.target.checked);
       });
     }
+
+    // เลือก/พิมพ์ "พื้นที่ปฏิบัติงาน" เป็นจังหวัดที่รู้จัก แล้วกรองรายการ "การไฟฟ้าปลายทาง" ให้เหลือเฉพาะจังหวัดนั้น
+    const workAreaInputForFilter = document.querySelector('input[name=workArea]');
+    const targetPeaDatalistEl = $("#dl-targetpea");
+    workAreaInputForFilter.addEventListener("input", () => {
+      if (!targetPeaDatalistEl) return;
+      const allOpts = combinedOptions(TARGET_PEA_OFFICES, x => x.targetPEA);
+      targetPeaDatalistEl.innerHTML = datalistOptionsHtml(targetPeaOptionsForWorkArea(allOpts, workAreaInputForFilter.value));
+    });
 
     // "PEA อำเภอบางปะกง" คือหน่วยงานต้นสังกัด — เลือกแล้วช่วยติ๊ก "ในพื้นที่" ให้ (แก้เองได้ทีหลัง)
     const targetPEAInput = document.querySelector('input[name=targetPEA]');
