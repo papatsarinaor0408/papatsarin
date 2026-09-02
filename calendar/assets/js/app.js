@@ -869,17 +869,17 @@
             <div class="form-field">
               <label>ชื่อทีม / ป้ายกำกับงานนี้</label>
               <input type="text" name="team" id="team-input" list="dl-team" value="${esc(t.team)}" placeholder="เช่น ทีม A หรือ ตั้งชื่อเองได้ เช่น ทีมออกบางปะกง" />
-              <div class="form-hint">พิมพ์ชื่อทีมที่เคยมี แล้วออกจากช่อง ระบบจะช่วยติ๊กรายชื่อทีมนั้นให้ หรือจะตั้งชื่อเองก็ได้</div>
+              <div class="form-hint">พิมพ์ชื่อทีมที่เคยมี แล้วออกจากช่อง ระบบจะช่วยเลือกรายชื่อทีมนั้นให้ หรือจะตั้งชื่อเองก็ได้</div>
             </div>
             <div class="form-field span2">
-              <label>ชื่อวงจรที่ปฏิบัติงาน (ติ๊กได้มากกว่า 1 วงจร) <span class="circuit-sum-badge" id="circuit-sum-badge">รวม ${t.circuits.length} วงจร</span></label>
+              <label>ชื่อวงจรที่ปฏิบัติงาน (เลือกได้มากกว่า 1 วงจร) <span class="circuit-sum-badge" id="circuit-sum-badge">รวม ${t.circuits.length} วงจร</span></label>
               <div id="circuit-check-grid">
                 ${circuitOpts.length ? circuitPickerHtml(circuitOpts, t.circuits) : `<span class="form-hint">ยังไม่มีรายชื่อวงจรในระบบ — เพิ่มได้ที่ "⚙ จัดการตัวเลือก"</span>`}
               </div>
               <input type="text" name="circuitOther" style="margin-top:6px" placeholder="ชื่อวงจรอื่นๆ นอกเหนือรายการ (คั่นด้วยจุลภาค)" value="${esc(extraCircuits.join(", "))}" />
             </div>
             <div class="form-field span2">
-              <label>คนที่ไปงานนี้ (ติ๊กชื่อ — จัดทีมตามความเหมาะสมของแต่ละงานได้อิสระ)</label>
+              <label>คนที่ไปงานนี้ (เลือกชื่อ — จัดทีมตามความเหมาะสมของแต่ละงานได้อิสระ)</label>
               <div class="check-grid" id="team-check-grid">
                 ${EMPLOYEES.map(e => `<label class="check-option"><input type="checkbox" name="teamMemberEmp" value="${esc(e.name)}" ${t.teamMembers.some(m => m.includes(e.name)) ? "checked" : ""}/> ${esc(e.name)}${e.position ? ` (${esc(e.position)})` : ""}</label>`).join("") || `<span class="form-hint">ยังไม่มีรายชื่อพนักงานในระบบ — เพิ่มได้ที่ปฏิทินรายบุคคล</span>`}
               </div>
@@ -891,10 +891,10 @@
                 ${vehicleAssignRowHtml(0)}
                 ${vehicleAssignRowHtml(1)}
               </div>
-              <div class="form-hint">ติ๊กชื่อ "คนที่ไปงานนี้" ก่อน แล้วรายชื่อคนขับจะดึงมาให้เลือกอัตโนมัติ — เลือกคนขับให้รถคันหนึ่งแล้ว ชื่อนั้นจะไม่ขึ้นให้เลือกซ้ำกับอีกคัน</div>
+              <div class="form-hint">เลือกชื่อ "คนที่ไปงานนี้" ก่อน แล้วรายชื่อคนขับจะดึงมาให้เลือกอัตโนมัติ — เลือกคนขับให้รถคันหนึ่งแล้ว ชื่อนั้นจะไม่ขึ้นให้เลือกซ้ำกับอีกคัน</div>
             </div>
             <div class="form-field span2">
-              <label>อุปกรณ์ที่ต้องใช้ (ติ๊กได้มากกว่า 1 รายการ)</label>
+              <label>อุปกรณ์ที่ต้องใช้ (เลือกได้มากกว่า 1 รายการ)</label>
               <div class="check-grid">
                 ${EQUIPMENT_POOL.map(item => `<label class="check-option"><input type="checkbox" name="equipment" value="${esc(item)}" ${t.equipment.includes(item) ? "checked" : ""}/> ${esc(item)}</label>`).join("")}
               </div>
@@ -917,7 +917,7 @@
               <input type="tel" name="coordinatorPhone" value="${esc(t.coordinatorPhone)}" placeholder="08x-xxx-xxxx" />
             </div>
             <div class="form-field span2">
-              <label class="urgent-toggle"><input type="checkbox" name="urgent" ${t.priority === "ด่วน" ? "checked" : ""}/> ⚡ ติ๊กถ้าเป็นงานด่วน (ไม่ติ๊ก = งานตามแผน)</label>
+              <label class="urgent-toggle"><input type="checkbox" name="urgent" ${t.priority === "ด่วน" ? "checked" : ""}/> ⚡ เลือกถ้าเป็นงานด่วน (ไม่เลือก = งานตามแผน)</label>
             </div>
             <div class="form-field span2">
               <label>หมายเหตุ</label>
@@ -1204,7 +1204,7 @@
         </div>` : ""}
         <div class="person-stat-row">
           <div class="person-stat"><div class="person-stat-label">วันที่มีงาน (เดือนนี้)</div><div class="person-stat-value">${workDays}</div></div>
-          <div class="person-stat ot"><div class="person-stat-label">วันโอที (เสาร์-อาทิตย์-นักขัตฤกษ์)</div><div class="person-stat-value">${otDays}</div></div>
+          <div class="person-stat ot"><div class="person-stat-label">วัน OT (เสาร์-อาทิตย์-นักขัตฤกษ์)</div><div class="person-stat-value">${otDays}</div></div>
           <div class="person-stat leave"><div class="person-stat-label">วันลา</div><div class="person-stat-value">${leaveDays.length}</div></div>
         </div>
         ${Object.keys(leaveByType).length ? `<div class="person-leave-breakdown">${Object.entries(leaveByType).map(([t, c]) => `<span class="leave-type-chip">${esc(t)} ${c} วัน</span>`).join("")}</div>` : ""}
