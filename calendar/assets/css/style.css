@@ -456,6 +456,15 @@ body.role-reviewer .admin-only { display: none !important; }
 .pill-circuit { background: var(--pea-purple-soft); color: var(--pea-purple-dark); border: 1px solid var(--pea-purple-border); }
 .week-empty { font-size: 11px; color: var(--text-faint); text-align:center; margin-top: 14px; }
 
+/* 7 คอลัมน์เคียงกันไม่พอสำหรับจอมือถือ (ตัวหนังสือถูกบีบจนขึ้นบรรทัดใหม่ทีละตัวอักษร) —
+   ต่ำกว่าจุดนี้เปลี่ยนเป็นเรียงเป็นรายการวันแนวตั้งแทน อ่านง่ายกว่ามาก */
+@media (max-width: 760px) {
+  .week-grid { grid-template-columns: 1fr; gap: 10px; }
+  .week-col { min-height: 0; }
+  .week-col-head { text-align: left; display: flex; align-items: baseline; gap: 8px; padding-bottom: 8px; }
+  .week-col-head .wd-num { margin: 0; }
+}
+
 /* ---------------- Day view ---------------- */
 .day-view-head {
   background: var(--white); border: 1px solid var(--border); border-radius: var(--radius);
