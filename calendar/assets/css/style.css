@@ -579,8 +579,12 @@ body.role-reviewer .admin-only { display: none !important; }
 
 .vehicle-assign-rows { display: flex; flex-direction: column; gap: 8px; }
 .vehicle-assign-row { display: flex; gap: 8px; flex-wrap: wrap; }
-.vehicle-assign-row select { flex: 1 1 220px; min-width: 0; }
+.vehicle-assign-row select, .vehicle-assign-row input[type=text] { flex: 1 1 220px; min-width: 0; }
 .vehicle-assign-row select:disabled { background: var(--bg); color: var(--text-faint); }
+.vehicle-assign-row input[type=text] {
+  border: 1px solid var(--pea-purple-border); border-radius: var(--radius-sm); padding: 8px 10px;
+  font-size: 13.5px; font-family: inherit; color: var(--ink); background: var(--white);
+}
 
 .urgent-toggle {
   display: flex; align-items: center; gap: 8px; border: 1px solid var(--urgent-bg); background: var(--urgent-bg);

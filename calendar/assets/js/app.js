@@ -819,14 +819,17 @@
 
     function vehicleAssignRowHtml(i) {
       const existing = (t.vehicles || [])[i] || {};
+      const isOther = !!existing.vehicle && !vehicleOptsForSelect.includes(existing.vehicle);
       return `
         <div class="vehicle-assign-row" data-row="${i + 1}">
           <select name="vehicle${i + 1}" class="va-vehicle-select">
             <option value="">— รถคันที่ ${i + 1}: ไม่ใช้ —</option>
             ${vehicleOptsForSelect.map(v => `<option value="${esc(v)}" ${existing.vehicle === v ? "selected" : ""}>${esc(v)}</option>`).join("")}
+            <option value="__other__" ${isOther ? "selected" : ""}>อื่นๆ (ระบุเอง)</option>
           </select>
+          <input type="text" name="vehicleOther${i + 1}" class="va-vehicle-other-input ${isOther ? "" : "hidden"}" placeholder="ระบุชื่อ/ทะเบียนรถคันอื่น" value="${esc(isOther ? existing.vehicle : "")}" />
           <select name="driver${i + 1}" class="va-driver-select" ${existing.vehicle ? "" : "disabled"}>
-            <option value="">— ระบุคนขับ —</option>
+            <option value="">— ระบุคนขับ (ไม่บังคับ) —</option>
           </select>
         </div>`;
     }
@@ -917,7 +920,7 @@
                 ${vehicleAssignRowHtml(0)}
                 ${vehicleAssignRowHtml(1)}
               </div>
-              <div class="form-hint">เลือกคนขับให้รถคันหนึ่งแล้ว ชื่อนั้นจะไม่ขึ้นให้เลือกซ้ำกับอีกคัน</div>
+              <div class="form-hint">ถ้าใช้รถคันอื่นนอกทะเบียน เลือก "อื่นๆ (ระบุเอง)" แล้วพิมพ์ชื่อ/ทะเบียนได้ — เลือกคนขับให้รถคันหนึ่งแล้ว ชื่อนั้นจะไม่ขึ้นให้เลือกซ้ำกับอีกคัน (ไม่บังคับต้องระบุคนขับ)</div>
             </div>
             <div class="form-field span2">
               <div class="equip-pick-head">
@@ -1052,7 +1055,8 @@
     function vehicleDriverRows() {
       return [1, 2].map(i => ({
         vSel: document.querySelector(`select[name=vehicle${i}]`),
-        dSel: document.querySelector(`select[name=driver${i}]`)
+        dSel: document.querySelector(`select[name=driver${i}]`),
+        vOtherInput: document.querySelector(`input[name=vehicleOther${i}]`)
       }));
     }
     function populateDriverOptions(forceValues) {
@@ -1069,11 +1073,15 @@
       const rows = vehicleDriverRows();
       rows.forEach((row, idx) => {
         const other = rows[1 - idx];
-        Array.from(row.vSel.options).forEach(opt => { if (opt.value) opt.disabled = opt.value === other.vSel.value; });
+        // "อื่นๆ (ระบุเอง)" ไม่ผูกเป็นรถคันเดียวกันเสมอไป เลยไม่กันซ้ำแบบรถในทะเบียน
+        Array.from(row.vSel.options).forEach(opt => {
+          if (opt.value && opt.value !== "__other__") opt.disabled = opt.value === other.vSel.value;
+        });
         Array.from(row.dSel.options).forEach(opt => { if (opt.value) opt.disabled = opt.value === other.dSel.value; });
         const hasVehicle = !!row.vSel.value;
         row.dSel.disabled = !hasVehicle;
         if (!hasVehicle && row.dSel.value) row.dSel.value = "";
+        if (row.vOtherInput) row.vOtherInput.classList.toggle("hidden", row.vSel.value !== "__other__");
       });
     }
     document.querySelectorAll(".va-vehicle-select, .va-driver-select").forEach(sel => {
@@ -1140,7 +1148,11 @@
     const otherCircuits = (fd.get("circuitOther") || "").split(",").map(s => s.trim()).filter(Boolean);
     const circuits = [...checkedCircuits, ...otherCircuits];
     const vehicleAssignments = [1, 2]
-      .map(i => ({ vehicle: (fd.get(`vehicle${i}`) || "").trim(), driver: (fd.get(`driver${i}`) || "").trim() }))
+      .map(i => {
+        const picked = (fd.get(`vehicle${i}`) || "").trim();
+        const vehicle = picked === "__other__" ? (fd.get(`vehicleOther${i}`) || "").trim() : picked;
+        return { vehicle, driver: (fd.get(`driver${i}`) || "").trim() };
+      })
       .filter(v => v.vehicle)
       .map(v => ({ vehicle: v.vehicle, driver: v.driver || null }));
 
