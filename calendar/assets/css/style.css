@@ -366,11 +366,18 @@ body.role-reviewer .admin-only { display: none !important; }
 .day-cards { display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
 .mini-card {
   font-size: 10.5px; padding: 3px 6px; border-radius: 6px; border-left: 3px solid var(--green-dot);
-  background: var(--green-bg); color: var(--green); overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
-  cursor: pointer;
+  background: var(--green-bg); color: var(--green); overflow: hidden; cursor: pointer;
+  display: flex; flex-direction: column; gap: 1px;
 }
 .mini-card.out { border-left-color: var(--orange-dot); background: var(--orange-bg); color: var(--orange); }
 .mini-card b { color: inherit; }
+.mc-row { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.mc-tag {
+  font-size: 8.5px; font-weight: 700; padding: 0 5px; border-radius: 999px; white-space: nowrap;
+  background: rgba(255,255,255,.6); color: inherit; flex-shrink: 0;
+}
+.mc-title, .mc-pea { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mc-pea { font-size: 9px; opacity: .85; }
 .mini-more { font-size: 10px; color: var(--pea-purple); font-weight: 500; padding: 1px 6px; }
 
 /* ---------------- Week view ---------------- */
@@ -720,8 +727,9 @@ body.role-reviewer .admin-only { display: none !important; }
   .day-cards { flex-direction: row; flex-wrap: wrap; gap: 3px; margin-top: auto; }
   .mini-card {
     width: 7px; height: 7px; padding: 0; margin: 0; border-radius: 50%;
-    border-left: none; font-size: 0; flex-shrink: 0;
+    border-left: none; font-size: 0; flex-shrink: 0; display: block;
   }
+  .mini-card .mc-row, .mini-card .mc-title, .mini-card .mc-pea { display: none; }
   .mini-more { font-size: 8px; padding: 0; width: 100%; }
 }
 

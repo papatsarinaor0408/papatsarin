@@ -444,8 +444,10 @@
   function areaLabel(t) { return t.areaStatus === "in" ? "ในพื้นที่" : "นอกพื้นที่"; }
 
   function miniCardHtml(t) {
-    return `<div class="mini-card ${areaClass(t)}" data-task="${t.id}" title="${esc(t.title)}">
-      <b>${esc(t.departTime)}</b> ${esc(t.title)}
+    return `<div class="mini-card ${areaClass(t)}" data-task="${t.id}" title="${esc(t.title)} · ${esc(t.targetPEA)}">
+      <div class="mc-row"><b>${esc(t.departTime)}</b> <span class="mc-tag">${areaLabel(t)}</span></div>
+      <div class="mc-title">${esc(t.title)}</div>
+      <div class="mc-pea">📍 ${esc(t.targetPEA)}</div>
     </div>`;
   }
   function fullCardHtml(t) {
