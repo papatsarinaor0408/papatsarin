@@ -597,40 +597,6 @@ body.role-reviewer .admin-only { display: none !important; }
 .btn-danger:hover { background: var(--red-bg); }
 .detail-actions { display: flex; gap: 8px; padding: 0 22px 18px; margin-top: -8px; }
 
-/* ---------------- Settings modal: option lists + teams ---------------- */
-.opt-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
-.opt-chip {
-  display: flex; align-items: center; gap: 6px; background: var(--pea-purple-light); color: var(--pea-purple-dark);
-  border-radius: 999px; padding: 4px 6px 4px 12px; font-size: 12.5px; font-weight: 500;
-}
-.opt-chip button {
-  border: none; background: rgba(43, 17, 68, 0.08); color: var(--pea-purple-dark);
-  width: 18px; height: 18px; border-radius: 50%; cursor: pointer; font-size: 10.5px; line-height: 1;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 0;
-}
-.opt-chip button:hover { background: var(--urgent-bg); color: var(--urgent); }
-.opt-add-row { display: flex; gap: 8px; margin-bottom: 6px; }
-.opt-add-row input { flex: 1; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 13px; font-family: inherit; }
-.opt-add-row input:focus { outline: 2px solid var(--pea-purple-soft); border-color: var(--pea-purple); }
-.opt-import { border: 1px dashed var(--border); border-radius: var(--radius-sm); padding: 8px 10px; margin-top: 4px; }
-.opt-import summary { cursor: pointer; font-size: 12.5px; color: var(--pea-purple); font-weight: 500; }
-.opt-import textarea {
-  width: 100%; min-height: 64px; margin-top: 6px; border: 1px solid var(--border); border-radius: var(--radius-sm);
-  padding: 8px 10px; font-size: 13px; font-family: inherit; resize: vertical;
-}
-.opt-import-actions { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 6px; }
-
-.team-card { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 10px; }
-.team-card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
-.team-card-head .team-name-input {
-  font-weight: 600; font-size: 14px; border: 1px solid var(--border); background: var(--white);
-  padding: 6px 9px; border-radius: var(--radius-sm); flex: 1; font-family: inherit;
-}
-.team-card-head .team-name-input:focus { outline: 2px solid var(--pea-purple-soft); border-color: var(--pea-purple); }
-.team-members-input {
-  width: 100%; min-height: 60px; border: 1px solid var(--border); border-radius: var(--radius-sm);
-  padding: 8px 10px; font-size: 13px; font-family: inherit; resize: vertical; line-height: 1.6;
-}
 
 /* ---------------- Person modal: individual calendar / leave / OT ---------------- */
 .person-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
