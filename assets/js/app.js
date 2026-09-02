@@ -1976,7 +1976,7 @@ function renderFinalDataTab() {
                   <button type="button" class="final-review-card final-review-btn btn-ghost" data-course-id="${escapeAttr(r.id)}" data-decision="">ล้างผลพิจารณา</button>
                 </div>
               </td>
-              <td><input type="text" class="final-review-remark-input" data-course-id="${escapeAttr(r.id)}" value="${escapeAttr(r.finalReviewRemark || '')}" placeholder="หมายเหตุ..."></td>
+              <td><textarea class="final-review-remark-input" rows="1" data-course-id="${escapeAttr(r.id)}" placeholder="หมายเหตุ...">${escapeHtml(r.finalReviewRemark || '')}</textarea></td>
             </tr>
           `).join('') : `<tr><td colspan="9"><div class="empty-state"><div class="big">🔍</div>ไม่พบหลักสูตรที่ตรงกับตัวกรอง</div></td></tr>`}
         </tbody>
@@ -2032,7 +2032,7 @@ function renderFinalDataTab() {
                     <td>${escapeHtml(r.id)}</td>
                     <td>${escapeHtml(r.nameTh || '-')}</td>
                     <td class="num">${r.budgetTotal ? fmtBaht(r.budgetTotal) : '-'}</td>
-                    <td>${escapeHtml(r.finalReviewRemark || '-')}</td>
+                    <td style="white-space:pre-line;">${escapeHtml(r.finalReviewRemark || '-')}</td>
                   </tr>
                 `).join('') : `<tr><td colspan="4">ไม่พบหลักสูตร</td></tr>`}
               </tbody>
@@ -2079,6 +2079,9 @@ function renderFinalDataTab() {
   });
   root.querySelectorAll('.final-review-remark-input').forEach((input) => {
     input.addEventListener('click', (e) => e.stopPropagation()); // ไม่ให้เปิด drawer ตอนโฟกัสกล่องข้อความ
+    const autoGrow = () => { input.style.height = 'auto'; input.style.height = `${input.scrollHeight}px`; };
+    autoGrow();
+    input.addEventListener('input', autoGrow);
     const save = () => {
       const courseId = input.dataset.courseId;
       const current = STATE.finalCourses.find((x) => x.id === courseId);
@@ -2087,7 +2090,10 @@ function renderFinalDataTab() {
       commitFinalCourseReview(courseId, currentDecision, input.value);
     };
     input.addEventListener('blur', save);
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
+    // Enter ธรรมดา = บันทึกทันที (เหมือนเดิม), Alt+Enter = ขึ้นบรรทัดใหม่ในกล่องข้อความ
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.altKey) { e.preventDefault(); input.blur(); }
+    });
   });
   if (courses.length) {
     const bindFd = (id, key, evt) => document.getElementById(id).addEventListener(evt || 'change', (e) => {
