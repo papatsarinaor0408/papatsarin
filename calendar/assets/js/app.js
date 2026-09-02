@@ -807,6 +807,9 @@
     // รายการปัจจุบันแล้ว (เช่นตัวเลือกถูกลบไปทีหลัง) ให้แทรกไว้เป็นตัวเลือกพิเศษ กันข้อมูลเดิมหาย
     const workAreaOptsForSelect = t.workArea && !WORK_AREAS.includes(t.workArea) ? [...WORK_AREAS, t.workArea] : WORK_AREAS;
     const targetPEAOpts = combinedOptions(TARGET_PEA_OFFICES, x => x.targetPEA);
+    const targetPeaFilteredOpts = targetPeaOptionsForWorkArea(targetPEAOpts, t.workArea);
+    const targetPeaOptsForSelect = t.targetPEA && !targetPeaFilteredOpts.includes(t.targetPEA)
+      ? [...targetPeaFilteredOpts, t.targetPEA] : targetPeaFilteredOpts;
     const vehicleOptsForSelect = Array.from(new Set([...VEHICLES, ...TASKS.flatMap(x => (x.vehicles || []).map(v => v.vehicle))]));
     const teamOpts = combinedOptions(Object.keys(TEAMS), x => x.team);
     const extraEquipment = t.equipment.filter(e => !EQUIPMENT_POOL.includes(e));
@@ -868,8 +871,11 @@
             </div>
             <div class="form-field">
               <label>การไฟฟ้าปลายทาง <span class="req">*</span></label>
-              <input type="text" name="targetPEA" list="dl-targetpea" required value="${esc(t.targetPEA)}" placeholder="เช่น กฟฟ.บางปะกง" />
-              <div class="form-hint">พิมพ์/เลือกพื้นที่ปฏิบัติงานเป็นจังหวัดก่อน รายการตรงนี้จะกรองเหลือเฉพาะการไฟฟ้าในจังหวัดนั้นให้อัตโนมัติ</div>
+              <select name="targetPEA" required>
+                <option value="" ${t.targetPEA ? "" : "selected"} disabled>— เลือกการไฟฟ้าปลายทาง —</option>
+                ${targetPeaOptsForSelect.map(v => `<option value="${esc(v)}" ${t.targetPEA === v ? "selected" : ""}>${esc(v)}</option>`).join("")}
+              </select>
+              <div class="form-hint">เลือกพื้นที่ปฏิบัติงานเป็นจังหวัดก่อน รายการตรงนี้จะกรองเหลือเฉพาะการไฟฟ้าในจังหวัดนั้นให้อัตโนมัติ</div>
             </div>
             <div class="form-field span2">
               <label>สถานะพื้นที่ปฏิบัติงาน</label>
@@ -958,7 +964,6 @@
           </div>
         </form>
       </div>
-      ${datalistHtml("dl-targetpea", targetPeaOptionsForWorkArea(targetPEAOpts, t.workArea))}
       ${datalistHtml("dl-team", teamOpts)}
     `;
   }
@@ -1029,12 +1034,14 @@
     }
 
     // เลือก "พื้นที่ปฏิบัติงาน" เป็นจังหวัด แล้วกรองรายการ "การไฟฟ้าปลายทาง" ให้เหลือเฉพาะจังหวัดนั้น
+    // (เปลี่ยนจังหวัดแล้วต้องเลือกการไฟฟ้าปลายทางใหม่ ของเดิมอาจไม่อยู่ในจังหวัดใหม่แล้ว)
     const workAreaSelectForFilter = document.querySelector('select[name=workArea]');
-    const targetPeaDatalistEl = $("#dl-targetpea");
+    const targetPeaSelectEl = document.querySelector('select[name=targetPEA]');
     workAreaSelectForFilter.addEventListener("change", () => {
-      if (!targetPeaDatalistEl) return;
       const allOpts = combinedOptions(TARGET_PEA_OFFICES, x => x.targetPEA);
-      targetPeaDatalistEl.innerHTML = datalistOptionsHtml(targetPeaOptionsForWorkArea(allOpts, workAreaSelectForFilter.value));
+      const filtered = targetPeaOptionsForWorkArea(allOpts, workAreaSelectForFilter.value);
+      targetPeaSelectEl.innerHTML = `<option value="" selected disabled>— เลือกการไฟฟ้าปลายทาง —</option>` +
+        filtered.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
     });
 
     // รถที่ใช้ + คนขับ: รายชื่อคนขับดึงจากพนักงานทั้งหมดในทีม (ไม่ต้องติ๊ก "คนที่ไปงานนี้" ก่อน)
@@ -1078,9 +1085,8 @@
     ]);
 
     // "PEA อำเภอบางปะกง" คือหน่วยงานต้นสังกัด — เลือกแล้วช่วยติ๊ก "ในพื้นที่" ให้ (แก้เองได้ทีหลัง)
-    const targetPEAInput = document.querySelector('input[name=targetPEA]');
-    targetPEAInput.addEventListener("change", () => {
-      if (targetPEAInput.value.trim() === HOME_UNIT_PEA) {
+    targetPeaSelectEl.addEventListener("change", () => {
+      if (targetPeaSelectEl.value.trim() === HOME_UNIT_PEA) {
         const inRadio = document.querySelector('input[name=areaStatus][value=in]');
         if (inRadio && !inRadio.checked) { inRadio.checked = true; syncAreaStatus(true); }
       }
