@@ -912,8 +912,12 @@
               <div class="form-hint">เลือกชื่อ "คนที่ไปงานนี้" ก่อน แล้วรายชื่อคนขับจะดึงมาให้เลือกอัตโนมัติ — เลือกคนขับให้รถคันหนึ่งแล้ว ชื่อนั้นจะไม่ขึ้นให้เลือกซ้ำกับอีกคัน</div>
             </div>
             <div class="form-field span2">
-              <label>อุปกรณ์ที่ต้องใช้ (เลือกได้มากกว่า 1 รายการ)</label>
-              <div class="check-grid">
+              <div class="equip-pick-head">
+                <label>อุปกรณ์ที่ต้องใช้</label>
+                <button type="button" class="equip-pick-toggle" id="equip-pick-toggle">เลือกอุปกรณ์ (เลือกไว้ <span id="equip-pick-count">${t.equipment.filter(e => EQUIPMENT_POOL.includes(e)).length}</span>/${EQUIPMENT_POOL.length}) ▾</button>
+              </div>
+              <div class="check-grid hidden" id="equipment-check-grid">
+                <label class="check-option check-option-all"><input type="checkbox" id="equip-select-all-cb" /> <b>เลือกทั้งหมด</b></label>
                 ${EQUIPMENT_POOL.map(item => `<label class="check-option"><input type="checkbox" name="equipment" value="${esc(item)}" ${t.equipment.includes(item) ? "checked" : ""}/> ${esc(item)}</label>`).join("")}
               </div>
               <input type="text" name="equipmentOther" style="margin-top:6px" placeholder="อุปกรณ์อื่นๆ นอกเหนือรายการ (คั่นด้วยจุลภาค)" value="${esc(extraEquipment.join(", "))}" />
@@ -995,6 +999,31 @@
         const chip = ev.target.closest(".circuit-num-chip");
         if (chip) chip.classList.toggle("is-checked", ev.target.checked);
       });
+    }
+
+    // รายการอุปกรณ์ยาว — พับเก็บไว้เป็นค่าเริ่มต้น กดปุ่มค่อยขยายออกมาเลือก + มีติ๊ก "เลือกทั้งหมด"
+    const equipPickToggle = $("#equip-pick-toggle");
+    const equipCheckGrid = $("#equipment-check-grid");
+    const equipPickCount = $("#equip-pick-count");
+    const equipSelectAllCb = $("#equip-select-all-cb");
+    if (equipPickToggle && equipCheckGrid) {
+      equipPickToggle.addEventListener("click", () => {
+        equipCheckGrid.classList.toggle("hidden");
+        equipPickToggle.classList.toggle("open", !equipCheckGrid.classList.contains("hidden"));
+      });
+      const equipCbs = Array.from(equipCheckGrid.querySelectorAll('input[name=equipment]'));
+      function updateEquipPickCount() {
+        const n = equipCbs.filter(cb => cb.checked).length;
+        equipPickCount.textContent = n;
+        equipSelectAllCb.checked = n === equipCbs.length;
+        equipSelectAllCb.indeterminate = n > 0 && n < equipCbs.length;
+      }
+      equipSelectAllCb.addEventListener("change", () => {
+        equipCbs.forEach(cb => { cb.checked = equipSelectAllCb.checked; });
+        updateEquipPickCount();
+      });
+      equipCbs.forEach(cb => cb.addEventListener("change", updateEquipPickCount));
+      updateEquipPickCount();
     }
 
     // เลือก "พื้นที่ปฏิบัติงาน" เป็นจังหวัด แล้วกรองรายการ "การไฟฟ้าปลายทาง" ให้เหลือเฉพาะจังหวัดนั้น

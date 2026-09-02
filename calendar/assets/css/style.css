@@ -478,6 +478,7 @@ body.role-reviewer .admin-only { display: none !important; }
   background: linear-gradient(120deg, var(--pea-purple-dark), var(--pea-purple));
   color: #fff; padding: 18px 22px; border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   display:flex; align-items:flex-start; justify-content:space-between; gap: 10px; position: sticky; top:0;
+  z-index: 2; box-shadow: 0 2px 8px rgba(30, 12, 51, 0.25);
 }
 .modal-head h2 { font-size: 17px; margin: 4px 0 0; font-weight: 600; line-height: 1.35; }
 .modal-head .modal-id { font-size: 11px; opacity: .75; }
@@ -556,6 +557,17 @@ body.role-reviewer .admin-only { display: none !important; }
 }
 .check-option { display: flex; align-items: center; gap: 7px; font-size: 13px; cursor: pointer; }
 .check-option input { accent-color: var(--pea-purple); }
+
+.equip-pick-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.equip-pick-toggle {
+  border: 1px solid var(--pea-purple-border); background: var(--pea-purple-light); color: var(--pea-purple-dark);
+  border-radius: var(--radius-sm); padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+.equip-pick-toggle:hover { background: var(--pea-purple-soft); }
+.equip-pick-toggle.open { background: var(--pea-purple); color: #fff; border-color: var(--pea-purple); }
+#equipment-check-grid.hidden { display: none; }
+#equipment-check-grid { margin-top: 6px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); max-height: 320px; overflow-y: auto; }
+.check-option-all { grid-column: 1 / -1; border-bottom: 1px dashed var(--border); padding-bottom: 8px; margin-bottom: 2px; }
 
 .vehicle-assign-rows { display: flex; flex-direction: column; gap: 8px; }
 .vehicle-assign-row { display: flex; gap: 8px; flex-wrap: wrap; }
