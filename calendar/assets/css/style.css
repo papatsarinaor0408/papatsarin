@@ -40,6 +40,7 @@
   --holiday-text: #b3175a;
 
   --weekend-text: #d1264a;
+  --weekend-bg: #f2eefa;
 
   --urgent: #dc2626;
   --urgent-bg: #fde8e8;
@@ -190,6 +191,8 @@ button { font-family: inherit; }
   border-radius: var(--radius-sm); padding: 0 14px; height: 36px; font-size: 13px; font-weight: 500; cursor: pointer;
 }
 .settings-btn:hover { background: var(--pea-purple-light); border-color: var(--pea-purple-border); }
+.person-btn { border: 1px solid var(--border); background: var(--white); color: var(--pea-purple-dark); border-radius: var(--radius-sm); padding: 0 14px; height: 36px; font-size: 13px; font-weight: 500; cursor: pointer; }
+.person-btn:hover { background: var(--pea-purple-light); border-color: var(--pea-purple-border); }
 
 .load-note {
   font-size: 12.5px; color: var(--pea-purple-dark); background: var(--pea-purple-light);
@@ -266,6 +269,7 @@ button { font-family: inherit; }
 .day-cell:hover { box-shadow: var(--shadow-sm); }
 .day-cell.out-month { background: #fbfaff; opacity: .55; }
 .day-cell.weekend .day-num { color: var(--weekend-text); }
+.day-cell.weekend:not(.holiday) { background: var(--weekend-bg); }
 .day-cell.holiday { background: var(--holiday-bg); border-color: var(--holiday-border); }
 .day-cell.is-today { box-shadow: 0 0 0 2px var(--accent) inset; }
 .day-cell.is-selected { box-shadow: 0 0 0 3px var(--accent); border-color: var(--accent); z-index: 1; }
@@ -308,6 +312,7 @@ button { font-family: inherit; }
   background: var(--white); border: 1px solid var(--border); border-radius: var(--radius);
   min-height: 420px; padding: 8px; cursor: pointer; display:flex; flex-direction:column;
 }
+.week-col.weekend:not(.holiday) { background: var(--weekend-bg); }
 .week-col.holiday { background: var(--holiday-bg); border-color: var(--holiday-border); }
 .week-col.is-today { box-shadow: 0 0 0 2px var(--accent) inset; }
 .week-col.is-selected { box-shadow: 0 0 0 3px var(--accent); border-color: var(--accent); }
@@ -522,6 +527,56 @@ button { font-family: inherit; }
 .team-members-input {
   width: 100%; min-height: 60px; border: 1px solid var(--border); border-radius: var(--radius-sm);
   padding: 8px 10px; font-size: 13px; font-family: inherit; resize: vertical; line-height: 1.6;
+}
+
+/* ---------------- Person modal: individual calendar / leave / OT ---------------- */
+.person-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.person-toolbar select#person-select {
+  border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 13.5px;
+  font-family: inherit; color: var(--ink); background: var(--white); font-weight: 600; min-width: 220px;
+}
+.person-nav { display: flex; align-items: center; gap: 8px; }
+.person-month-label { font-size: 14px; font-weight: 600; color: var(--ink); min-width: 130px; text-align: center; }
+
+.person-stat-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 10px; }
+.person-stat { background: var(--pea-purple-light); border-radius: var(--radius-sm); padding: 10px 12px; }
+.person-stat-label { font-size: 11.5px; color: var(--pea-purple-dark); margin-bottom: 4px; }
+.person-stat-value { font-size: 20px; font-weight: 700; color: var(--pea-purple-dark); }
+.person-stat.ot { background: var(--urgent-bg); }
+.person-stat.ot .person-stat-label, .person-stat.ot .person-stat-value { color: var(--urgent); }
+.person-stat.leave { background: var(--orange-bg); }
+.person-stat.leave .person-stat-label, .person-stat.leave .person-stat-value { color: var(--orange); }
+
+.person-leave-breakdown { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.leave-type-chip { font-size: 11.5px; background: var(--orange-bg); color: var(--orange); border: 1px solid var(--orange-border); border-radius: 999px; padding: 3px 10px; font-weight: 500; }
+
+.person-month-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-bottom: 4px; }
+.person-day-cell {
+  min-height: 68px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--white);
+  padding: 5px; cursor: pointer; display: flex; flex-direction: column; gap: 2px;
+}
+.person-day-cell.empty { visibility: hidden; border: none; cursor: default; }
+.person-day-cell.weekend:not(.holiday) { background: var(--weekend-bg); }
+.person-day-cell.holiday { background: var(--holiday-bg); border-color: var(--holiday-border); }
+.person-day-cell.is-today { box-shadow: 0 0 0 2px var(--accent) inset; }
+.person-day-cell.has-leave { background: var(--orange-bg); border-color: var(--orange-border); }
+.pd-num { font-size: 12px; font-weight: 600; color: var(--ink); }
+.pd-holiday { font-size: 8.5px; color: var(--holiday-text); font-weight: 600; line-height: 1.2; }
+.pd-leave-tag { font-size: 9px; color: var(--orange); font-weight: 700; background: rgba(194, 84, 10, 0.12); border-radius: 4px; padding: 1px 4px; align-self: flex-start; }
+.pd-work-tag { font-size: 9px; color: var(--green); font-weight: 600; background: var(--green-bg); border-radius: 4px; padding: 1px 4px; align-self: flex-start; }
+.pd-work-tag.ot { color: var(--urgent); background: var(--urgent-bg); }
+
+.leave-history-list { display: flex; flex-direction: column; gap: 6px; }
+.leave-history-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12.5px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 7px 10px;
+}
+.leave-history-row .btn-danger { height: 28px; padding: 0 10px; font-size: 12px; }
+
+@media (max-width: 640px) {
+  .person-month-grid { gap: 4px; }
+  .person-day-cell { min-height: 50px; padding: 3px; }
+  .pd-holiday, .pd-leave-tag, .pd-work-tag { font-size: 7.5px; }
 }
 
 /* ---------------- Empty state ---------------- */

@@ -18,6 +18,10 @@
     { key: "out", cls: "stat-out", label: "งานนอกพื้นที่", icon: "🟠" }
   ];
 
+  // "PEA อำเภอบางปะกง" คือหน่วยงานต้นสังกัด — เลือกการไฟฟ้าปลายทางนี้แล้วฟอร์มจะช่วยติ๊ก "ในพื้นที่" ให้อัตโนมัติ
+  const HOME_UNIT_PEA = "PEA อำเภอบางปะกง";
+  const LEAVE_TYPES = ["ลาป่วย", "ลากิจส่วนตัว", "ลาพักผ่อน", "ลาคลอดบุตร", "ลาอุปสมบท", "อื่นๆ"];
+
   /* ---------------- Date helpers (local-time, no TZ surprises) ---------------- */
   function toISO(d) {
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
@@ -86,6 +90,41 @@
       TEAMS = {};
       TEAM_ROWS.forEach(t => { TEAMS[t.name] = t.members || []; });
     }
+  }
+
+  /* ---------------- Employees + leave records (individual calendar / OT) ---------------- */
+  let EMPLOYEES = [];
+  let LEAVES = [];
+
+  async function loadPeopleData() {
+    const [empRes, leaveRes] = await Promise.all([
+      CAL_SB.from("calendar_employees").select("*"),
+      CAL_SB.from("calendar_leaves").select("*")
+    ]);
+    if (!empRes.error && empRes.data) EMPLOYEES = empRes.data.slice().sort((a, b) => a.name.localeCompare(b.name, "th"));
+    if (!leaveRes.error && leaveRes.data) LEAVES = leaveRes.data;
+  }
+
+  function leaveOnDate(employeeName, iso) {
+    return LEAVES.find(l => l.employee_name === employeeName && iso >= l.date_from && iso <= l.date_to) || null;
+  }
+  function tasksForEmployeeOnDate(employeeName, iso) {
+    return TASKS.filter(t => t.date === iso && (t.teamMembers || []).some(m => m.includes(employeeName)));
+  }
+  function getPersonMonthData(employeeName, year, month0) {
+    const daysInMonth = new Date(year, month0 + 1, 0).getDate();
+    const out = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+      const iso = `${year}-${String(month0 + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const dow = new Date(year, month0, day).getDay();
+      const holiday = HOLIDAYS[iso];
+      const isWeekend = dow === 0 || dow === 6;
+      const leave = leaveOnDate(employeeName, iso);
+      const tasksForDay = tasksForEmployeeOnDate(employeeName, iso);
+      const worked = tasksForDay.length > 0;
+      out.push({ iso, day, dow, holiday, isWeekend, leave, tasksForDay, worked, isOT: worked && (isWeekend || !!holiday) });
+    }
+    return out;
   }
 
   function rowToTask(r) {
@@ -192,6 +231,7 @@
   const loadNoteEl = $("#load-note");
   const addTaskBtnEl = $("#add-task-btn");
   const settingsBtnEl = $("#settings-btn");
+  const personBtnEl = $("#person-btn");
 
   /* ---------------- Header today badge ---------------- */
   todayBadgeEl.textContent = `วันนี้ ${WD_FULL[TODAY.getDay()]} ${TODAY.getDate()} ${THAI_MONTHS[TODAY.getMonth()]} พ.ศ. ${beYear(TODAY)}`;
@@ -770,6 +810,15 @@
     document.querySelectorAll("input[name=areaStatus]").forEach(r => r.addEventListener("change", () => syncAreaStatus(true)));
     syncAreaStatus(false);
 
+    // "PEA อำเภอบางปะกง" คือหน่วยงานต้นสังกัด — เลือกแล้วช่วยติ๊ก "ในพื้นที่" ให้ (แก้เองได้ทีหลัง)
+    const targetPEAInput = document.querySelector('input[name=targetPEA]');
+    targetPEAInput.addEventListener("change", () => {
+      if (targetPEAInput.value.trim() === HOME_UNIT_PEA) {
+        const inRadio = document.querySelector('input[name=areaStatus][value=in]');
+        if (inRadio && !inRadio.checked) { inRadio.checked = true; syncAreaStatus(true); }
+      }
+    });
+
     $("#team-input").addEventListener("change", (ev) => {
       const membersEl = $("#team-members-input");
       if (!membersEl.value.trim() && TEAMS[ev.target.value]) {
@@ -1017,6 +1066,190 @@
 
   settingsBtnEl.addEventListener("click", openSettingsModal);
 
+  /* ---------------- Person modal: individual calendar / leave / OT ---------------- */
+  const personState = { employeeName: "", cursor: new Date(TODAY) };
+
+  function showLeaveFormError(msg) {
+    const el = $("#leave-form-error");
+    if (el) el.innerHTML = `<div class="form-error">${esc(msg)}</div>`;
+  }
+
+  function buildPersonModalHtml() {
+    if (!personState.employeeName && EMPLOYEES.length) personState.employeeName = EMPLOYEES[0].name;
+    const employee = personState.employeeName;
+    const cursor = personState.cursor;
+    const year = cursor.getFullYear(), month0 = cursor.getMonth();
+    const monthData = employee ? getPersonMonthData(employee, year, month0) : [];
+    const workDays = monthData.filter(d => d.worked).length;
+    const leaveDays = monthData.filter(d => d.leave);
+    const otDays = monthData.filter(d => d.isOT).length;
+
+    const leaveByType = {};
+    leaveDays.forEach(d => { leaveByType[d.leave.leave_type] = (leaveByType[d.leave.leave_type] || 0) + 1; });
+
+    const startDow = new Date(year, month0, 1).getDay();
+    const cells = [];
+    for (let i = 0; i < startDow; i++) cells.push(null);
+    monthData.forEach(d => cells.push(d));
+    while (cells.length % 7 !== 0) cells.push(null);
+
+    const employeeLeaves = LEAVES.filter(l => l.employee_name === employee).sort((a, b) => b.date_from.localeCompare(a.date_from));
+
+    return `
+      <div class="modal-head">
+        <div>
+          <div class="modal-id">ปฏิทินรายบุคคล</div>
+          <h2>ปฏิทิน / วันลา / สรุปโอทีรายบุคคล</h2>
+        </div>
+        <button class="modal-close" id="modal-close-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        ${EMPLOYEES.length ? `
+        <div class="person-toolbar">
+          <select id="person-select">${EMPLOYEES.map(e => `<option value="${esc(e.name)}" ${e.name === employee ? "selected" : ""}>${esc(e.name)}${e.position ? " (" + esc(e.position) + ")" : ""}</option>`).join("")}</select>
+          <div class="person-nav">
+            <button type="button" class="nav-btn" id="person-prev">‹</button>
+            <span class="person-month-label">${THAI_MONTHS[month0]} พ.ศ. ${beYear(cursor)}</span>
+            <button type="button" class="nav-btn" id="person-next">›</button>
+          </div>
+        </div>
+        <div class="person-stat-row">
+          <div class="person-stat"><div class="person-stat-label">วันที่มีงาน (เดือนนี้)</div><div class="person-stat-value">${workDays}</div></div>
+          <div class="person-stat ot"><div class="person-stat-label">วันโอที (เสาร์-อาทิตย์-นักขัตฤกษ์)</div><div class="person-stat-value">${otDays}</div></div>
+          <div class="person-stat leave"><div class="person-stat-label">วันลา</div><div class="person-stat-value">${leaveDays.length}</div></div>
+        </div>
+        ${Object.keys(leaveByType).length ? `<div class="person-leave-breakdown">${Object.entries(leaveByType).map(([t, c]) => `<span class="leave-type-chip">${esc(t)} ${c} วัน</span>`).join("")}</div>` : ""}
+        <div class="weekday-row">${WD_SHORT.map((w, i) => `<div class="wd ${i === 0 ? "sun" : i === 6 ? "sat" : ""}">${w}</div>`).join("")}</div>
+        <div class="person-month-grid">
+          ${cells.map(d => {
+            if (!d) return `<div class="person-day-cell empty"></div>`;
+            const cls = ["person-day-cell"];
+            if (d.isWeekend) cls.push("weekend");
+            if (d.holiday) cls.push("holiday");
+            if (d.leave) cls.push("has-leave");
+            if (d.iso === TODAY_ISO) cls.push("is-today");
+            return `<div class="${cls.join(" ")}" data-date="${d.iso}">
+              <div class="pd-num">${d.day}</div>
+              ${d.holiday ? `<div class="pd-holiday">${esc(d.holiday)}</div>` : ""}
+              ${d.leave ? `<div class="pd-leave-tag">${esc(d.leave.leave_type)}</div>` : ""}
+              ${d.worked ? `<div class="pd-work-tag ${d.isOT ? "ot" : ""}">${d.isOT ? "⚡" : ""} ${d.tasksForDay.length} งาน</div>` : ""}
+            </div>`;
+          }).join("")}
+        </div>
+
+        <div class="detail-section" style="margin-top:18px;">
+          <div class="detail-section-title">บันทึกวันลาใหม่ (คลิกวันที่ในปฏิทินด้านบนเพื่อเติมวันที่ให้อัตโนมัติ)</div>
+          <form id="leave-form">
+            <div class="form-grid">
+              <div class="form-field">
+                <label>ตั้งแต่วันที่ <span class="req">*</span></label>
+                <input type="date" name="dateFrom" id="leave-date-from" required />
+              </div>
+              <div class="form-field">
+                <label>ถึงวันที่ <span class="req">*</span></label>
+                <input type="date" name="dateTo" id="leave-date-to" required />
+              </div>
+              <div class="form-field">
+                <label>ประเภทการลา <span class="req">*</span></label>
+                <select name="leaveType" required>${LEAVE_TYPES.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join("")}</select>
+              </div>
+              <div class="form-field">
+                <label>หมายเหตุ</label>
+                <input type="text" name="note" placeholder="ไม่บังคับ" />
+              </div>
+            </div>
+            <div id="leave-form-error"></div>
+            <div class="form-actions">
+              <span class="form-hint">บันทึกให้ ${esc(employee)}</span>
+              <div class="form-actions-right"><button type="submit" class="btn-primary">+ บันทึกวันลา</button></div>
+            </div>
+          </form>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">ประวัติวันลาทั้งหมดของ ${esc(employee)}</div>
+          ${employeeLeaves.length ? `<div class="leave-history-list">${employeeLeaves.map(l => `
+            <div class="leave-history-row">
+              <div><b>${esc(l.leave_type)}</b> · ${esc(l.date_from)}${l.date_from !== l.date_to ? " ถึง " + esc(l.date_to) : ""}${l.note ? " · " + esc(l.note) : ""}</div>
+              <button type="button" class="btn-danger leave-del-btn" data-id="${l.id}">🗑</button>
+            </div>`).join("")}</div>` : `<div class="form-hint">ยังไม่มีประวัติการลา</div>`}
+        </div>
+        ` : `<div class="empty-state">ยังไม่มีรายชื่อพนักงานในระบบ</div>`}
+      </div>`;
+  }
+
+  function openPersonModal() {
+    modalBodyEl.innerHTML = buildPersonModalHtml();
+    modalBackdropEl.classList.add("open");
+    bindPersonEvents();
+  }
+
+  async function refreshPersonModal() {
+    await loadPeopleData();
+    modalBodyEl.innerHTML = buildPersonModalHtml();
+    bindPersonEvents();
+  }
+
+  function bindPersonEvents() {
+    $("#modal-close-btn").addEventListener("click", closeModal);
+    if (!EMPLOYEES.length) return;
+
+    $("#person-select").addEventListener("change", (ev) => {
+      personState.employeeName = ev.target.value;
+      modalBodyEl.innerHTML = buildPersonModalHtml();
+      bindPersonEvents();
+    });
+    $("#person-prev").addEventListener("click", () => {
+      personState.cursor = addMonths(personState.cursor, -1);
+      modalBodyEl.innerHTML = buildPersonModalHtml();
+      bindPersonEvents();
+    });
+    $("#person-next").addEventListener("click", () => {
+      personState.cursor = addMonths(personState.cursor, 1);
+      modalBodyEl.innerHTML = buildPersonModalHtml();
+      bindPersonEvents();
+    });
+    modalBodyEl.querySelectorAll(".person-day-cell[data-date]").forEach(cell => {
+      cell.addEventListener("click", () => {
+        const iso = cell.getAttribute("data-date");
+        $("#leave-date-from").value = iso;
+        $("#leave-date-to").value = iso;
+      });
+    });
+
+    $("#leave-form").addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const fd = new FormData(ev.target);
+      const dateFrom = fd.get("dateFrom");
+      const dateTo = fd.get("dateTo") || dateFrom;
+      if (!dateFrom || !dateTo) { showLeaveFormError("กรุณาเลือกวันที่ให้ครบ"); return; }
+      if (dateTo < dateFrom) { showLeaveFormError("วันสิ้นสุดต้องไม่ก่อนวันเริ่ม"); return; }
+      const row = {
+        employee_name: personState.employeeName,
+        date_from: dateFrom,
+        date_to: dateTo,
+        leave_type: fd.get("leaveType"),
+        note: (fd.get("note") || "").trim() || null
+      };
+      const btn = ev.target.querySelector("button[type=submit]");
+      btn.disabled = true;
+      const { error } = await CAL_SB.from("calendar_leaves").insert([row]);
+      if (error) { showLeaveFormError("บันทึกไม่สำเร็จ: " + error.message); btn.disabled = false; return; }
+      await refreshPersonModal();
+    });
+
+    modalBodyEl.querySelectorAll(".leave-del-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        if (!confirm("ลบวันลานี้ออกจากประวัติ?")) return;
+        const { error } = await CAL_SB.from("calendar_leaves").delete().eq("id", btn.getAttribute("data-id"));
+        if (error) { alert("ลบไม่สำเร็จ: " + error.message); return; }
+        await refreshPersonModal();
+      });
+    });
+  }
+
+  personBtnEl.addEventListener("click", openPersonModal);
+
   /* ---------------- Main render ---------------- */
   function renderAll() {
     renderToolbar();
@@ -1032,7 +1265,7 @@
   }
 
   async function init() {
-    await Promise.all([loadOptions(), loadTasks()]);
+    await Promise.all([loadOptions(), loadTasks(), loadPeopleData()]);
     renderAll();
   }
   init();
