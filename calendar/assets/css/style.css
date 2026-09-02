@@ -147,6 +147,7 @@ body.role-reviewer .admin-only { display: none !important; }
 .equip-table .equip-id { font-size: 11px; font-weight: 600; color: var(--pea-purple); display: block; }
 .equip-table .equip-name-th { font-size: 13px; font-weight: 600; color: var(--ink); }
 .equip-table .equip-name-en { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+.equip-table .equip-name-reading { font-size: 10.5px; color: var(--text-faint); margin-top: 1px; font-style: italic; }
 .equip-table td.eq-warn { color: var(--urgent); background: var(--urgent-bg); }
 
 /* ---------------- Dedicated full pages (equipment manual / person / access log — not modals) ---------------- */

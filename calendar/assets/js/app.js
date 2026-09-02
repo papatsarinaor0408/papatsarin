@@ -1487,11 +1487,10 @@
             <thead>
               <tr>
                 <th>อุปกรณ์</th>
-                <th>ใช้กับงาน/สถานการณ์</th>
-                <th>หน้าที่/การใช้งาน</th>
+                <th>การใช้งาน</th>
                 <th>ตรวจสอบก่อนใช้</th>
-                <th>ห้ามใช้ / เงื่อนไขหยุดงาน</th>
-                <th>การดูแลหลังใช้งาน</th>
+                <th>ห้ามใช้ / Stop Work</th>
+                <th>ดูแลหลังใช้งาน</th>
                 <th>ข้อกำหนดความปลอดภัย</th>
               </tr>
             </thead>
@@ -1499,12 +1498,11 @@
               ${groups[g].map(e => `
                 <tr>
                   <td class="eq-name-cell">
-                    <span class="equip-id">${esc(e.id)}</span>
                     <div class="equip-name-th">${esc(e.name_th)}</div>
-                    <div class="equip-name-en">${esc(e.name_en)}</div>
+                    ${e.name_en ? `<div class="equip-name-en">${esc(e.name_en)}</div>` : ""}
+                    ${e.reading ? `<div class="equip-name-reading">อ่านว่า “${esc(e.reading)}”</div>` : ""}
                   </td>
-                  ${equipCellHtml(e.use_case)}
-                  ${equipCellHtml(e.function)}
+                  ${equipCellHtml(e.usage)}
                   ${equipCellHtml(e.pre_check)}
                   ${equipCellHtml(e.stop_conditions, true)}
                   ${equipCellHtml(e.care_after)}
