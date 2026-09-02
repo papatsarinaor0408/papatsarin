@@ -1461,8 +1461,20 @@
     const submitBtn = loginFormEl.querySelector("button[type=submit]");
     submitBtn.disabled = true;
     submitBtn.textContent = "กำลังเข้าสู่ระบบ...";
-    const { data, error } = await CAL_SB.from("calendar_employees").select("*").eq("employee_no", employeeNo);
-    const row = !error && data && data[0];
+    let data, error;
+    try {
+      ({ data, error } = await CAL_SB.from("calendar_employees").select("*").eq("employee_no", employeeNo));
+    } catch (ex) {
+      showLoginError("เชื่อมต่อฐานข้อมูลไม่สำเร็จ: " + (ex && ex.message ? ex.message : String(ex)));
+      submitBtn.disabled = false; submitBtn.textContent = "เข้าสู่ระบบ";
+      return;
+    }
+    if (error) {
+      showLoginError("เชื่อมต่อฐานข้อมูลไม่สำเร็จ: " + error.message);
+      submitBtn.disabled = false; submitBtn.textContent = "เข้าสู่ระบบ";
+      return;
+    }
+    const row = data && data[0];
     if (!row || !row.password_hash || !row.password_salt) {
       showLoginError("ไม่พบผู้ใช้นี้ในระบบ");
       submitBtn.disabled = false; submitBtn.textContent = "เข้าสู่ระบบ";
