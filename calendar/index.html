@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ระบบปฏิทินงาน Hotline PEA BPK Team Calendar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css?v=1" />
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-header-inner">
+    <div class="app-brand">
+      <div class="app-brand-mark">⚡</div>
+      <div>
+        <h1>ระบบปฏิทินงาน Hotline PEA BPK Team Calendar</h1>
+        <div class="sub">ภาพรวมแผนปฏิบัติงานทีม Hotline การไฟฟ้าส่วนภูมิภาค บางปะกง</div>
+      </div>
+    </div>
+    <div class="app-header-today" id="today-badge"></div>
+  </div>
+</header>
+
+<div class="app-shell">
+
+  <div class="stat-row" id="stat-row"></div>
+
+  <div class="filter-bar" id="filter-bar">
+    <div class="filter-bar-head">
+      <div class="filter-bar-title">🔎 ตัวกรอง</div>
+      <button class="filter-clear-btn" id="filter-clear-btn">ล้างตัวกรอง</button>
+    </div>
+    <div class="filter-grid" id="filter-grid"></div>
+    <div class="filter-active-note hidden" id="filter-active-note"></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar-nav">
+      <button class="nav-btn" id="nav-prev">‹</button>
+      <button class="today-btn" id="nav-today">วันนี้</button>
+      <button class="nav-btn" id="nav-next">›</button>
+      <span class="period-label" id="period-label"></span>
+    </div>
+    <div class="view-switch" id="view-switch"></div>
+  </div>
+
+  <div class="main-cols" id="main-cols">
+    <div class="calendar-col" id="calendar-view"></div>
+    <div class="side-col" id="side-col">
+      <div class="side-panel" id="side-panel"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal" id="modal-body"></div>
+</div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
