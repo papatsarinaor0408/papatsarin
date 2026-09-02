@@ -178,7 +178,8 @@
       // นับเป็นวันโอที ถ้าเป็นวันเสาร์/อาทิตย์/วันหยุดนักขัตฤกษ์ หรือมีงานที่เวลานัดหมายหน้างานหลัง 16:30 น. (งานด่วนนอกเวลาราชการ)
       const isOT = worked && (isWeekend || !!holiday || tasksForDay.some(t => t.appointTime && t.appointTime >= OT_AFTER_HOURS_TIME));
       const hasTravelOrder = tasksForDay.some(t => t.travelOrder);
-      out.push({ iso, day, dow, holiday, isWeekend, leave, tasksForDay, worked, isOT, hasTravelOrder });
+      const inArea = worked && tasksForDay.some(t => t.areaStatus === "in");
+      out.push({ iso, day, dow, holiday, isWeekend, leave, tasksForDay, worked, isOT, hasTravelOrder, inArea });
     }
     return out;
   }
@@ -1168,7 +1169,54 @@
   addTaskBtnEl.addEventListener("click", () => openFormModal(null));
 
   /* ---------------- Person modal: individual calendar / leave / OT ---------------- */
-  const personState = { employeeName: "", cursor: new Date(TODAY) };
+  const personState = { employeeName: "", cursor: new Date(TODAY), mode: "individual" };
+
+  function computeEmployeeMonthStats(employeeName, year, month0) {
+    const monthData = getPersonMonthData(employeeName, year, month0);
+    return {
+      workDays: monthData.filter(d => d.worked).length,
+      travelOrderDays: monthData.filter(d => d.hasTravelOrder).length,
+      inAreaDays: monthData.filter(d => d.inArea).length,
+      otDays: monthData.filter(d => d.isOT).length,
+      leaveDays: monthData.filter(d => d.leave).length
+    };
+  }
+
+  function buildTeamSummaryHtml(year, month0) {
+    if (!EMPLOYEES.length) return `<div class="empty-state">ยังไม่มีรายชื่อพนักงานในระบบ</div>`;
+    const bizDays = businessDaysProgress(year, month0);
+    const rows = EMPLOYEES.map(e => ({ e, stats: computeEmployeeMonthStats(e.name, year, month0) }));
+    return `
+      <div class="team-summary-wrap">
+        <table class="team-summary-table">
+          <thead>
+            <tr>
+              <th>ทีมปฏิบัติงาน Hotline</th>
+              <th>ปฏิบัติงาน / วันทำการ</th>
+              <th>คำสั่งเดินทาง</th>
+              <th>ประจำสำนักงาน</th>
+              <th>OT</th>
+              <th>ลา</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(({ e, stats }) => `
+              <tr class="team-summary-row" data-employee="${esc(e.name)}">
+                <td class="ts-name-cell">
+                  ${esc(e.name)}${e.role_title ? ` <span class="role-title-badge">${esc(e.role_title)}</span>` : ""}
+                  ${e.position ? `<div class="form-hint">${esc(e.position)}</div>` : ""}
+                </td>
+                <td>${stats.workDays}/${bizDays.total} วัน</td>
+                <td>${stats.travelOrderDays} วัน</td>
+                <td>${stats.inAreaDays} วัน</td>
+                <td>${stats.otDays} วัน</td>
+                <td>${stats.leaveDays} วัน</td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+      <div class="form-hint" style="margin-top:8px;">คลิกชื่อพนักงานเพื่อดูปฏิทิน/รายละเอียดรายบุคคล</div>`;
+  }
 
   function showLeaveFormError(msg) {
     const el = $("#leave-form-error");
@@ -1199,16 +1247,23 @@
 
     const employeeLeaves = LEAVES.filter(l => l.employee_name === employee).sort((a, b) => b.date_from.localeCompare(a.date_from));
 
+    const mode = personState.mode === "team" ? "team" : "individual";
+
     return `
         ${EMPLOYEES.length ? `
         <div class="person-toolbar">
-          <select id="person-select">${EMPLOYEES.map(e => `<option value="${esc(e.name)}" ${e.name === employee ? "selected" : ""}>${esc(e.name)}${e.position ? " (" + esc(e.position) + ")" : ""}</option>`).join("")}</select>
+          <div class="person-mode-switch">
+            <button type="button" class="pm-tab ${mode === "individual" ? "active" : ""}" data-mode="individual">รายบุคคล</button>
+            <button type="button" class="pm-tab ${mode === "team" ? "active" : ""}" data-mode="team">สรุปทีมรายเดือน</button>
+          </div>
+          ${mode === "individual" ? `<select id="person-select">${EMPLOYEES.map(e => `<option value="${esc(e.name)}" ${e.name === employee ? "selected" : ""}>${esc(e.name)}${e.position ? " (" + esc(e.position) + ")" : ""}</option>`).join("")}</select>` : ""}
           <div class="person-nav">
             <button type="button" class="nav-btn" id="person-prev">‹</button>
             <span class="person-month-label">${THAI_MONTHS[month0]} พ.ศ. ${beYear(cursor)}</span>
             <button type="button" class="nav-btn" id="person-next">›</button>
           </div>
         </div>
+        ${mode === "team" ? buildTeamSummaryHtml(year, month0) : `
         ${empObj && (empObj.role_title || empObj.position || empObj.employee_no || empObj.duties) ? `
         <div class="detail-section person-profile-card">
           <div class="detail-section-title">ข้อมูลประจำตัว</div>
@@ -1284,6 +1339,7 @@
               <button type="button" class="btn-danger leave-del-btn admin-only" data-id="${l.id}">🗑</button>
             </div>`).join("")}</div>` : `<div class="form-hint">ยังไม่มีประวัติการลา</div>`}
         </div>
+        `}
         ` : `<div class="empty-state">ยังไม่มีรายชื่อพนักงานในระบบ</div>`}`;
   }
 
@@ -1308,7 +1364,23 @@
   function bindPersonEvents() {
     if (!EMPLOYEES.length) return;
 
-    $("#person-select").addEventListener("change", (ev) => {
+    document.querySelectorAll(".pm-tab").forEach(btn => {
+      btn.addEventListener("click", () => {
+        personState.mode = btn.getAttribute("data-mode");
+        personPageBodyEl.innerHTML = buildPersonModalHtml();
+        bindPersonEvents();
+      });
+    });
+    document.querySelectorAll(".team-summary-row").forEach(row => {
+      row.addEventListener("click", () => {
+        personState.employeeName = row.getAttribute("data-employee");
+        personState.mode = "individual";
+        personPageBodyEl.innerHTML = buildPersonModalHtml();
+        bindPersonEvents();
+      });
+    });
+    const personSelectEl = $("#person-select");
+    if (personSelectEl) personSelectEl.addEventListener("change", (ev) => {
       personState.employeeName = ev.target.value;
       personPageBodyEl.innerHTML = buildPersonModalHtml();
       bindPersonEvents();
@@ -1331,7 +1403,8 @@
       });
     });
 
-    $("#leave-form").addEventListener("submit", async (ev) => {
+    const leaveFormEl = $("#leave-form");
+    if (leaveFormEl) leaveFormEl.addEventListener("submit", async (ev) => {
       ev.preventDefault();
       if (!isAdmin()) return;
       const fd = new FormData(ev.target);

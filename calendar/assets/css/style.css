@@ -601,6 +601,22 @@ body.role-reviewer .admin-only { display: none !important; }
 .person-nav { display: flex; align-items: center; gap: 8px; }
 .person-month-label { font-size: 14px; font-weight: 600; color: var(--ink); min-width: 130px; text-align: center; }
 
+.person-mode-switch { display: flex; gap: 4px; background: var(--pea-purple-light); padding: 4px; border-radius: 10px; }
+.pm-tab { border: none; background: transparent; color: var(--pea-purple-dark); padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; font-family: inherit; }
+.pm-tab.active { background: var(--pea-purple); color: #fff; box-shadow: var(--shadow-sm); }
+
+.team-summary-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--white); margin-bottom: 4px; }
+.team-summary-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 720px; }
+.team-summary-table th {
+  text-align: left; font-size: 10.5px; font-weight: 700; color: var(--pea-purple-dark); text-transform: uppercase;
+  letter-spacing: .03em; background: var(--pea-purple-light); padding: 9px 10px; white-space: nowrap;
+}
+.team-summary-table td { padding: 10px; border-bottom: 1px solid var(--border-soft); font-variant-numeric: tabular-nums; }
+.team-summary-table tr:last-child td { border-bottom: none; }
+.team-summary-row { cursor: pointer; }
+.team-summary-row:hover td { background: var(--pea-purple-light); }
+.ts-name-cell { font-weight: 600; color: var(--ink); white-space: nowrap; }
+
 .person-stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 10px; }
 .person-stat { background: var(--pea-purple-light); border-radius: var(--radius-sm); padding: 10px 12px; }
 .person-stat-label { font-size: 11.5px; color: var(--pea-purple-dark); margin-bottom: 4px; }
