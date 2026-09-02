@@ -911,7 +911,7 @@
                 ${vehicleAssignRowHtml(0)}
                 ${vehicleAssignRowHtml(1)}
               </div>
-              <div class="form-hint">เลือกชื่อ "คนที่ไปงานนี้" ก่อน แล้วรายชื่อคนขับจะดึงมาให้เลือกอัตโนมัติ — เลือกคนขับให้รถคันหนึ่งแล้ว ชื่อนั้นจะไม่ขึ้นให้เลือกซ้ำกับอีกคัน</div>
+              <div class="form-hint">เลือกคนขับให้รถคันหนึ่งแล้ว ชื่อนั้นจะไม่ขึ้นให้เลือกซ้ำกับอีกคัน</div>
             </div>
             <div class="form-field span2">
               <div class="equip-pick-head">
@@ -1037,10 +1037,10 @@
       targetPeaDatalistEl.innerHTML = datalistOptionsHtml(targetPeaOptionsForWorkArea(allOpts, workAreaSelectForFilter.value));
     });
 
-    // รถที่ใช้ + คนขับ: ดึงรายชื่อคนขับจาก "คนที่ไปงานนี้" ที่ติ๊กไว้ ห้ามเลือกรถซ้ำคันหรือคนขับซ้ำคนระหว่าง 2 แถว
-    const teamCheckGridEl = $("#team-check-grid");
+    // รถที่ใช้ + คนขับ: รายชื่อคนขับดึงจากพนักงานทั้งหมดในทีม (ไม่ต้องติ๊ก "คนที่ไปงานนี้" ก่อน)
+    // ห้ามเลือกรถซ้ำคันหรือคนขับซ้ำคนระหว่าง 2 แถว
     function currentTeamMemberNames() {
-      return Array.from(document.querySelectorAll('input[name=teamMemberEmp]:checked')).map(cb => cb.value);
+      return EMPLOYEES.map(e => e.name);
     }
     function vehicleDriverRows() {
       return [1, 2].map(i => ({
@@ -1068,9 +1068,6 @@
         row.dSel.disabled = !hasVehicle;
         if (!hasVehicle && row.dSel.value) row.dSel.value = "";
       });
-    }
-    if (teamCheckGridEl) {
-      teamCheckGridEl.addEventListener("change", () => populateDriverOptions());
     }
     document.querySelectorAll(".va-vehicle-select, .va-driver-select").forEach(sel => {
       sel.addEventListener("change", () => syncVehicleDriverRows());
