@@ -138,7 +138,9 @@
       CAL_SB.from("calendar_employees").select("*"),
       CAL_SB.from("calendar_leaves").select("*")
     ]);
-    if (!empRes.error && empRes.data) EMPLOYEES = empRes.data.slice().sort((a, b) => a.name.localeCompare(b.name, "th"));
+    // is_field_staff = false คือบัญชีสำหรับสิทธิ์เข้าใช้เท่านั้น (เช่น ผู้ดูแลระบบสำรอง) ไม่ใช่คนทำงานจริง
+    // เลยไม่เอาไปแสดงในรายการเลือกคน/คนขับ/ปฏิทินรายบุคคล/สรุปทีมที่ไหนเลย
+    if (!empRes.error && empRes.data) EMPLOYEES = empRes.data.filter(e => e.is_field_staff !== false).slice().sort((a, b) => a.name.localeCompare(b.name, "th"));
     if (!leaveRes.error && leaveRes.data) LEAVES = leaveRes.data;
   }
 
