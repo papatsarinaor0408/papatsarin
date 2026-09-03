@@ -1288,10 +1288,11 @@
     const cursor = personState.cursor;
     const year = cursor.getFullYear(), month0 = cursor.getMonth();
     const monthData = employee ? getPersonMonthData(employee, year, month0) : [];
-    const workDays = monthData.filter(d => d.worked).length;
     const leaveDays = monthData.filter(d => d.leave);
     const otDays = monthData.filter(d => d.isOT).length;
     const travelOrderDays = monthData.filter(d => d.hasTravelOrder).length;
+    const inAreaDays = monthData.filter(d => d.inArea).length;
+    const taskCount = monthData.reduce((sum, d) => sum + d.tasksForDay.length, 0);
     const bizDays = businessDaysProgress(year, month0);
 
     const leaveByType = {};
@@ -1335,11 +1336,11 @@
           ${empObj.duties ? `<div class="person-duties-title">หน้าที่รับผิดชอบ</div><ul class="person-duties-list">${empObj.duties.split("\n").map(d => d.trim()).filter(Boolean).map(d => `<li>${esc(d)}</li>`).join("")}</ul>` : ""}
         </div>` : ""}
         <div class="person-stat-row">
-          <div class="person-stat workday"><div class="person-stat-label">วันทำการ (ทั้งเดือน/ผ่านมาแล้ว)</div><div class="person-stat-value">${bizDays.total}/${bizDays.elapsed}</div></div>
-          <div class="person-stat"><div class="person-stat-label">วันที่มีงาน (เดือนนี้)</div><div class="person-stat-value">${workDays}</div></div>
-          <div class="person-stat travel"><div class="person-stat-label">วันมีคำสั่งเดินทาง</div><div class="person-stat-value">${travelOrderDays}</div></div>
-          <div class="person-stat ot"><div class="person-stat-label">วัน OT (เสาร์-อาทิตย์-นักขัตฤกษ์)</div><div class="person-stat-value">${otDays}</div></div>
-          <div class="person-stat leave"><div class="person-stat-label">วันลา</div><div class="person-stat-value">${leaveDays.length}</div></div>
+          <div class="person-stat workday"><div class="person-stat-label">วันทำการ</div><div class="person-stat-value">${bizDays.total}/${bizDays.elapsed}</div></div>
+          <div class="person-stat"><div class="person-stat-label">ปฏิบัติงาน บปก.</div><div class="person-stat-value">${inAreaDays} วัน</div></div>
+          <div class="person-stat travel"><div class="person-stat-label">คำสั่งเดินทาง</div><div class="person-stat-value">${travelOrderDays} วัน</div></div>
+          <div class="person-stat ot"><div class="person-stat-label">OT</div><div class="person-stat-value">${otDays} วัน</div></div>
+          <div class="person-stat taskcount"><div class="person-stat-label">จำนวนงาน</div><div class="person-stat-value">${taskCount} งาน</div></div>
         </div>
         ${Object.keys(leaveByType).length ? `<div class="person-leave-breakdown">${Object.entries(leaveByType).map(([t, c]) => `<span class="leave-type-chip">${esc(t)} ${c} วัน</span>`).join("")}</div>` : ""}
         <div class="weekday-row">${WD_SHORT.map((w, i) => `<div class="wd ${i === 0 ? "sun" : i === 6 ? "sat" : ""}">${w}</div>`).join("")}</div>

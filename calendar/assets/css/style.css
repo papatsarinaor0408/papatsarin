@@ -693,8 +693,8 @@ body.role-reviewer .admin-only { display: none !important; }
 .person-stat-value { font-size: 20px; font-weight: 700; color: var(--pea-purple-dark); font-variant-numeric: tabular-nums; }
 .person-stat.ot { background: var(--urgent-bg); }
 .person-stat.ot .person-stat-label, .person-stat.ot .person-stat-value { color: var(--urgent); }
-.person-stat.leave { background: var(--orange-bg); }
-.person-stat.leave .person-stat-label, .person-stat.leave .person-stat-value { color: var(--orange); }
+.person-stat.taskcount { background: var(--orange-bg); }
+.person-stat.taskcount .person-stat-label, .person-stat.taskcount .person-stat-value { color: var(--orange); }
 .person-stat.travel { background: var(--pea-purple-soft); }
 .person-stat.travel .person-stat-label, .person-stat.travel .person-stat-value { color: var(--pea-purple-dark); }
 .person-stat.workday { background: var(--green-bg); }
