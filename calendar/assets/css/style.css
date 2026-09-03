@@ -190,24 +190,23 @@ body.role-reviewer .admin-only { display: none !important; }
   margin-bottom: 16px;
 }
 .stat-card {
-  background: var(--white);
-  border: 1px solid var(--border);
+  background: var(--pea-purple-light);
   border-radius: var(--radius);
   padding: 13px 16px;
-  cursor: pointer;
   text-align: left;
-  transition: box-shadow .15s, transform .15s, border-color .15s;
   position: relative;
 }
-.stat-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
-.stat-card.active { border-color: var(--pea-purple); box-shadow: 0 0 0 3px var(--pea-purple-soft); }
-.stat-card .stat-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; display:flex; align-items:center; gap:6px; }
-.stat-card .stat-value { font-size: 24px; font-weight: 600; color: var(--ink); }
-.stat-card.stat-all .stat-value { color: var(--pea-purple); }
-.stat-card.stat-urgent .stat-value { color: var(--urgent); }
-.stat-card.stat-in .stat-value { color: var(--green); }
-.stat-card.stat-out .stat-value { color: var(--orange); }
-.stat-dot { width: 8px; height: 8px; border-radius: 50%; display:inline-block; }
+.stat-card .stat-label { font-size: 12px; color: var(--pea-purple-dark); margin-bottom: 6px; display:flex; align-items:center; gap:6px; }
+.stat-card .stat-value { font-size: 24px; font-weight: 600; color: var(--pea-purple-dark); font-variant-numeric: tabular-nums; }
+.stat-card.workday { background: var(--green-bg); }
+.stat-card.workday .stat-label, .stat-card.workday .stat-value { color: var(--green); }
+.stat-card.inarea { background: var(--pea-purple-soft); }
+.stat-card.inarea .stat-label, .stat-card.inarea .stat-value { color: var(--pea-purple-dark); }
+.stat-card.travel { background: var(--pea-purple-light); }
+.stat-card.urgent { background: var(--urgent-bg); }
+.stat-card.urgent .stat-label, .stat-card.urgent .stat-value { color: var(--urgent); }
+.stat-card.taskcount { background: var(--orange-bg); }
+.stat-card.taskcount .stat-label, .stat-card.taskcount .stat-value { color: var(--orange); }
 
 /* ---------------- Toolbar ---------------- */
 .toolbar {

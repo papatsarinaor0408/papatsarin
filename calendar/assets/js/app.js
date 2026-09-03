@@ -10,16 +10,11 @@
   const WD_SHORT = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
   const WD_FULL = ["วันอาทิตย์","วันจันทร์","วันอังคาร","วันพุธ","วันพฤหัสบดี","วันศุกร์","วันเสาร์"];
 
-  const STAT_DEFS = [
-    { key: "all", cls: "stat-all", label: "งานทั้งหมด", icon: "📋" },
-    { key: "planned", cls: "stat-planned", label: "งานตามแผน", icon: "🗓️" },
-    { key: "urgent", cls: "stat-urgent", label: "งานด่วน", icon: "⚡" },
-    { key: "in", cls: "stat-in", label: "งานในพื้นที่", icon: "🟢" },
-    { key: "out", cls: "stat-out", label: "งานนอกพื้นที่", icon: "🟠" }
-  ];
-
-  // "PEA อำเภอบางปะกง" คือหน่วยงานต้นสังกัด — เลือกการไฟฟ้าปลายทางนี้แล้วฟอร์มจะช่วยติ๊ก "ในพื้นที่" ให้อัตโนมัติ
-  const HOME_UNIT_PEA = "PEA อำเภอบางปะกง";
+  // การไฟฟ้าต้นสังกัด (บางปะกง) — ในระบบมีชื่อซ้อนกัน 2 แบบจากข้อมูลตั้งต้นคนละชุด
+  // ("กฟฟ.บางปะกง" กับ "PEA อำเภอบางปะกง") เลยเก็บเป็นลิสต์ ใช้ยันกันทั้งคู่แทนที่จะเทียบสตริงตรงๆ
+  const HOME_UNIT_PEA_VARIANTS = ["กฟฟ.บางปะกง", "PEA อำเภอบางปะกง"];
+  const HOME_UNIT_PEA = HOME_UNIT_PEA_VARIANTS[0];
+  function isHomeUnitPea(targetPea) { return HOME_UNIT_PEA_VARIANTS.includes((targetPea || "").trim()); }
   const LEAVE_TYPES = ["ลาป่วย", "ลากิจส่วนตัว", "ลาพักผ่อน", "ลาคลอดบุตร", "ลาอุปสมบท", "อื่นๆ"];
   // งานที่มีเวลานัดหมายหน้างาน (appointTime) ตั้งแต่เวลานี้เป็นต้นไป นับเป็นโอที แม้จะเป็นวันทำงานปกติ
   const OT_AFTER_HOURS_TIME = "16:30";
@@ -80,7 +75,6 @@
     view: "month",
     cursor: new Date(TODAY),
     selectedDate: new Date(TODAY),
-    statFilter: null,
     filters: {
       dateFrom: "", dateTo: "", month: "", year: "",
       jobType: "", workArea: "", targetPEA: "", team: "", vehicle: "",
@@ -187,7 +181,8 @@
       // นับเป็นวันโอที ถ้าเป็นวันเสาร์/อาทิตย์/วันหยุดนักขัตฤกษ์ หรือมีงานที่เวลานัดหมายหน้างานหลัง 16:30 น. (งานด่วนนอกเวลาราชการ)
       const isOT = worked && (isWeekend || !!holiday || tasksForDay.some(t => t.appointTime && t.appointTime >= OT_AFTER_HOURS_TIME));
       const hasTravelOrder = tasksForDay.some(t => t.travelOrder);
-      const inArea = worked && tasksForDay.some(t => t.areaStatus === "in");
+      // "ปฏิบัติงาน บปก." = อยู่ที่การไฟฟ้าบางปะกงจริงๆ (ไม่ใช่แค่ areaStatus "ในพื้นที่" ทั่วไป) และไม่มีคำสั่งเดินทาง
+      const inArea = worked && tasksForDay.some(t => isHomeUnitPea(t.targetPEA) && !t.travelOrder);
       out.push({ iso, day, dow, holiday, isWeekend, leave, tasksForDay, worked, isOT, hasTravelOrder, inArea });
     }
     return out;
@@ -254,13 +249,6 @@
       return true;
     });
   }
-  function matchStat(t, key) {
-    if (key === "planned") return t.priority === "ตามแผน";
-    if (key === "urgent") return t.priority === "ด่วน";
-    if (key === "in") return t.areaStatus === "in";
-    if (key === "out") return t.areaStatus === "out";
-    return true;
-  }
   function periodRange() {
     const anchor = state.view === "day" ? state.selectedDate : state.cursor;
     if (state.view === "day") return [anchor, anchor];
@@ -271,8 +259,7 @@
   function inRange(iso, start, end) { return iso >= toISO(start) && iso <= toISO(end); }
 
   function getRenderTasks() {
-    const fieldFiltered = applyFieldFilters(TASKS);
-    return state.statFilter ? fieldFiltered.filter(t => matchStat(t, state.statFilter)) : fieldFiltered;
+    return applyFieldFilters(TASKS);
   }
   function getPeriodTasks() {
     const [s, e] = periodRange();
@@ -325,30 +312,24 @@
   /* ---------------- Header today badge ---------------- */
   todayBadgeEl.textContent = `วันนี้ ${WD_FULL[TODAY.getDay()]} ${TODAY.getDate()} ${THAI_MONTHS[TODAY.getMonth()]} พ.ศ. ${beYear(TODAY)}`;
 
-  /* ---------------- Stat row ---------------- */
+  /* ---------------- Stat row (สรุปรวมทั้งทีม ตามช่วงที่กำลังดูอยู่) ---------------- */
+  function isOTTask(t) {
+    const dow = fromISO(t.date).getDay();
+    return dow === 0 || dow === 6 || !!HOLIDAYS[t.date] || (t.appointTime && t.appointTime >= OT_AFTER_HOURS_TIME);
+  }
   function renderStatRow() {
     const periodTasks = getPeriodTasks();
-    const counts = {
-      all: periodTasks.length,
-      planned: periodTasks.filter(t => t.priority === "ตามแผน").length,
-      urgent: periodTasks.filter(t => t.priority === "ด่วน").length,
-      in: periodTasks.filter(t => t.areaStatus === "in").length,
-      out: periodTasks.filter(t => t.areaStatus === "out").length
-    };
-    statRowEl.innerHTML = STAT_DEFS.map(s => {
-      const active = (state.statFilter === s.key) || (s.key === "all" && !state.statFilter);
-      return `<button class="stat-card ${s.cls} ${active ? "active" : ""}" data-stat="${s.key}">
-        <div class="stat-label">${s.icon} ${s.label}</div>
-        <div class="stat-value">${counts[s.key]}</div>
-      </button>`;
-    }).join("");
-    statRowEl.querySelectorAll("[data-stat]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const key = btn.getAttribute("data-stat");
-        state.statFilter = (key === "all") ? null : (state.statFilter === key ? null : key);
-        renderAll();
-      });
-    });
+    const bizDays = businessDaysProgress(state.cursor.getFullYear(), state.cursor.getMonth());
+    const inAreaCount = periodTasks.filter(t => isHomeUnitPea(t.targetPEA) && !t.travelOrder).length;
+    const travelOrderCount = periodTasks.filter(t => t.travelOrder).length;
+    const otCount = periodTasks.filter(isOTTask).length;
+    statRowEl.innerHTML = `
+      <div class="stat-card workday"><div class="stat-label">วันทำการ</div><div class="stat-value">${bizDays.total}/${bizDays.elapsed}</div></div>
+      <div class="stat-card inarea"><div class="stat-label">ปฏิบัติงาน บปก.</div><div class="stat-value">${inAreaCount} วัน</div></div>
+      <div class="stat-card travel"><div class="stat-label">คำสั่งเดินทาง</div><div class="stat-value">${travelOrderCount} วัน</div></div>
+      <div class="stat-card urgent"><div class="stat-label">OT</div><div class="stat-value">${otCount} วัน</div></div>
+      <div class="stat-card taskcount"><div class="stat-label">จำนวนงาน</div><div class="stat-value">${periodTasks.length} งาน</div></div>
+    `;
   }
 
   /* ---------------- Toolbar ---------------- */
@@ -437,7 +418,7 @@
       });
     });
 
-    const activeCount = Object.values(state.filters).filter(v => v).length + (state.statFilter ? 1 : 0);
+    const activeCount = Object.values(state.filters).filter(v => v).length;
     if (activeCount > 0) {
       filterNoteEl.classList.remove("hidden");
       filterNoteEl.textContent = `กำลังใช้ตัวกรอง ${activeCount} รายการ · พบ ${getRenderTasks().length} งาน`;
@@ -447,7 +428,6 @@
   }
   $("#filter-clear-btn").addEventListener("click", () => {
     Object.keys(state.filters).forEach(k => state.filters[k] = "");
-    state.statFilter = null;
     renderAll();
   });
 
@@ -1104,9 +1084,9 @@
       ((task && task.vehicles) || [])[1] ? task.vehicles[1].driver || "" : ""
     ]);
 
-    // "PEA อำเภอบางปะกง" คือหน่วยงานต้นสังกัด — เลือกแล้วช่วยติ๊ก "ในพื้นที่" ให้ (แก้เองได้ทีหลัง)
+    // การไฟฟ้าต้นสังกัด (บางปะกง) — เลือกแล้วช่วยติ๊ก "ในพื้นที่" ให้ (แก้เองได้ทีหลัง)
     targetPeaSelectEl.addEventListener("change", () => {
-      if (targetPeaSelectEl.value.trim() === HOME_UNIT_PEA) {
+      if (isHomeUnitPea(targetPeaSelectEl.value)) {
         const inRadio = document.querySelector('input[name=areaStatus][value=in]');
         if (inRadio && !inRadio.checked) { inRadio.checked = true; syncAreaStatus(true); }
       }
