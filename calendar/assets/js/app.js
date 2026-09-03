@@ -702,6 +702,7 @@
         ${t.note ? `<div class="detail-section"><div class="detail-section-title">หมายเหตุ</div><div class="note-box">${esc(t.note)}</div></div>` : ""}
       </div>
       <div class="detail-actions admin-only">
+        ${t.status !== "เสร็จสิ้น" ? `<button class="btn-primary" id="mark-done-btn">✓ งานเสร็จสิ้น</button>` : ""}
         <button class="btn-secondary" id="edit-task-btn">✎ แก้ไขงาน</button>
         <button class="btn-danger" id="delete-task-btn">🗑 ลบงาน</button>
       </div>`;
@@ -710,6 +711,17 @@
     $("#modal-close-btn").addEventListener("click", closeModal);
     $("#edit-task-btn").addEventListener("click", () => openFormModal(t));
     $("#delete-task-btn").addEventListener("click", () => deleteTask(t));
+    if ($("#mark-done-btn")) $("#mark-done-btn").addEventListener("click", () => markTaskDone(t));
+  }
+  async function markTaskDone(t) {
+    if (!isAdmin()) return;
+    const btn = $("#mark-done-btn");
+    if (btn) { btn.disabled = true; btn.textContent = "กำลังบันทึก..."; }
+    const { error } = await CAL_SB.from("calendar_tasks").update({ status: "เสร็จสิ้น" }).eq("id", t.id);
+    if (error) { alert("บันทึกไม่สำเร็จ: " + error.message); if (btn) { btn.disabled = false; btn.textContent = "✓ งานเสร็จสิ้น"; } return; }
+    await loadTasks();
+    closeModal();
+    renderAll();
   }
   function detailItem(label, value, mono) {
     return `<div class="detail-item"><div class="di-label">${esc(label)}</div><div class="di-value ${mono ? "mono" : ""}">${esc(value)}</div></div>`;
