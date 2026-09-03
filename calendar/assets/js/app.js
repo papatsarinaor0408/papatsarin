@@ -145,8 +145,8 @@
     if (!error && data) MONTHLY_TODOS = data;
   }
 
-  function leaveOnDate(employeeName, iso) {
-    return LEAVES.find(l => l.employee_name === employeeName && iso >= l.date_from && iso <= l.date_to) || null;
+  function leavesOnDate(employeeName, iso) {
+    return LEAVES.filter(l => l.employee_name === employeeName && iso >= l.date_from && iso <= l.date_to);
   }
   function tasksForEmployeeOnDate(employeeName, iso) {
     return TASKS.filter(t => t.date === iso && (t.teamMembers || []).some(m => m.includes(employeeName)));
@@ -175,7 +175,8 @@
       const dow = new Date(year, month0, day).getDay();
       const holiday = HOLIDAYS[iso];
       const isWeekend = dow === 0 || dow === 6;
-      const leave = leaveOnDate(employeeName, iso);
+      const leaves = leavesOnDate(employeeName, iso);
+      const leave = leaves[0] || null;
       const tasksForDay = tasksForEmployeeOnDate(employeeName, iso);
       const worked = tasksForDay.length > 0;
       // นับเป็นวันโอที ถ้าเป็นวันเสาร์/อาทิตย์/วันหยุดนักขัตฤกษ์ หรือมีงานที่เวลานัดหมายหน้างานหลัง 16:30 น. (งานด่วนนอกเวลาราชการ)
@@ -183,7 +184,7 @@
       const hasTravelOrder = tasksForDay.some(t => t.travelOrder);
       // "ปฏิบัติงาน บปก." = อยู่ที่การไฟฟ้าบางปะกงจริงๆ (ไม่ใช่แค่ areaStatus "ในพื้นที่" ทั่วไป) และไม่มีคำสั่งเดินทาง
       const inArea = worked && tasksForDay.some(t => isHomeUnitPea(t.targetPEA) && !t.travelOrder);
-      out.push({ iso, day, dow, holiday, isWeekend, leave, tasksForDay, worked, isOT, hasTravelOrder, inArea });
+      out.push({ iso, day, dow, holiday, isWeekend, leave, leaves, tasksForDay, worked, isOT, hasTravelOrder, inArea });
     }
     return out;
   }
@@ -1294,7 +1295,7 @@
     const bizDays = businessDaysProgress(year, month0);
 
     const leaveByType = {};
-    leaveDays.forEach(d => { leaveByType[d.leave.leave_type] = (leaveByType[d.leave.leave_type] || 0) + 1; });
+    leaveDays.forEach(d => { d.leaves.forEach(l => { leaveByType[l.leave_type] = (leaveByType[l.leave_type] || 0) + 1; }); });
 
     const startDow = new Date(year, month0, 1).getDay();
     const cells = [];
@@ -1353,7 +1354,7 @@
             return `<div class="${cls.join(" ")}" data-date="${d.iso}">
               <div class="pd-num">${d.day}</div>
               ${d.holiday ? `<div class="pd-holiday">${esc(d.holiday)}</div>` : ""}
-              ${d.leave ? `<div class="pd-leave-tag">${esc(d.leave.leave_type)}</div>` : ""}
+              ${d.leaves.map(l => `<div class="pd-leave-tag">${esc(l.leave_type)}</div>`).join("")}
               ${d.worked ? `<div class="pd-work-tag ${d.isOT ? "ot" : ""}">${d.isOT ? "⚡" : ""} ${d.tasksForDay.length} งาน</div>` : ""}
             </div>`;
           }).join("")}
@@ -1363,6 +1364,10 @@
           <div class="detail-section-title">บันทึกวันลาใหม่ (คลิกวันที่ในปฏิทินด้านบนเพื่อเติมวันที่ให้อัตโนมัติ)</div>
           <form id="leave-form">
             <div class="form-grid">
+              <div class="form-field">
+                <label>พนักงาน <span class="req">*</span></label>
+                <select name="employeeName" id="leave-employee-select" required>${EMPLOYEES.map(e => `<option value="${esc(e.name)}" ${e.name === employee ? "selected" : ""}>${esc(e.name)}${e.position ? " (" + esc(e.position) + ")" : ""}</option>`).join("")}</select>
+              </div>
               <div class="form-field">
                 <label>ตั้งแต่วันที่ <span class="req">*</span></label>
                 <input type="date" name="dateFrom" id="leave-date-from" required />
@@ -1382,7 +1387,7 @@
             </div>
             <div id="leave-form-error"></div>
             <div class="form-actions">
-              <span class="form-hint">บันทึกให้ ${esc(employee)}</span>
+              <span class="form-hint">เลือกพนักงานได้อิสระ ไม่จำเป็นต้องตรงกับปฏิทินที่กำลังดูอยู่</span>
               <div class="form-actions-right"><button type="submit" class="btn-primary">+ บันทึกวันลา</button></div>
             </div>
           </form>
@@ -1465,12 +1470,14 @@
       ev.preventDefault();
       if (!isAdmin()) return;
       const fd = new FormData(ev.target);
+      const employeeName = (fd.get("employeeName") || "").trim();
       const dateFrom = fd.get("dateFrom");
       const dateTo = fd.get("dateTo") || dateFrom;
+      if (!employeeName) { showLeaveFormError("กรุณาเลือกพนักงาน"); return; }
       if (!dateFrom || !dateTo) { showLeaveFormError("กรุณาเลือกวันที่ให้ครบ"); return; }
       if (dateTo < dateFrom) { showLeaveFormError("วันสิ้นสุดต้องไม่ก่อนวันเริ่ม"); return; }
       const row = {
-        employee_name: personState.employeeName,
+        employee_name: employeeName,
         date_from: dateFrom,
         date_to: dateTo,
         leave_type: fd.get("leaveType"),
@@ -1480,6 +1487,8 @@
       btn.disabled = true;
       const { error } = await CAL_SB.from("calendar_leaves").insert([row]);
       if (error) { showLeaveFormError("บันทึกไม่สำเร็จ: " + error.message); btn.disabled = false; return; }
+      personState.employeeName = employeeName;
+      personState.mode = "individual";
       await refreshPersonPage();
     });
 
