@@ -300,6 +300,10 @@
   const leavePageEl = $("#leave-page");
   const leavePageBodyEl = $("#leave-page-body");
   const leaveBackBtnEl = $("#leave-back-btn");
+  const auditBtnEl = $("#audit-btn");
+  const auditPageEl = $("#audit-page");
+  const auditPageBodyEl = $("#audit-page-body");
+  const auditBackBtnEl = $("#audit-back-btn");
   const personPageEl = $("#person-page");
   const personPageBodyEl = $("#person-page-body");
   const personBackBtnEl = $("#person-back-btn");
@@ -1678,6 +1682,153 @@
   }
   leaveBtnEl.addEventListener("click", openLeavePage);
   leaveBackBtnEl.addEventListener("click", closeLeavePage);
+
+  /* ---------------- ระเบียบวินัย ความปลอดภัย และสภาพการจ้าง (Zero-Gap Audit) ---------------- */
+  function auditDocCardHtml(d) {
+    return `
+      <div class="leave-type-card">
+        <div class="leave-type-head">
+          <div class="leave-type-icon">📄</div>
+          <div>
+            <div class="leave-type-no">${esc(d.code)}</div>
+            <div class="leave-type-title">${esc(d.name)}</div>
+          </div>
+        </div>
+        <div class="leave-row"><div class="leave-row-label">สถานะการบังคับใช้</div><div class="leave-row-value">${leaveMultilineHtml(d.status)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">ฐานอำนาจการออกกฎหมาย</div><div class="leave-row-value">${leaveMultilineHtml(d.basis)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">ประเด็นที่ควบคุมหลัก</div><div class="leave-row-value">${leaveMultilineHtml(d.mainIssues)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">ผลการตรวจสอบความถูกต้อง</div><div class="leave-row-value leave-text-correct">${leaveMultilineHtml(d.result)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">ขอบเขตการนำไปบังคับใช้และข้อพึงระวัง</div><div class="leave-row-value">${leaveMultilineHtml(d.scope)}</div></div>
+      </div>`;
+  }
+  function auditPenaltyTableHtml() {
+    return `
+      <div class="equip-table-wrap">
+        <table class="equip-table leave-approval-table">
+          <thead><tr>
+            <th>ผู้บังคับบัญชาผู้มีอำนาจ</th><th>ตำแหน่งพนักงานผู้กระทำผิด</th><th>เพดานลดเงินเดือน</th>
+            <th>เพดานตัดเงินเดือน</th><th>ระยะเวลาตัดเงินเดือน</th><th>อำนาจสั่งไล่ออก/ปลดออก</th>
+          </tr></thead>
+          <tbody>
+            ${AUDIT_PENALTY_AUTHORITY.map(r => `<tr>
+              <td class="leave-impact-type">${esc(r.authority)}</td>
+              <td>${esc(r.position)}</td>
+              <td>${esc(r.reduceCap)}</td>
+              <td>${esc(r.deductCap)}</td>
+              <td>${esc(r.months)}</td>
+              <td>${esc(r.dismissal)}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>`;
+  }
+  function auditInvestigationCardHtml(s) {
+    return `
+      <div class="leave-gap-card">
+        <div class="leave-gap-card-head">
+          <div class="leave-gap-card-title">${esc(s.topic)}</div>
+          <span class="leave-risk-badge risk-low">${esc(s.article)}</span>
+        </div>
+        <div class="leave-row"><div class="leave-row-label">ข้อกำหนดภาคบังคับ</div><div class="leave-row-value">${leaveMultilineHtml(s.requirement)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">เงื่อนไขเฉพาะและข้อยกเว้น</div><div class="leave-row-value">${leaveMultilineHtml(s.exception)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">ผลทางกฎหมายหากปฏิบัติไม่ถูกต้อง</div><div class="leave-row-value leave-text-wrong">${leaveMultilineHtml(s.consequence)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">มาตรการควบคุมความถูกต้อง</div><div class="leave-row-value leave-text-correct">${leaveMultilineHtml(s.control)}</div></div>
+      </div>`;
+  }
+  function auditSafetyTableHtml() {
+    return `
+      <div class="equip-table-wrap">
+        <table class="equip-table leave-impact-table">
+          <thead><tr>
+            <th>ข้อสั่งการ</th><th>มาตรการความปลอดภัยภาคบังคับ</th><th>ผู้มีหน้าที่รับผิดชอบ</th>
+            <th>เอกสารหลักฐาน</th><th>ฐานความรับผิดทางวินัยและละเมิด</th><th>จุดควบคุมความปลอดภัย</th>
+          </tr></thead>
+          <tbody>
+            ${AUDIT_SAFETY_ORDERS.map(r => `<tr>
+              <td class="leave-impact-type">${esc(r.no)}</td>
+              <td>${esc(r.measure)}</td>
+              <td>${esc(r.responsible)}</td>
+              <td>${esc(r.evidence)}</td>
+              <td>${esc(r.liability)}</td>
+              <td>${esc(r.control)}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>`;
+  }
+  function auditEmploymentTableHtml() {
+    return `
+      <div class="equip-table-wrap">
+        <table class="equip-table leave-impact-table">
+          <thead><tr>
+            <th>หมวดสภาพการจ้าง</th><th>ข้อ/มาตรา</th><th>อัตรา/สิทธิประโยชน์ที่ได้รับ</th>
+            <th>ข้อยกเว้น</th><th>ผู้มีสิทธิได้รับ</th><th>ข้อกำหนดภาคบังคับและกฎหมายห้าม</th>
+          </tr></thead>
+          <tbody>
+            ${AUDIT_EMPLOYMENT_CONDITIONS.map(r => `<tr>
+              <td class="leave-impact-type">${esc(r.category)}</td>
+              <td>${esc(r.refArticle)}</td>
+              <td>${esc(r.benefit)}</td>
+              <td>${esc(r.exception)}</td>
+              <td>${esc(r.entitled)}</td>
+              <td>${esc(r.mandatoryRule)}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>`;
+  }
+  function auditChecklistCardHtml(g) {
+    return `
+      <div class="leave-gap-card risk-low">
+        <div class="leave-gap-card-head">
+          <div class="leave-gap-card-title">${esc(g.code)} · ${esc(g.issue)}</div>
+          <span class="leave-risk-badge risk-low">✔ VERIFIED</span>
+        </div>
+        <div class="leave-row"><div class="leave-row-label">เอกสารอ้างอิง</div><div class="leave-row-value">${leaveMultilineHtml(g.refDoc)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">ข้อกำหนดที่ถูกต้อง 100%</div><div class="leave-row-value leave-text-correct">${leaveMultilineHtml(g.correctRule)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">ความเสี่ยงหากปฏิบัติผิดพลาด</div><div class="leave-row-value leave-text-wrong">${leaveMultilineHtml(g.risk)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">หลักฐานที่ต้องเรียกตรวจ</div><div class="leave-row-value">${leaveMultilineHtml(g.evidence)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">ผู้รับผิดชอบหลัก</div><div class="leave-row-value">${leaveMultilineHtml(g.responsible)}</div></div>
+      </div>`;
+  }
+  function auditPageHtml() {
+    return `
+      <div class="leave-section">
+        <div class="leave-section-title"><span class="leave-section-badge">1/5</span> แหล่งอ้างอิงและศักดิ์กฎหมาย (${AUDIT_DOCS.length} ฉบับ)</div>
+        <div class="leave-type-grid">${AUDIT_DOCS.map(auditDocCardHtml).join("")}</div>
+      </div>
+      <div class="leave-section">
+        <div class="leave-section-title"><span class="leave-section-badge">2/5</span> หมวดวินัย การลงโทษ การสอบสวน และการอุทธรณ์</div>
+        <div class="form-hint" style="margin-bottom:10px;">1. ตารางอำนาจการลงโทษทางวินัย (ลดเงินเดือน / ตัดเงินเดือน)</div>
+        ${auditPenaltyTableHtml()}
+        <div class="form-hint" style="margin:18px 0 10px;">2. ขั้นตอนการสอบสวน การพักงาน และการอุทธรณ์</div>
+        <div class="leave-gap-grid">${AUDIT_INVESTIGATION_STEPS.map(auditInvestigationCardHtml).join("")}</div>
+      </div>
+      <div class="leave-section">
+        <div class="leave-section-title"><span class="leave-section-badge">3/5</span> ความปลอดภัย อุบัติเหตุ และ SOP (10 ข้อสั่งการ กฟน.1)</div>
+        ${auditSafetyTableHtml()}
+      </div>
+      <div class="leave-section">
+        <div class="leave-section-title"><span class="leave-section-badge">4/5</span> สภาพการจ้างขั้นต่ำและเงินทดแทน</div>
+        ${auditEmploymentTableHtml()}
+      </div>
+      <div class="leave-section">
+        <div class="leave-section-title"><span class="leave-section-badge">5/5</span> Checklist ตรวจสอบและปิดทุก Gap (${AUDIT_CHECKLIST.length} รายการ)</div>
+        <div class="leave-gap-grid">${AUDIT_CHECKLIST.map(auditChecklistCardHtml).join("")}</div>
+      </div>`;
+  }
+  function openAuditPage() {
+    auditPageBodyEl.innerHTML = auditPageHtml();
+    appShellEl.classList.add("hidden");
+    auditPageEl.classList.remove("hidden");
+    window.scrollTo(0, 0);
+  }
+  function closeAuditPage() {
+    auditPageEl.classList.add("hidden");
+    appShellEl.classList.remove("hidden");
+  }
+  auditBtnEl.addEventListener("click", openAuditPage);
+  auditBackBtnEl.addEventListener("click", closeAuditPage);
 
   /* ---------------- Access log (ประวัติการใช้งาน) — เฉพาะผู้ดูแลระบบ ---------------- */
   function fmtLogTime(iso) {
