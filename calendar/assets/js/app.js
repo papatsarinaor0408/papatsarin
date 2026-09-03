@@ -1794,7 +1794,7 @@
   function auditPageHtml() {
     return `
       <div class="leave-section">
-        <div class="leave-section-title"><span class="leave-section-badge">1/5</span> แหล่งอ้างอิงและศักดิ์กฎหมาย (${AUDIT_DOCS.length} ฉบับ)</div>
+        <div class="leave-section-title"><span class="leave-section-badge">1/5</span> อ้างอิง (${AUDIT_DOCS.length} ฉบับ)</div>
         <div class="leave-type-grid">${AUDIT_DOCS.map(auditDocCardHtml).join("")}</div>
       </div>
       <div class="leave-section">
