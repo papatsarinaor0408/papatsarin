@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=5" />
+<link rel="stylesheet" href="assets/css/style.css?v=6" />
 </head>
 <body>
 
@@ -102,8 +102,14 @@
     </div>
     <div class="todo-list" id="todo-list"></div>
     <form id="todo-add-form" class="todo-add-form admin-only">
-      <input type="text" name="title" placeholder="เพิ่มงานที่ต้องทำเดือนนี้..." required />
-      <button type="submit" class="btn-primary">+ เพิ่ม</button>
+      <div class="todo-add-row">
+        <input type="text" name="title" placeholder="เพิ่มงานที่ต้องทำเดือนนี้..." required />
+        <button type="submit" class="btn-primary">+ เพิ่ม</button>
+      </div>
+      <div class="todo-assignee-field">
+        <label>มอบหมายให้ (เลือกได้หลายคน ไม่บังคับ)</label>
+        <div class="todo-assignee-picker" id="todo-add-assignees"></div>
+      </div>
     </form>
   </div>
 

@@ -1721,6 +1721,7 @@
     return `${d.getDate()} ${THAI_MONTHS[d.getMonth()]} ${beYear(d)}`;
   }
   function todoRowHtml(item) {
+    const assignees = item.assignees || [];
     return `
       <div class="todo-row ${item.done ? "done" : ""}" data-id="${esc(item.id)}">
         <div class="todo-row-main">
@@ -1729,6 +1730,7 @@
           ${item.done
             ? `<span class="todo-done-note">✓ ดำเนินการแล้ว${item.done_date ? " · " + fmtTodoDate(item.done_date) : ""}</span>`
             : `<span class="todo-pending-note">รอดำเนินการ</span>`}
+          ${assignees.length ? `<span class="todo-assignee-tags">${assignees.map(n => `<span class="todo-assignee-tag">👤 ${esc(n)}</span>`).join("")}</span>` : ""}
         </div>
         <div class="todo-row-actions admin-only">
           ${item.done
@@ -1790,16 +1792,23 @@
         renderTodoPanel();
       });
     });
+    const todoAssigneePickerEl = $("#todo-add-assignees");
+    if (todoAssigneePickerEl) {
+      todoAssigneePickerEl.innerHTML = EMPLOYEES.map(e =>
+        `<label class="check-option"><input type="checkbox" name="assignee" value="${esc(e.name)}" /> ${esc(e.name)}</label>`
+      ).join("") || `<span class="form-hint">ยังไม่มีรายชื่อพนักงานในระบบ</span>`;
+    }
     todoAddFormEl.onsubmit = async (ev) => {
       ev.preventDefault();
       if (!isAdmin()) return;
       const fd = new FormData(todoAddFormEl);
       const title = (fd.get("title") || "").trim();
       if (!title) return;
+      const assignees = fd.getAll("assignee");
       const btn = todoAddFormEl.querySelector("button[type=submit]");
       btn.disabled = true;
       const { error } = await CAL_SB.from("calendar_monthly_todos")
-        .insert([{ title, target_month: month, target_year: year, done: false }]);
+        .insert([{ title, target_month: month, target_year: year, done: false, assignees }]);
       btn.disabled = false;
       if (error) { alert("เพิ่มไม่สำเร็จ: " + error.message); return; }
       todoAddFormEl.reset();
