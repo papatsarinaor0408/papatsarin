@@ -1781,7 +1781,7 @@
     return `
       <div class="leave-gap-card risk-low">
         <div class="leave-gap-card-head">
-          <div class="leave-gap-card-title">${esc(g.code)} · ${esc(g.issue)}</div>
+          <div class="leave-gap-card-title">${esc(g.issue)}</div>
           <span class="leave-risk-badge risk-low">✔ VERIFIED</span>
         </div>
         <div class="leave-row"><div class="leave-row-label">เอกสารอ้างอิง</div><div class="leave-row-value">${leaveMultilineHtml(g.refDoc)}</div></div>
