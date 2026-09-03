@@ -1595,8 +1595,8 @@
           <div class="leave-gap-card-title">${esc(g.title)}</div>
           <span class="leave-risk-badge ${riskClass}">🛡️ ความเสี่ยง: ${esc(g.risk)}</span>
         </div>
-        <div class="leave-row"><div class="leave-row-label">เข้าใจผิด</div><div class="leave-row-value">${leaveMultilineHtml(g.pitfall)}</div></div>
-        <div class="leave-row"><div class="leave-row-label">หลักเกณฑ์ที่ถูกต้อง</div><div class="leave-row-value">${leaveMultilineHtml(g.correctRule)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">เข้าใจผิด</div><div class="leave-row-value leave-text-wrong">${leaveMultilineHtml(g.pitfall)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">หลักเกณฑ์ที่ถูกต้อง</div><div class="leave-row-value leave-text-correct">${leaveMultilineHtml(g.correctRule)}</div></div>
         <div class="leave-row"><div class="leave-row-label">ความเสี่ยง</div><div class="leave-row-value">${leaveMultilineHtml(g.riskDesc)}</div></div>
         <div class="leave-row"><div class="leave-row-label">แนวทางปฏิบัติ</div><div class="leave-row-value">${leaveMultilineHtml(g.sop)}</div></div>
       </div>`;
