@@ -1565,6 +1565,10 @@
 
   /* ---------------- คู่มือระเบียบการลา — ข้อมูลอ้างอิงคงที่ ดูได้ทุกสิทธิ์ ---------------- */
   const LEAVE_RISK_CLASS = { "ต่ำ-ปานกลาง": "risk-low", "ปานกลาง": "risk-medium", "สูง": "risk-high", "สูงมาก": "risk-critical" };
+  function leaveMultilineHtml(value) {
+    if (!value) return "";
+    return value.split(" | ").map(part => `<div>${esc(part.trim())}</div>`).join("");
+  }
   function leaveTypeCardHtml(t) {
     return `
       <div class="leave-type-card">
@@ -1575,12 +1579,12 @@
             <div class="leave-type-title">${esc(t.title)}</div>
           </div>
         </div>
-        <div class="leave-row"><div class="leave-row-label">คุณสมบัติ/อายุงาน</div><div class="leave-row-value">${esc(t.eligibility)}</div></div>
-        <div class="leave-row"><div class="leave-row-label">โควตา</div><div class="leave-row-value">${esc(t.quota)}</div></div>
-        <div class="leave-row"><div class="leave-row-label">วิธีนับวัน</div><div class="leave-row-value">${esc(t.dayCount)}</div></div>
-        <div class="leave-row"><div class="leave-row-label">สิทธิรับเงินเดือน</div><div class="leave-row-value">${esc(t.salary)}</div></div>
-        <div class="leave-row"><div class="leave-row-label">เอกสาร/การยื่น</div><div class="leave-row-value">${esc(t.docs)}</div></div>
-        <div class="leave-gap-box"><span class="leave-gap-icon">⚠️</span><div><b>Gap / ข้อควรระวัง</b><div>${esc(t.gap)}</div></div></div>
+        <div class="leave-row"><div class="leave-row-label">คุณสมบัติ/อายุงาน</div><div class="leave-row-value">${leaveMultilineHtml(t.eligibility)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">โควตา</div><div class="leave-row-value">${leaveMultilineHtml(t.quota)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">วิธีนับวัน</div><div class="leave-row-value">${leaveMultilineHtml(t.dayCount)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">สิทธิรับเงินเดือน</div><div class="leave-row-value">${leaveMultilineHtml(t.salary)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">เอกสาร/การยื่น</div><div class="leave-row-value">${leaveMultilineHtml(t.docs)}</div></div>
+        <div class="leave-gap-box"><span class="leave-gap-icon">⚠️</span><div><b>Gap / ข้อควรระวัง</b><div>${leaveMultilineHtml(t.gap)}</div></div></div>
       </div>`;
   }
   function leaveGapCardHtml(g) {
@@ -1591,10 +1595,10 @@
           <div class="leave-gap-card-title">${esc(g.title)}</div>
           <span class="leave-risk-badge ${riskClass}">🛡️ ความเสี่ยง: ${esc(g.risk)}</span>
         </div>
-        <div class="leave-row"><div class="leave-row-label">เข้าใจผิด</div><div class="leave-row-value">${esc(g.pitfall)}</div></div>
-        <div class="leave-row"><div class="leave-row-label">หลักเกณฑ์ที่ถูกต้อง</div><div class="leave-row-value">${esc(g.correctRule)}</div></div>
-        <div class="leave-row"><div class="leave-row-label">ความเสี่ยง</div><div class="leave-row-value">${esc(g.riskDesc)}</div></div>
-        <div class="leave-row"><div class="leave-row-label">แนวทางปฏิบัติ</div><div class="leave-row-value">${esc(g.sop)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">เข้าใจผิด</div><div class="leave-row-value">${leaveMultilineHtml(g.pitfall)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">หลักเกณฑ์ที่ถูกต้อง</div><div class="leave-row-value">${leaveMultilineHtml(g.correctRule)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">ความเสี่ยง</div><div class="leave-row-value">${leaveMultilineHtml(g.riskDesc)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">แนวทางปฏิบัติ</div><div class="leave-row-value">${leaveMultilineHtml(g.sop)}</div></div>
       </div>`;
   }
   function leaveImpactTableHtml() {
