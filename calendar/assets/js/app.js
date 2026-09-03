@@ -289,12 +289,16 @@
   const addTaskBtnEl = $("#add-task-btn");
   const personBtnEl = $("#person-btn");
   const equipmentBtnEl = $("#equipment-btn");
+  const leaveBtnEl = $("#leave-btn");
   const accessLogBtnEl = $("#access-log-btn");
   const appShellEl = $("#app-shell");
   const equipmentPageEl = $("#equipment-page");
   const equipmentPageBodyEl = $("#equipment-page-body");
   const equipmentBackBtnEl = $("#equipment-back-btn");
   const equipmentPageCountEl = $("#equipment-page-count");
+  const leavePageEl = $("#leave-page");
+  const leavePageBodyEl = $("#leave-page-body");
+  const leaveBackBtnEl = $("#leave-back-btn");
   const personPageEl = $("#person-page");
   const personPageBodyEl = $("#person-page-body");
   const personBackBtnEl = $("#person-back-btn");
@@ -1549,6 +1553,118 @@
   }
   equipmentBtnEl.addEventListener("click", openEquipmentPage);
   equipmentBackBtnEl.addEventListener("click", closeEquipmentPage);
+
+  /* ---------------- คู่มือระเบียบการลา — ข้อมูลอ้างอิงคงที่ ดูได้ทุกสิทธิ์ ---------------- */
+  const LEAVE_RISK_CLASS = { "ต่ำ-ปานกลาง": "risk-low", "ปานกลาง": "risk-medium", "สูง": "risk-high", "สูงมาก": "risk-critical" };
+  function leaveTypeCardHtml(t) {
+    return `
+      <div class="leave-type-card">
+        <div class="leave-type-head">
+          <div class="leave-type-icon">${t.icon}</div>
+          <div>
+            <div class="leave-type-no">หมวด ${esc(t.no)}</div>
+            <div class="leave-type-title">${esc(t.title)}</div>
+          </div>
+        </div>
+        <div class="leave-row"><div class="leave-row-label">คุณสมบัติ/อายุงาน</div><div class="leave-row-value">${esc(t.eligibility)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">โควตา</div><div class="leave-row-value">${esc(t.quota)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">วิธีนับวัน</div><div class="leave-row-value">${esc(t.dayCount)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">สิทธิรับเงินเดือน</div><div class="leave-row-value">${esc(t.salary)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">เอกสาร/การยื่น</div><div class="leave-row-value">${esc(t.docs)}</div></div>
+        <div class="leave-gap-box"><span class="leave-gap-icon">⚠️</span><div><b>Gap / ข้อควรระวัง</b><div>${esc(t.gap)}</div></div></div>
+      </div>`;
+  }
+  function leaveGapCardHtml(g) {
+    const riskClass = LEAVE_RISK_CLASS[g.risk] || "risk-medium";
+    return `
+      <div class="leave-gap-card ${riskClass}">
+        <div class="leave-gap-card-head">
+          <div class="leave-gap-card-title">${esc(g.title)}</div>
+          <span class="leave-risk-badge ${riskClass}">🛡️ ความเสี่ยง: ${esc(g.risk)}</span>
+        </div>
+        <div class="leave-row"><div class="leave-row-label">เข้าใจผิด</div><div class="leave-row-value">${esc(g.pitfall)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">หลักเกณฑ์ที่ถูกต้อง</div><div class="leave-row-value">${esc(g.correctRule)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">ความเสี่ยง</div><div class="leave-row-value">${esc(g.riskDesc)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">แนวทางปฏิบัติ</div><div class="leave-row-value">${esc(g.sop)}</div></div>
+      </div>`;
+  }
+  function leaveImpactTableHtml() {
+    const row = (r, warn) => `<tr class="${warn ? "leave-impact-warn" : ""}">
+        <td class="leave-impact-type">${esc(r.type)}</td>
+        <td>${esc(r.salaryDuring)}</td>
+        <td>${esc(r.attendance)}</td>
+        <td>${esc(r.behaviorKpi)}</td>
+        <td>${esc(r.stepReview)}</td>
+        <td>${esc(r.bonus)}</td>
+        <td>${esc(r.threshold)}</td>
+      </tr>`;
+    return `
+      <div class="equip-table-wrap">
+        <table class="equip-table leave-impact-table">
+          <thead><tr>
+            <th>ประเภทการลา</th><th>เงินเดือนระหว่างลา</th><th>Attendance</th><th>Behavior/KPI</th>
+            <th>เลื่อนขั้นเงินเดือน</th><th>โบนัสประจำปี</th><th>เกณฑ์เพดานวิกฤต (Threshold)</th>
+          </tr></thead>
+          <tbody>
+            ${LEAVE_REG_IMPACTS.map(r => row(r, false)).join("")}
+            ${row(LEAVE_REG_ABSENTEEISM, true)}
+          </tbody>
+        </table>
+      </div>`;
+  }
+  function leaveApprovalTableHtml() {
+    return `
+      <div class="equip-table-wrap">
+        <table class="equip-table leave-approval-table">
+          <thead><tr>
+            <th>กลุ่มตำแหน่งผู้ขอลา</th><th>ผู้บังคับบัญชาชั้นต้น</th><th>ลาป่วย/ลากิจ</th>
+            <th>ลาพักผ่อนประจำปี</th><th>ลาคลอด/ช่วยภริยาคลอด</th><th>ลาอุปสมบท/ฮัจย์</th><th>ลาเลี้ยงดูบุตร/ติดตามคู่สมรส</th>
+          </tr></thead>
+          <tbody>
+            ${LEAVE_REG_APPROVALS.map(a => `<tr>
+              <td class="leave-impact-type">${esc(a.level)}</td>
+              <td>${esc(a.supervisor)}</td>
+              <td>${esc(a.sickPersonal)}</td>
+              <td>${esc(a.vacation)}</td>
+              <td>${esc(a.maternity)}</td>
+              <td>${esc(a.ordination)}</td>
+              <td>${esc(a.childcareSpouse)}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>`;
+  }
+  function leavePageHtml() {
+    return `
+      <div class="leave-section">
+        <div class="leave-section-title"><span class="leave-section-badge">1/4</span> สรุปสิทธิการลา ${LEAVE_REG_TYPES.length} หมวด</div>
+        <div class="leave-type-grid">${LEAVE_REG_TYPES.map(leaveTypeCardHtml).join("")}</div>
+      </div>
+      <div class="leave-section">
+        <div class="leave-section-title"><span class="leave-section-badge">2/4</span> การวิเคราะห์ปิด Gap เชิงปฏิบัติการและข้อยกเว้น</div>
+        <div class="leave-gap-grid">${LEAVE_REG_GAPS.map(leaveGapCardHtml).join("")}</div>
+      </div>
+      <div class="leave-section">
+        <div class="leave-section-title"><span class="leave-section-badge">3/4</span> ผลกระทบต่อเงินเดือน โบนัส และการเลื่อนขั้น</div>
+        ${leaveImpactTableHtml()}
+      </div>
+      <div class="leave-section">
+        <div class="leave-section-title"><span class="leave-section-badge">4/4</span> ตารางสายอำนาจการอนุมัติการลา</div>
+        ${leaveApprovalTableHtml()}
+      </div>`;
+  }
+  function openLeavePage() {
+    leavePageBodyEl.innerHTML = leavePageHtml();
+    appShellEl.classList.add("hidden");
+    leavePageEl.classList.remove("hidden");
+    window.scrollTo(0, 0);
+  }
+  function closeLeavePage() {
+    leavePageEl.classList.add("hidden");
+    appShellEl.classList.remove("hidden");
+  }
+  leaveBtnEl.addEventListener("click", openLeavePage);
+  leaveBackBtnEl.addEventListener("click", closeLeavePage);
 
   /* ---------------- Access log (ประวัติการใช้งาน) — เฉพาะผู้ดูแลระบบ ---------------- */
   function fmtLogTime(iso) {

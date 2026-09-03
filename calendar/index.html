@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=6" />
+<link rel="stylesheet" href="assets/css/style.css?v=7" />
 </head>
 <body>
 
@@ -81,6 +81,17 @@
   <div id="person-page-body"></div>
 </div>
 
+<div class="app-page app-page-wide hidden" id="leave-page">
+  <div class="app-page-head">
+    <button type="button" class="btn-secondary" id="leave-back-btn">‹ กลับสู่ปฏิทิน</button>
+    <div>
+      <div class="modal-id" id="leave-page-count">คู่มือระเบียบการลา</div>
+      <h1 class="app-page-title">คู่มือวิเคราะห์เจาะลึกระเบียบการลา กฟภ. (พ.ศ. 2562 และแก้ไขเพิ่มเติม 2564)</h1>
+    </div>
+  </div>
+  <div id="leave-page-body"></div>
+</div>
+
 <div class="app-page app-page-wide hidden" id="access-log-page">
   <div class="app-page-head">
     <button type="button" class="btn-secondary" id="access-log-back-btn">‹ กลับสู่ปฏิทิน</button>
@@ -133,6 +144,7 @@
       <div class="view-switch" id="view-switch"></div>
       <button class="person-btn" id="person-btn">👤 รายบุคคล / ลา / OT</button>
       <button class="person-btn" id="equipment-btn">📖 คู่มืออุปกรณ์</button>
+      <button class="person-btn" id="leave-btn">🗓️ ระเบียบการลา</button>
       <button class="settings-btn admin-only" id="access-log-btn">🕒 ประวัติการใช้งาน</button>
       <button class="add-task-btn admin-only" id="add-task-btn">+ เพิ่มงาน</button>
     </div>
