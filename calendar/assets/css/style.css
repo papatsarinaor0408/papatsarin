@@ -265,6 +265,32 @@ body.role-reviewer .admin-only { display: none !important; }
 .audit-pill.green { background: var(--green-bg); color: var(--green); }
 .audit-pill.gray { background: var(--border-soft); color: var(--text-muted); font-weight: 500; white-space: normal; }
 
+/* ---------------- Audit power-rule cards (โครงสร้างอำนาจ) ---------------- */
+.audit-rule-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(460px, 1fr)); gap: 16px; }
+.audit-rule-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow-sm); }
+.audit-rule-head { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 14px; }
+.audit-rule-icon {
+  width: 46px; height: 46px; border-radius: 50%; background: var(--pea-purple-light); display: flex;
+  align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;
+}
+.audit-rule-title { flex: 1; font-size: 15px; font-weight: 700; color: var(--ink); line-height: 1.4; }
+.audit-rule-badge {
+  background: var(--green-bg); color: var(--green); font-size: 11px; font-weight: 700; padding: 3px 10px;
+  border-radius: 999px; white-space: nowrap; flex-shrink: 0;
+}
+.audit-rule-section { margin-bottom: 10px; }
+.audit-rule-label { font-size: 12px; font-weight: 700; margin-bottom: 5px; display: flex; align-items: center; gap: 5px; }
+.audit-rule-label.green { color: var(--green); }
+.audit-rule-label.purple { color: var(--pea-purple); }
+.audit-rule-text { font-size: 13px; color: var(--text); line-height: 1.6; }
+.audit-rule-divider { height: 1px; background: var(--border-soft); margin: 12px 0; }
+.audit-rule-example {
+  display: flex; gap: 8px; background: var(--orange-bg); border: 1px solid var(--orange-border);
+  border-radius: var(--radius-sm); padding: 12px; font-size: 12.5px; line-height: 1.6; color: var(--orange); margin-top: 4px;
+}
+.audit-rule-example b { color: var(--orange); }
+.audit-rule-example-icon { font-size: 15px; flex-shrink: 0; }
+
 /* ---------------- Shell / layout ---------------- */
 .app-shell {
   max-width: 1440px;

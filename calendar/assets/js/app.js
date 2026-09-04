@@ -1713,16 +1713,28 @@
         <div class="leave-row"><div class="leave-row-label">ผลต่อการเลื่อนขั้นเงินเดือน</div><div class="leave-row-value">${leaveMultilineHtml(c.salaryStepEffect)}</div></div>
       </div>`;
   }
+  const AUDIT_RULE_ICONS = ["🛡️", "🔨", "⚖️", "📈"];
   function auditPowerRuleCardHtml(r, i) {
     return `
-      <div class="leave-gap-card risk-low">
-        <div class="leave-gap-card-head">
-          <div class="leave-gap-card-title">${esc(r.topic)}</div>
-          <span class="leave-risk-badge risk-low">กฎข้อ ${i + 1}</span>
+      <div class="audit-rule-card">
+        <div class="audit-rule-head">
+          <div class="audit-rule-icon">${AUDIT_RULE_ICONS[i % AUDIT_RULE_ICONS.length]}</div>
+          <div class="audit-rule-title">${esc(r.topic)}</div>
+          <span class="audit-rule-badge">กลุ่ม ${i + 1}</span>
         </div>
-        <div class="leave-row"><div class="leave-row-label">สาระสำคัญ</div><div class="leave-row-value leave-text-correct">${leaveMultilineHtml(r.rule)}</div></div>
-        <div class="leave-row"><div class="leave-row-label">เหตุผลในเชิงการบริหาร</div><div class="leave-row-value">${leaveMultilineHtml(r.rationale)}</div></div>
-        <div class="leave-gap-box"><span class="leave-gap-icon">💡</span><div><b>ตัวอย่างเคสจริง</b><div>${leaveMultilineHtml(r.example)}</div></div></div>
+        <div class="audit-rule-section">
+          <div class="audit-rule-label green">🔖 สาระสำคัญ</div>
+          <div class="audit-rule-text">${leaveMultilineHtml(r.rule)}</div>
+        </div>
+        <div class="audit-rule-divider"></div>
+        <div class="audit-rule-section">
+          <div class="audit-rule-label purple">👥 เหตุผลเชิงการบริหาร</div>
+          <div class="audit-rule-text">${leaveMultilineHtml(r.rationale)}</div>
+        </div>
+        <div class="audit-rule-example">
+          <span class="audit-rule-example-icon">💡</span>
+          <div><b>ตัวอย่างในชีวิตจริง</b><div>${leaveMultilineHtml(r.example)}</div></div>
+        </div>
       </div>`;
   }
   function auditBossViewCardHtml(b) {
@@ -1968,7 +1980,7 @@
         <div class="form-hint" style="margin-bottom:10px;">1. เข้าใจ 2 โทษหลักให้ชัด</div>
         <div class="leave-type-grid">${AUDIT_PENALTY_COMPARE.map(auditPenaltyCompareCardHtml).join("")}</div>
         <div class="form-hint" style="margin:18px 0 10px;">2. โครงสร้างอำนาจ (กฎเหล็กที่ต้องรู้)</div>
-        <div class="leave-gap-grid">${AUDIT_POWER_RULES.map(auditPowerRuleCardHtml).join("")}</div>
+        <div class="audit-rule-grid">${AUDIT_POWER_RULES.map(auditPowerRuleCardHtml).join("")}</div>
         <div class="form-hint" style="margin:18px 0 10px;">3. มุมมองผู้ปฏิบัติงาน — หาระดับตัวเอง ดูว่าใครสั่งลงโทษได้แค่ไหน</div>
         ${auditWorkerMatrixTableHtml()}
         <div class="form-hint" style="margin:18px 0 10px;">4. มุมมองหัวหน้า — ฉันสั่งอะไรได้บ้าง และห้ามทำอะไร</div>
