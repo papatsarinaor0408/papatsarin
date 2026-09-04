@@ -1697,7 +1697,6 @@
         <div class="leave-row"><div class="leave-row-label">สถานะการบังคับใช้</div><div class="leave-row-value">${leaveMultilineHtml(d.status)}</div></div>
         <div class="leave-row"><div class="leave-row-label">ฐานอำนาจการออกกฎหมาย</div><div class="leave-row-value">${leaveMultilineHtml(d.basis)}</div></div>
         <div class="leave-row"><div class="leave-row-label">ประเด็นที่ควบคุมหลัก</div><div class="leave-row-value">${leaveMultilineHtml(d.mainIssues)}</div></div>
-        <div class="leave-row"><div class="leave-row-label">ผลการตรวจสอบความถูกต้อง</div><div class="leave-row-value leave-text-correct">${leaveMultilineHtml(d.result)}</div></div>
         <div class="leave-row"><div class="leave-row-label">ขอบเขตการนำไปบังคับใช้และข้อพึงระวัง</div><div class="leave-row-value">${leaveMultilineHtml(d.scope)}</div></div>
       </div>`;
   }
