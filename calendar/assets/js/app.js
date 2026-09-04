@@ -1700,6 +1700,87 @@
         <div class="leave-row"><div class="leave-row-label">ขอบเขตการนำไปบังคับใช้และข้อพึงระวัง</div><div class="leave-row-value">${leaveMultilineHtml(d.scope)}</div></div>
       </div>`;
   }
+  function auditPenaltyCompareCardHtml(c) {
+    return `
+      <div class="leave-type-card">
+        <div class="leave-type-head">
+          <div class="leave-type-icon">${c.icon}</div>
+          <div class="leave-type-title">${esc(c.title)}</div>
+        </div>
+        <div class="leave-row"><div class="leave-row-label">ลักษณะการหักเงิน</div><div class="leave-row-value">${leaveMultilineHtml(c.deduction)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">ผลกระทบต่อชีวิตพนักงาน</div><div class="leave-row-value leave-text-wrong">${leaveMultilineHtml(c.impact)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">ใครมีอำนาจสั่งได้บ้าง</div><div class="leave-row-value">${leaveMultilineHtml(c.authority)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">ผลต่อการเลื่อนขั้นเงินเดือน</div><div class="leave-row-value">${leaveMultilineHtml(c.salaryStepEffect)}</div></div>
+      </div>`;
+  }
+  function auditPowerRuleCardHtml(r, i) {
+    return `
+      <div class="leave-gap-card risk-low">
+        <div class="leave-gap-card-head">
+          <div class="leave-gap-card-title">${esc(r.topic)}</div>
+          <span class="leave-risk-badge risk-low">กฎข้อ ${i + 1}</span>
+        </div>
+        <div class="leave-row"><div class="leave-row-label">สาระสำคัญ</div><div class="leave-row-value leave-text-correct">${leaveMultilineHtml(r.rule)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">เหตุผลในเชิงการบริหาร</div><div class="leave-row-value">${leaveMultilineHtml(r.rationale)}</div></div>
+        <div class="leave-gap-box"><span class="leave-gap-icon">💡</span><div><b>ตัวอย่างเคสจริง</b><div>${leaveMultilineHtml(r.example)}</div></div></div>
+      </div>`;
+  }
+  function auditWorkerMatrixGroupHtml(g) {
+    return `
+      <div class="equip-group">
+        <div class="equip-group-title">${esc(g.position)} <span class="form-hint">(${esc(g.level)})</span></div>
+        <div class="equip-table-wrap">
+          <table class="equip-table leave-approval-table">
+            <thead><tr>
+              <th>ผู้บังคับบัญชาที่มีคำสั่งลงโทษ</th><th>อำนาจตัดเงินเดือนชั่วคราว</th><th>อำนาจลดเงินเดือนถาวร</th>
+              <th>อำนาจสั่งไล่ออก/ปลดออก</th><th>สรุป</th>
+            </tr></thead>
+            <tbody>
+              ${g.rows.map(r => `<tr>
+                <td class="leave-impact-type">${esc(r.supervisor)}</td>
+                <td>${esc(r.tempCut)}</td>
+                <td>${esc(r.permCut)}</td>
+                <td>${esc(r.dismissal)}</td>
+                <td>${esc(r.summary)}</td>
+              </tr>`).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+  }
+  function auditBossViewCardHtml(b) {
+    return `
+      <div class="leave-gap-card">
+        <div class="leave-gap-card-head">
+          <div class="leave-gap-card-title">${esc(b.position)}</div>
+        </div>
+        <div class="leave-row"><div class="leave-row-label">ลูกน้องที่อยู่ในข่ายอำนาจ</div><div class="leave-row-value">${leaveMultilineHtml(b.subordinatesInScope)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">อำนาจสูงสุดที่สั่งได้เอง</div><div class="leave-row-value leave-text-correct">${leaveMultilineHtml(b.maxOwnAuthority)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">สิ่งที่ไม่มีอำนาจทำ (ห้ามสั่งเด็ดขาด)</div><div class="leave-row-value leave-text-wrong">${leaveMultilineHtml(b.forbidden)}</div></div>
+        <div class="leave-row"><div class="leave-row-label">ถ้าลูกน้องผิดหนักกว่าอำนาจเรา</div><div class="leave-row-value">${leaveMultilineHtml(b.escalation)}</div></div>
+        <div class="leave-gap-box"><span class="leave-gap-icon">⚠️</span><div><b>ข้อควรระวังทางวินัย</b><div>${leaveMultilineHtml(b.caution)}</div></div></div>
+      </div>`;
+  }
+  function auditPositionMapTableHtml() {
+    return `
+      <div class="equip-table-wrap">
+        <table class="equip-table leave-impact-table">
+          <thead><tr>
+            <th>ชื่อตำแหน่งตามระเบียบ 2517</th><th>ระดับปัจจุบัน</th><th>ตำแหน่งงานปัจจุบัน</th>
+            <th>ลักษณะหน้าที่ความรับผิดชอบ</th><th>กลุ่มงาน</th>
+          </tr></thead>
+          <tbody>
+            ${AUDIT_POSITION_MAP.map(r => `<tr>
+              <td class="leave-impact-type">${esc(r.oldTitle)}</td>
+              <td>${esc(r.level)}</td>
+              <td>${esc(r.currentTitle)}</td>
+              <td>${esc(r.duties)}</td>
+              <td>${esc(r.group)}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>`;
+  }
   function auditPenaltyTableHtml() {
     return `
       <div class="equip-table-wrap">
@@ -1793,27 +1874,40 @@
   function auditPageHtml() {
     return `
       <div class="leave-section">
-        <div class="leave-section-title"><span class="leave-section-badge">1/5</span> อ้างอิง (${AUDIT_DOCS.length} ฉบับ)</div>
+        <div class="leave-section-title"><span class="leave-section-badge">1/6</span> อ้างอิง (${AUDIT_DOCS.length} ฉบับ)</div>
         <div class="leave-type-grid">${AUDIT_DOCS.map(auditDocCardHtml).join("")}</div>
       </div>
       <div class="leave-section">
-        <div class="leave-section-title"><span class="leave-section-badge">2/5</span> หมวดวินัย การลงโทษ การสอบสวน และการอุทธรณ์</div>
+        <div class="leave-section-title"><span class="leave-section-badge">2/6</span> อำนาจลงโทษทางวินัย กฟภ. — ฉบับเข้าใจง่าย</div>
+        <div class="form-hint" style="margin-bottom:10px;">1. เข้าใจ 2 โทษหลักให้ชัด</div>
+        <div class="leave-type-grid">${AUDIT_PENALTY_COMPARE.map(auditPenaltyCompareCardHtml).join("")}</div>
+        <div class="form-hint" style="margin:18px 0 10px;">2. โครงสร้างอำนาจ (กฎเหล็กที่ต้องรู้)</div>
+        <div class="leave-gap-grid">${AUDIT_POWER_RULES.map(auditPowerRuleCardHtml).join("")}</div>
+        <div class="form-hint" style="margin:18px 0 10px;">3. มุมมองผู้ปฏิบัติงาน — หาระดับตัวเอง ดูว่าใครสั่งลงโทษได้แค่ไหน</div>
+        ${AUDIT_WORKER_MATRIX.map(auditWorkerMatrixGroupHtml).join("")}
+        <div class="form-hint" style="margin:18px 0 10px;">4. มุมมองหัวหน้า — ฉันสั่งอะไรได้บ้าง และห้ามทำอะไร</div>
+        <div class="leave-gap-grid">${AUDIT_BOSS_VIEW.map(auditBossViewCardHtml).join("")}</div>
+      </div>
+      <div class="leave-section">
+        <div class="leave-section-title"><span class="leave-section-badge">3/6</span> หมวดวินัย การลงโทษ การสอบสวน และการอุทธรณ์ (ตารางเต็มตามข้อบังคับ)</div>
         <div class="form-hint" style="margin-bottom:10px;">1. ตารางอำนาจการลงโทษทางวินัย (ลดเงินเดือน / ตัดเงินเดือน)</div>
         ${auditPenaltyTableHtml()}
         <div class="form-hint" style="margin:18px 0 10px;">2. ขั้นตอนการสอบสวน การพักงาน และการอุทธรณ์</div>
         <div class="leave-gap-grid">${AUDIT_INVESTIGATION_STEPS.map(auditInvestigationCardHtml).join("")}</div>
       </div>
       <div class="leave-section">
-        <div class="leave-section-title"><span class="leave-section-badge">3/5</span> ความปลอดภัย อุบัติเหตุ และ SOP (10 ข้อสั่งการ กฟน.1)</div>
+        <div class="leave-section-title"><span class="leave-section-badge">4/6</span> ความปลอดภัย อุบัติเหตุ และ SOP (10 ข้อสั่งการ กฟน.1)</div>
         ${auditSafetyTableHtml()}
       </div>
       <div class="leave-section">
-        <div class="leave-section-title"><span class="leave-section-badge">4/5</span> สภาพการจ้างขั้นต่ำและเงินทดแทน</div>
+        <div class="leave-section-title"><span class="leave-section-badge">5/6</span> สภาพการจ้างขั้นต่ำและเงินทดแทน</div>
         ${auditEmploymentTableHtml()}
       </div>
       <div class="leave-section">
-        <div class="leave-section-title"><span class="leave-section-badge">5/5</span> Checklist ตรวจสอบและปิดทุก Gap (${AUDIT_CHECKLIST.length} รายการ)</div>
+        <div class="leave-section-title"><span class="leave-section-badge">6/6</span> Checklist ตรวจสอบและปิดทุก Gap (${AUDIT_CHECKLIST.length} รายการ) และเทียบตำแหน่ง 2517 vs ปัจจุบัน</div>
         <div class="leave-gap-grid">${AUDIT_CHECKLIST.map(auditChecklistCardHtml).join("")}</div>
+        <div class="form-hint" style="margin:18px 0 10px;">เทียบตำแหน่งตามระเบียบ พ.ศ. 2517 กับตำแหน่งงานในปัจจุบัน</div>
+        ${auditPositionMapTableHtml()}
       </div>`;
   }
   function openAuditPage() {
