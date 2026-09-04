@@ -526,7 +526,7 @@
       <div class="gantt-row">
         <div class="gantt-row-num">${i + 1}</div>
         <div class="gantt-row-label" style="--gantt-accent:${color}">
-          <div class="gantt-row-title">📍 ${esc(dest)}</div>
+          <div class="gantt-row-title">${esc(dest)}</div>
         </div>
         <div class="gantt-row-track" style="${ganttTrackStyle(year, month0, daysInMonth)}">
           ${bars}
@@ -634,7 +634,7 @@
     const dest = plan.target_pea || plan.work_area || plan.title || "แผนงานทีม";
     modalBodyEl.innerHTML = `
       <div class="modal-head">
-        <div><div class="modal-id">แผนงานทีม</div><h2>📍 ${esc(dest)}</h2></div>
+        <div><div class="modal-id">แผนงานทีม</div><h2>${esc(dest)}</h2></div>
         <button class="modal-close" id="modal-close-btn">✕</button>
       </div>
       <div class="modal-body">
@@ -675,7 +675,7 @@
     const dest = plan.target_pea || plan.work_area || plan.title || "แผนงานทีม";
     modalBodyEl.innerHTML = `
       <div class="modal-head">
-        <div><div class="modal-id">แผนงานทีม</div><h2>📍 ${esc(dest)}</h2></div>
+        <div><div class="modal-id">แผนงานทีม</div><h2>${esc(dest)}</h2></div>
         <button class="modal-close" id="modal-close-btn">✕</button>
       </div>
       <div class="modal-body">
