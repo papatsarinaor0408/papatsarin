@@ -1725,29 +1725,6 @@
         <div class="leave-gap-box"><span class="leave-gap-icon">💡</span><div><b>ตัวอย่างเคสจริง</b><div>${leaveMultilineHtml(r.example)}</div></div></div>
       </div>`;
   }
-  function auditWorkerMatrixGroupHtml(g) {
-    return `
-      <div class="equip-group">
-        <div class="equip-group-title">${esc(g.position)} <span class="form-hint">(${esc(g.level)})</span></div>
-        <div class="equip-table-wrap">
-          <table class="equip-table leave-approval-table">
-            <thead><tr>
-              <th>ผู้บังคับบัญชาที่มีคำสั่งลงโทษ</th><th>อำนาจตัดเงินเดือนชั่วคราว</th><th>อำนาจลดเงินเดือนถาวร</th>
-              <th>อำนาจสั่งไล่ออก/ปลดออก</th><th>สรุป</th>
-            </tr></thead>
-            <tbody>
-              ${g.rows.map(r => `<tr>
-                <td class="leave-impact-type">${esc(r.supervisor)}</td>
-                <td>${esc(r.tempCut)}</td>
-                <td>${esc(r.permCut)}</td>
-                <td>${esc(r.dismissal)}</td>
-                <td>${esc(r.summary)}</td>
-              </tr>`).join("")}
-            </tbody>
-          </table>
-        </div>
-      </div>`;
-  }
   function auditBossViewCardHtml(b) {
     return `
       <div class="leave-gap-card">
@@ -1798,30 +1775,30 @@
   function auditPenaltyTableHtml() {
     const groups = auditPenaltyGroups();
     return `
-      <div class="audit-penalty-search">
+      <div class="audit-group-search">
         <input type="text" id="audit-penalty-search" placeholder="🔍 ค้นหาตำแหน่ง..." />
       </div>
       <div class="equip-table-wrap">
-        <table class="equip-table audit-penalty-table" id="audit-penalty-table">
+        <table class="equip-table audit-group-table" id="audit-penalty-table">
           <thead><tr>
             <th>ระดับ</th><th>ตำแหน่งพนักงานผู้กระทำผิด</th><th>ลดเงินเดือน</th>
             <th>ตัดเงินเดือน</th><th>ระยะเวลา</th><th>อำนาจสั่งไล่ออก/ปลดออก</th>
           </tr></thead>
           <tbody>
             ${groups.map((g, gi) => `
-              <tr class="audit-penalty-group-row" data-group="${gi}">
+              <tr class="audit-group-row" data-group="${gi}">
                 <td colspan="6">
-                  <div class="audit-penalty-group-head" data-group-toggle="${gi}">
-                    <span class="audit-penalty-group-badge">${gi + 1}</span>
-                    <span class="audit-penalty-group-icon">${AUDIT_PENALTY_GROUP_ICONS[g.authority] || "🧑‍💼"}</span>
-                    <span class="audit-penalty-group-title">${esc(g.authority)}</span>
-                    <span class="audit-penalty-group-chevron">▾</span>
+                  <div class="audit-group-head" data-group-toggle="${gi}">
+                    <span class="audit-group-badge">${gi + 1}</span>
+                    <span class="audit-group-icon">${AUDIT_PENALTY_GROUP_ICONS[g.authority] || "🧑‍💼"}</span>
+                    <span class="audit-group-title">${esc(g.authority)}</span>
+                    <span class="audit-group-chevron">▾</span>
                   </div>
                 </td>
               </tr>
               ${g.rows.map((r, ri) => `
-                <tr class="audit-penalty-data-row" data-group="${gi}" data-search="${esc((r.position || "").toLowerCase())}">
-                  <td class="audit-penalty-row-idx">${String(ri + 1).padStart(2, "0")}</td>
+                <tr class="audit-data-row" data-group="${gi}" data-search="${esc((r.position || "").toLowerCase())}">
+                  <td class="audit-row-idx">${String(ri + 1).padStart(2, "0")}</td>
                   <td>${esc(r.position.replace(/^\d+\.\s*/, ""))}</td>
                   <td>${r.reduceCap === "ไม่มีอำนาจสั่งลด" ? `<span class="audit-dash">–</span>` : `<span class="audit-pill orange">${esc(r.reduceCap)}</span>`}</td>
                   <td><span class="audit-pill red">${esc(r.deductCap)}</span></td>
@@ -1833,31 +1810,81 @@
         </table>
       </div>`;
   }
-  function bindAuditPenaltyTableEvents() {
-    const tableEl = $("#audit-penalty-table");
+  const AUDIT_WORKER_GROUP_ICONS = {
+    "พนักงานระดับ 1 – 2 หรือเทียบเท่า": "👥",
+    "ประจำแผนก / ผู้ช่วย หน.แผนก / หัวหน้าหมวด": "🧑‍💼",
+    "หัวหน้าแผนก (หน.ผ.) หรือเทียบเท่า": "💼",
+    "ผู้อำนวยการกอง (ผอ.กอง) / หัวหน้ากอง": "🏛️",
+    "ผู้อำนวยการฝ่าย (ผอ.ฝ่าย) / ผู้เชี่ยวชาญ": "🎖️"
+  };
+  function splitTempCut(text) {
+    const m = text.match(/^(.*?)\s*(นาน.*)$/);
+    if (!m) return { pct: text, dur: null };
+    return { pct: m[1].trim(), dur: m[2].trim() };
+  }
+  function auditWorkerMatrixTableHtml() {
+    return `
+      <div class="audit-group-search">
+        <input type="text" id="audit-worker-search" placeholder="🔍 ค้นหาตำแหน่ง/ผู้บังคับบัญชา..." />
+      </div>
+      <div class="equip-table-wrap">
+        <table class="equip-table audit-group-table" id="audit-worker-table">
+          <thead><tr>
+            <th>ผู้บังคับบัญชาที่มีคำสั่งลงโทษ</th><th>อำนาจตัดเงินเดือนชั่วคราว</th><th>อำนาจลดเงินเดือนถาวร</th>
+            <th>อำนาจสั่งไล่ออก/ปลดออก</th><th>สรุป</th>
+          </tr></thead>
+          <tbody>
+            ${AUDIT_WORKER_MATRIX.map((g, gi) => `
+              <tr class="audit-group-row" data-group="${gi}">
+                <td colspan="5">
+                  <div class="audit-group-head" data-group-toggle="${gi}">
+                    <span class="audit-group-badge">${gi + 1}</span>
+                    <span class="audit-group-icon">${AUDIT_WORKER_GROUP_ICONS[g.position] || "🧑‍💼"}</span>
+                    <span class="audit-group-title">${esc(g.position)} <span class="form-hint">(${esc(g.level)})</span></span>
+                    <span class="audit-group-chevron">▾</span>
+                  </div>
+                </td>
+              </tr>
+              ${g.rows.map(r => {
+                const tc = splitTempCut(r.tempCut);
+                return `<tr class="audit-data-row" data-group="${gi}" data-search="${esc((r.supervisor || "").toLowerCase())}">
+                  <td class="leave-impact-type">${esc(r.supervisor)}</td>
+                  <td>${tc.dur ? `<span class="audit-pill orange">${esc(tc.pct)}</span> <span class="audit-pill blue">${esc(tc.dur)}</span>` : `<span class="audit-dash">${esc(tc.pct)}</span>`}</td>
+                  <td>${r.permCut === "ไม่มีอำนาจสั่งลด" ? `<span class="audit-pill gray">${esc(r.permCut)}</span>` : `<span class="audit-pill red">${esc(r.permCut)}</span>`}</td>
+                  <td><span class="audit-pill ${r.dismissal.startsWith("ไม่มีอำนาจ") ? "gray" : "green"}">${esc(r.dismissal)}</span></td>
+                  <td>${esc(r.summary)}</td>
+                </tr>`;
+              }).join("")}
+            `).join("")}
+          </tbody>
+        </table>
+      </div>`;
+  }
+  function bindAuditGroupTableEvents(tableId, searchId) {
+    const tableEl = $("#" + tableId);
     if (!tableEl) return;
     tableEl.querySelectorAll("[data-group-toggle]").forEach(headEl => {
       headEl.addEventListener("click", () => {
         const gi = headEl.getAttribute("data-group-toggle");
         const collapsed = headEl.classList.toggle("collapsed");
-        tableEl.querySelectorAll(`.audit-penalty-data-row[data-group="${gi}"]`).forEach(row => {
-          row.classList.toggle("audit-penalty-row-hidden", collapsed);
+        tableEl.querySelectorAll(`.audit-data-row[data-group="${gi}"]`).forEach(row => {
+          row.classList.toggle("audit-row-hidden", collapsed);
         });
-        headEl.querySelector(".audit-penalty-group-chevron").textContent = collapsed ? "▸" : "▾";
+        headEl.querySelector(".audit-group-chevron").textContent = collapsed ? "▸" : "▾";
       });
     });
-    const searchEl = $("#audit-penalty-search");
+    const searchEl = $("#" + searchId);
     if (searchEl) searchEl.addEventListener("input", () => {
       const q = searchEl.value.trim().toLowerCase();
-      tableEl.querySelectorAll(".audit-penalty-group-head").forEach(h => { h.classList.remove("collapsed"); h.querySelector(".audit-penalty-group-chevron").textContent = "▾"; });
+      tableEl.querySelectorAll(".audit-group-head").forEach(h => { h.classList.remove("collapsed"); h.querySelector(".audit-group-chevron").textContent = "▾"; });
       const visibleGroups = new Set();
-      tableEl.querySelectorAll(".audit-penalty-data-row").forEach(row => {
+      tableEl.querySelectorAll(".audit-data-row").forEach(row => {
         const match = !q || row.getAttribute("data-search").includes(q);
-        row.classList.toggle("audit-penalty-row-hidden", !match);
+        row.classList.toggle("audit-row-hidden", !match);
         if (match) visibleGroups.add(row.getAttribute("data-group"));
       });
-      tableEl.querySelectorAll(".audit-penalty-group-row").forEach(gRow => {
-        gRow.classList.toggle("audit-penalty-row-hidden", !visibleGroups.has(gRow.getAttribute("data-group")));
+      tableEl.querySelectorAll(".audit-group-row").forEach(gRow => {
+        gRow.classList.toggle("audit-row-hidden", !visibleGroups.has(gRow.getAttribute("data-group")));
       });
     });
   }
@@ -1943,7 +1970,7 @@
         <div class="form-hint" style="margin:18px 0 10px;">2. โครงสร้างอำนาจ (กฎเหล็กที่ต้องรู้)</div>
         <div class="leave-gap-grid">${AUDIT_POWER_RULES.map(auditPowerRuleCardHtml).join("")}</div>
         <div class="form-hint" style="margin:18px 0 10px;">3. มุมมองผู้ปฏิบัติงาน — หาระดับตัวเอง ดูว่าใครสั่งลงโทษได้แค่ไหน</div>
-        ${AUDIT_WORKER_MATRIX.map(auditWorkerMatrixGroupHtml).join("")}
+        ${auditWorkerMatrixTableHtml()}
         <div class="form-hint" style="margin:18px 0 10px;">4. มุมมองหัวหน้า — ฉันสั่งอะไรได้บ้าง และห้ามทำอะไร</div>
         <div class="leave-gap-grid">${AUDIT_BOSS_VIEW.map(auditBossViewCardHtml).join("")}</div>
       </div>
@@ -1971,7 +1998,8 @@
   }
   function openAuditPage() {
     auditPageBodyEl.innerHTML = auditPageHtml();
-    bindAuditPenaltyTableEvents();
+    bindAuditGroupTableEvents("audit-penalty-table", "audit-penalty-search");
+    bindAuditGroupTableEvents("audit-worker-table", "audit-worker-search");
     appShellEl.classList.add("hidden");
     auditPageEl.classList.remove("hidden");
     window.scrollTo(0, 0);
