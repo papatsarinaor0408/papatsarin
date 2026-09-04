@@ -1718,28 +1718,54 @@
         <div class="leave-row"><div class="leave-row-label">แนวทางปฏิบัติ</div><div class="leave-row-value">${leaveMultilineHtml(g.sop)}</div></div>
       </div>`;
   }
+  const LEAVE_IMPACT_ICONS = ["🩺", "🛡️", "💼", "🤱", "🏖️", "🤰"];
+  const LEAVE_IMPACT_COLUMNS = [
+    { key: "salaryDuring", label: "เงินเดือนระหว่างลา", icon: "💳" },
+    { key: "attendance", label: "Attendance", icon: "📅" },
+    { key: "behaviorKpi", label: "Behavior/KPI", icon: "👤" },
+    { key: "stepReview", label: "เลื่อนขั้นเงินเดือน", icon: "📈" },
+    { key: "bonus", label: "โบนัสประจำปี", icon: "🎁" },
+    { key: "threshold", label: "Threshold (เกณฑ์เพดานสูงสุด)", icon: "🎯" }
+  ];
+  function leaveImpactTone(text) {
+    if (/งด|ห้าม|ตัดสิทธิ|เด็ดขาด|ไล่ออก|ขาดงาน/.test(text)) return "red";
+    if (/หัก|จำกัด|ตัด|ลด/.test(text)) return "orange";
+    if (/ยกเว้น|เต็ม 100%|เต็มจำนวน|เต็มตาม|ไม่ถูกหัก|ไม่มีผลกระทบ|ไม่มีการหัก|ไม่มีผลงานประเมิน|ไม่มีผล/.test(text)) return "green";
+    return "blue";
+  }
   function leaveImpactTableHtml() {
-    const row = (r, warn) => `<tr class="${warn ? "leave-impact-warn" : ""}">
-        <td class="leave-impact-type">${esc(r.type)}</td>
-        <td>${esc(r.salaryDuring)}</td>
-        <td>${esc(r.attendance)}</td>
-        <td>${esc(r.behaviorKpi)}</td>
-        <td>${esc(r.stepReview)}</td>
-        <td>${esc(r.bonus)}</td>
-        <td>${esc(r.threshold)}</td>
-      </tr>`;
     return `
       <div class="equip-table-wrap">
-        <table class="equip-table leave-impact-table">
+        <table class="equip-table leave-impact-matrix">
           <thead><tr>
-            <th>ประเภทการลา</th><th>เงินเดือนระหว่างลา</th><th>Attendance</th><th>Behavior/KPI</th>
-            <th>เลื่อนขั้นเงินเดือน</th><th>โบนัสประจำปี</th><th>เกณฑ์เพดานวิกฤต (Threshold)</th>
+            <th><span class="leave-impact2-info">ⓘ</span> ประเภทการลา</th>
+            ${LEAVE_IMPACT_COLUMNS.map(c => `<th><div class="leave-impact2-th"><span>${c.icon}</span><span>${esc(c.label)}</span></div></th>`).join("")}
+            <th><div class="leave-impact2-th"><span>📋</span><span>สรุปภาพรวม</span></div></th>
           </tr></thead>
           <tbody>
-            ${LEAVE_REG_IMPACTS.map(r => row(r, false)).join("")}
-            ${row(LEAVE_REG_ABSENTEEISM, true)}
+            ${LEAVE_REG_IMPACTS.map((r, i) => `
+              <tr class="leave-impact2-row">
+                <td class="leave-impact2-type">
+                  <span class="leave-impact2-num" style="background:${LEAVE_CAT_ICON_COLORS[i % LEAVE_CAT_ICON_COLORS.length]}">${i + 1}</span>
+                  <div class="leave-impact2-type-title">${LEAVE_IMPACT_ICONS[i] || ""} ${esc(r.type)}</div>
+                </td>
+                ${LEAVE_IMPACT_COLUMNS.map(c => `<td><span class="leave-impact2-pill ${leaveImpactTone(r[c.key])}">${esc(r[c.key])}</span></td>`).join("")}
+                <td class="leave-impact2-summary">${esc(r.summary)}</td>
+              </tr>`).join("")}
           </tbody>
         </table>
+      </div>
+      <div class="leave-impact2-absent">
+        <div class="leave-impact2-absent-head">
+          <span class="leave-impact2-absent-icon">⚠️</span>
+          <div>
+            <b>${esc(LEAVE_REG_ABSENTEEISM.type)}</b>
+            <div class="leave-impact2-absent-sub">กรณีนี้ไม่ใช่ “การลา” แต่เป็นความผิดทางวินัยขั้นร้ายแรง ต้องแยกให้ชัดเจนจากการลาทุกประเภทข้างต้น</div>
+          </div>
+        </div>
+        <div class="leave-impact2-absent-grid">
+          ${LEAVE_IMPACT_COLUMNS.map(c => `<div class="leave-impact2-absent-item"><span>${c.icon}</span>${esc(LEAVE_REG_ABSENTEEISM[c.key])}</div>`).join("")}
+        </div>
       </div>`;
   }
   function leaveApprovalTableHtml() {
