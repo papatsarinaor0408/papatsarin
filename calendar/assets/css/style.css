@@ -519,6 +519,8 @@ body.role-reviewer .admin-only { display: none !important; }
 .gantt-row:last-child { border-bottom: none; }
 .gantt-header-row { background: #F2F2F2; }
 .gantt-row-label { flex: 0 0 210px; padding: 10px 12px; border-right: 1px solid #E2E2E2; }
+.gantt-row-label[data-action] { cursor: pointer; }
+.gantt-row-label[data-action]:hover { background: #F2F2F2; }
 .gantt-row-title { font-size: 12.5px; font-weight: 700; color: #111111; }
 .gantt-row-meta { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
 .gantt-row-track { flex: 1 1 auto; display: grid; min-width: 360px; position: relative; }
@@ -527,8 +529,9 @@ body.role-reviewer .admin-only { display: none !important; }
 .gantt-bar {
   border-radius: 6px; color: #fff; font-size: 10.5px; font-weight: 600; display: flex; align-items: center;
   padding: 0 8px; height: 22px; align-self: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  margin: 0 1px;
+  margin: 0 1px; cursor: pointer;
 }
+.gantt-exclude-summary { display: flex; flex-wrap: wrap; gap: 6px; }
 .gantt-row-actions { flex: 0 0 60px; display: flex; align-items: center; justify-content: center; gap: 2px; }
 .gantt-icon-btn { border: none; background: transparent; cursor: pointer; font-size: 13px; padding: 5px; border-radius: 6px; line-height: 1; }
 .gantt-icon-btn:hover { background: #F2F2F2; }

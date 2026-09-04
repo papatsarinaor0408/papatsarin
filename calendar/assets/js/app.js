@@ -459,17 +459,15 @@
   function ganttRowHtml(plan, i, monthStart, monthEnd, daysInMonth) {
     const bounds = ganttPlanBounds(plan, monthStart, monthEnd);
     const color = GANTT_COLORS[i % GANTT_COLORS.length];
-    const excluded = plan.excluded_employees || [];
+    const dest = plan.target_pea || plan.work_area || "-";
     return `
       <div class="gantt-row">
-        <div class="gantt-row-label">
+        <div class="gantt-row-label" data-action="detail" data-id="${esc(plan.id)}" title="คลิกดูรายละเอียด">
           <div class="gantt-row-title">${esc(plan.title)}</div>
-          <div class="gantt-row-meta">${esc(plan.date_from)} – ${esc(plan.date_to)} · ${ganttDurationLabel(plan)}${excluded.length ? ` · ยกเว้น ${excluded.length} คน` : ""}</div>
-          ${plan.work_area || plan.target_pea ? `<div class="gantt-row-meta">📍 ${esc(plan.work_area || "-")} → ${esc(plan.target_pea || "-")} ${plan.area_status === "out" ? "🟠" : "🟢"}</div>` : ""}
-          ${plan.coordinator ? `<div class="gantt-row-meta">👤 ${esc(plan.coordinator)}${plan.coordinator_phone ? ` · ${esc(plan.coordinator_phone)}` : ""}</div>` : ""}
+          <div class="gantt-row-meta">📍 ${esc(dest)}</div>
         </div>
         <div class="gantt-row-track" style="grid-template-columns: repeat(${daysInMonth}, minmax(0,1fr));">
-          ${bounds ? `<div class="gantt-bar" style="grid-column: ${bounds.startDay} / ${bounds.endDay + 1}; background:${color};" title="${esc(plan.title)}">${esc(plan.title)}</div>` : ""}
+          ${bounds ? `<div class="gantt-bar" data-action="detail" data-id="${esc(plan.id)}" style="grid-column: ${bounds.startDay} / ${bounds.endDay + 1}; background:${color};" title="คลิกดูรายละเอียด: ${esc(plan.title)}">${esc(plan.title)}</div>` : ""}
         </div>
         <div class="gantt-row-actions admin-only">
           <button type="button" class="gantt-icon-btn" data-action="exclude" data-id="${esc(plan.id)}" title="ยกเว้นบางคน (เช่นคนที่ลา)">👤</button>
@@ -517,6 +515,17 @@
           </div>
           <div class="form-field"><label>ผู้ประสานงาน/เจ้าของงาน</label><input type="text" name="coordinator" /></div>
           <div class="form-field"><label>เบอร์โทรผู้ประสานงาน</label><input type="tel" name="coordinatorPhone" placeholder="08x-xxx-xxxx" /></div>
+          <div class="form-field span2">
+            <label>เลขใบตัดงบปลายทาง (สำหรับเบิกค่าเบี้ยเลี้ยง)</label>
+            <div class="radio-group" id="gantt-budget-group">
+              <label class="radio-option"><input type="radio" name="budgetRefStatus" value="none" checked/> ไม่มี</label>
+              <label class="radio-option"><input type="radio" name="budgetRefStatus" value="has"/> มี</label>
+            </div>
+          </div>
+          <div class="form-field" id="gantt-budget-no-field" style="display:none;">
+            <label>เลขที่ใบตัดงบ</label>
+            <input type="text" name="budgetRefNo" placeholder="ไม่ทราบเลขตอนนี้ กรอกภายหลังได้" />
+          </div>
         </div>
         <div id="gantt-add-error"></div>
         <div class="form-actions">
@@ -536,6 +545,33 @@
           ${plans.map((p, i) => ganttRowHtml(p, i, monthStart, monthEnd, daysInMonth)).join("")}
         </div>
       ` : `<div class="gantt-empty">ยังไม่มีแผนงานในเดือนนี้</div>`}`;
+  }
+  function openGanttDetailModal(planId) {
+    const plan = TEAM_PLANS.find(p => p.id === planId);
+    if (!plan) return;
+    const excluded = plan.excluded_employees || [];
+    modalBodyEl.innerHTML = `
+      <div class="modal-head">
+        <div><div class="modal-id">แผนงานทีม</div><h2>${esc(plan.title)}</h2></div>
+        <button class="modal-close" id="modal-close-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="detail-grid">
+          ${detailItem("ช่วงวันที่", `${plan.date_from} – ${plan.date_to} (${ganttDurationLabel(plan)})`)}
+          ${detailItem("พื้นที่ปฏิบัติงาน", plan.work_area || "-")}
+          ${detailItem("การไฟฟ้าปลายทาง", plan.target_pea || "-")}
+          ${detailItem("สถานะพื้นที่ปฏิบัติงาน", plan.area_status === "out" ? "🟠 นอกพื้นที่ (มีคำสั่งเดินทาง)" : "🟢 ในพื้นที่ต้นสังกัด")}
+          ${detailItem("ผู้ประสานงาน/เจ้าของงาน", plan.coordinator || "-")}
+          ${detailItem("เบอร์โทรผู้ประสานงาน", plan.coordinator_phone || "-", true)}
+          ${detailItem("เลขใบตัดงบปลายทาง", plan.budget_ref_status === "has" ? (plan.budget_ref_no ? plan.budget_ref_no : "มี (ยังไม่ระบุเลข)") : "ไม่มี")}
+        </div>
+        <div class="detail-section" style="margin-top:14px;">
+          <div class="detail-section-title">ผู้ที่ยกเว้นจากแผนงานนี้ (เช่น คนที่ลา)</div>
+          ${excluded.length ? `<div class="gantt-exclude-summary">${excluded.map(n => `<span class="pls-type-tag">${esc(n)}</span>`).join("")}</div>` : `<div class="form-hint">ไม่มีใครถูกยกเว้น — มีผลกับทั้งทีม</div>`}
+        </div>
+      </div>`;
+    modalBackdropEl.classList.add("open");
+    $("#modal-close-btn").addEventListener("click", closeModal);
   }
   function openGanttExcludeModal(planId) {
     const plan = TEAM_PLANS.find(p => p.id === planId);
@@ -599,6 +635,14 @@
         }
       });
 
+      // เลขใบตัดงบปลายทาง — ติ๊ก "มี" ค่อยผุดช่องกรอกเลข (จะยังไม่กรอกเลขตอนนี้ก็ได้)
+      const budgetNoField = $("#gantt-budget-no-field");
+      function syncGanttBudgetRef() {
+        const checked = addForm.querySelector("input[name=budgetRefStatus]:checked");
+        budgetNoField.style.display = checked && checked.value === "has" ? "" : "none";
+      }
+      addForm.querySelectorAll("input[name=budgetRefStatus]").forEach(r => r.addEventListener("change", syncGanttBudgetRef));
+
       addForm.addEventListener("submit", async (ev) => {
         ev.preventDefault();
         const fd = new FormData(addForm);
@@ -611,13 +655,16 @@
         if (dateTo < dateFrom) { errEl.innerHTML = `<div class="form-error">วันสิ้นสุดต้องไม่ก่อนวันเริ่ม</div>`; return; }
         const btn = addForm.querySelector("button[type=submit]");
         btn.disabled = true;
+        const budgetRefStatus = fd.get("budgetRefStatus") || "none";
         const row = {
           title, date_from: dateFrom, date_to: dateTo,
           work_area: (fd.get("workArea") || "").trim() || null,
           target_pea: (fd.get("targetPEA") || "").trim() || null,
           area_status: fd.get("areaStatus") || "in",
           coordinator: (fd.get("coordinator") || "").trim() || null,
-          coordinator_phone: (fd.get("coordinatorPhone") || "").trim() || null
+          coordinator_phone: (fd.get("coordinatorPhone") || "").trim() || null,
+          budget_ref_status: budgetRefStatus,
+          budget_ref_no: budgetRefStatus === "has" ? ((fd.get("budgetRefNo") || "").trim() || null) : null
         };
         const { error } = await CAL_SB.from("calendar_team_plans").insert([row]);
         if (error) { errEl.innerHTML = `<div class="form-error">บันทึกไม่สำเร็จ: ${esc(error.message)}</div>`; btn.disabled = false; return; }
@@ -625,6 +672,9 @@
         renderTeamPlanGantt();
       });
     }
+    ganttPanelEl.querySelectorAll('[data-action="detail"]').forEach(el => {
+      el.addEventListener("click", () => openGanttDetailModal(el.getAttribute("data-id")));
+    });
     ganttPanelEl.querySelectorAll('[data-action="exclude"]').forEach(btn => {
       btn.addEventListener("click", () => openGanttExcludeModal(btn.getAttribute("data-id")));
     });
