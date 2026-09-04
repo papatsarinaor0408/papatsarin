@@ -1283,6 +1283,10 @@
     const el = $("#leave-form-error");
     if (el) el.innerHTML = `<div class="form-error">${esc(msg)}</div>`;
   }
+  function showLeaveFormSuccess(msg) {
+    const el = $("#leave-form-error");
+    if (el) el.innerHTML = `<div class="form-success">${esc(msg)}</div>`;
+  }
 
   function buildPersonModalHtml() {
     if (!personState.employeeName && EMPLOYEES.length) personState.employeeName = EMPLOYEES[0].name;
@@ -1491,9 +1495,9 @@
       btn.disabled = true;
       const { error } = await CAL_SB.from("calendar_leaves").insert([row]);
       if (error) { showLeaveFormError("บันทึกไม่สำเร็จ: " + error.message); btn.disabled = false; return; }
-      personState.employeeName = employeeName;
-      personState.mode = "individual";
       await refreshPersonPage();
+      const dateLabel = dateTo !== dateFrom ? `${dateFrom} ถึง ${dateTo}` : dateFrom;
+      showLeaveFormSuccess(`✓ บันทึกวันลาให้ ${employeeName} (${dateLabel}) เรียบร้อยแล้ว`);
     });
 
     personPageBodyEl.querySelectorAll(".leave-del-btn").forEach(btn => {
