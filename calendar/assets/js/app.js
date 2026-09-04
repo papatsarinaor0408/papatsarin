@@ -1913,17 +1913,44 @@
         <div class="leave-row"><div class="leave-row-label">มาตรการควบคุมความถูกต้อง</div><div class="leave-row-value leave-text-correct">${leaveMultilineHtml(s.control)}</div></div>
       </div>`;
   }
+  function auditSafetyStatsHtml() {
+    const orderCount = AUDIT_SAFETY_ORDERS.length;
+    const respSet = new Set();
+    AUDIT_SAFETY_ORDERS.forEach(r => r.responsible.split(/[,/]/).forEach(s => { const t = s.trim(); if (t) respSet.add(t); }));
+    const evidenceSet = new Set();
+    AUDIT_SAFETY_ORDERS.forEach(r => r.evidence.split(/[+/]/).forEach(s => { const t = s.trim(); if (t) evidenceSet.add(t); }));
+    return `
+      <div class="audit-stat-row">
+        <div class="audit-stat-card">
+          <div class="audit-stat-icon purple">🛡️</div>
+          <div><div class="audit-stat-value">${orderCount}</div><div class="audit-stat-label">ข้อสั่งการด้านความปลอดภัย</div></div>
+        </div>
+        <div class="audit-stat-card">
+          <div class="audit-stat-icon violet">👥</div>
+          <div><div class="audit-stat-value">${respSet.size}</div><div class="audit-stat-label">ผู้รับผิดชอบหลักที่เกี่ยวข้อง</div></div>
+        </div>
+        <div class="audit-stat-card">
+          <div class="audit-stat-icon orange">📄</div>
+          <div><div class="audit-stat-value">${evidenceSet.size}</div><div class="audit-stat-label">เอกสารหลักฐานที่ต้องตรวจ</div></div>
+        </div>
+        <div class="audit-stat-card">
+          <div class="audit-stat-icon green">✅</div>
+          <div><div class="audit-stat-value">${orderCount}</div><div class="audit-stat-label">จุดควบคุมความปลอดภัย</div></div>
+        </div>
+      </div>`;
+  }
   function auditSafetyTableHtml() {
     return `
+      ${auditSafetyStatsHtml()}
       <div class="equip-table-wrap">
         <table class="equip-table leave-impact-table">
           <thead><tr>
-            <th>ข้อสั่งการ</th><th>มาตรการความปลอดภัยภาคบังคับ</th><th>ผู้มีหน้าที่รับผิดชอบ</th>
-            <th>เอกสารหลักฐาน</th><th>ฐานความรับผิดทางวินัยและละเมิด</th><th>จุดควบคุมความปลอดภัย</th>
+            <th>ข้อสั่งการ</th><th>มาตรการความปลอดภัยภาคบังคับ</th><th>ผู้ที่เกี่ยวข้อง/รับผิดชอบ</th>
+            <th>📄 เอกสารหลักฐาน</th><th>ฐานความผิดหรือระเบียบ</th><th>✅ จุดควบคุมความปลอดภัย</th>
           </tr></thead>
           <tbody>
-            ${AUDIT_SAFETY_ORDERS.map(r => `<tr>
-              <td class="leave-impact-type">${esc(r.no)}</td>
+            ${AUDIT_SAFETY_ORDERS.map((r, i) => `<tr>
+              <td class="leave-impact-type"><span class="audit-item-badge">${i + 1}</span> ${esc(r.no)}</td>
               <td>${esc(r.measure)}</td>
               <td>${esc(r.responsible)}</td>
               <td>${esc(r.evidence)}</td>
@@ -1932,6 +1959,10 @@
             </tr>`).join("")}
           </tbody>
         </table>
+      </div>
+      <div class="audit-table-footnote">
+        <span>ℹ️ หมายเหตุ: ใช้สำหรับกำกับติดตามการปฏิบัติตามข้อสั่งการด้านความปลอดภัย</span>
+        <span>อ้างอิงจากไฟล์ PEA_Audit_Master_Verification_100Percent.xlsx</span>
       </div>`;
   }
   function auditEmploymentTableHtml() {
