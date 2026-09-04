@@ -338,12 +338,91 @@
     const travelOrderCount = countUniqueDays(periodTasks, t => t.travelOrder);
     const otCount = countUniqueDays(periodTasks, isOTTask);
     statRowEl.innerHTML = `
-      <div class="stat-card workday"><div class="stat-label">วันทำการ</div><div class="stat-value">${bizDays.total}/${bizDays.elapsed}</div></div>
-      <div class="stat-card inarea"><div class="stat-label">ปฏิบัติงาน บปก.</div><div class="stat-value">${inAreaCount} วัน</div></div>
-      <div class="stat-card travel"><div class="stat-label">คำสั่งเดินทาง</div><div class="stat-value">${travelOrderCount} วัน</div></div>
-      <div class="stat-card urgent"><div class="stat-label">OT</div><div class="stat-value">${otCount} วัน</div></div>
-      <div class="stat-card taskcount"><div class="stat-label">จำนวนงาน</div><div class="stat-value">${periodTasks.length} งาน</div></div>
+      <div class="stat-card workday" data-stat="workday"><div class="stat-label">วันทำการ</div><div class="stat-value">${bizDays.total}/${bizDays.elapsed}</div></div>
+      <div class="stat-card inarea" data-stat="inarea"><div class="stat-label">ปฏิบัติงาน บปก.</div><div class="stat-value">${inAreaCount} วัน</div></div>
+      <div class="stat-card travel" data-stat="travel"><div class="stat-label">คำสั่งเดินทาง</div><div class="stat-value">${travelOrderCount} วัน</div></div>
+      <div class="stat-card urgent" data-stat="ot"><div class="stat-label">OT</div><div class="stat-value">${otCount} วัน</div></div>
+      <div class="stat-card taskcount" data-stat="taskcount"><div class="stat-label">จำนวนงาน</div><div class="stat-value">${periodTasks.length} งาน</div></div>
     `;
+    statRowEl.querySelectorAll(".stat-card").forEach(card => {
+      card.addEventListener("click", () => openStatDetailModal(card.getAttribute("data-stat")));
+    });
+  }
+  function statTaskListModalHtml(title, tasksByDate) {
+    const dates = Object.keys(tasksByDate).sort();
+    return `
+      <div class="modal-head">
+        <div>
+          <div class="modal-id">สรุปตามช่วงเวลาที่กำลังแสดงอยู่</div>
+          <h2>${esc(title)}</h2>
+        </div>
+        <button class="modal-close" id="modal-close-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        ${dates.length ? dates.map(iso => {
+          const d = fromISO(iso);
+          const items = tasksByDate[iso];
+          return `
+            <div class="detail-section">
+              <div class="detail-section-title">${WD_FULL[d.getDay()]} ${d.getDate()} ${THAI_MONTHS[d.getMonth()]} ${beYear(d)} (${items.length} งาน)</div>
+              <div class="detail-list">
+                ${items.map(t => `<div class="stat-detail-task" data-task-id="${esc(t.id)}">${esc(t.appointTime || t.departTime || "-")} น. · ${esc(t.title)} · ${esc(t.targetPEA)}</div>`).join("")}
+              </div>
+            </div>`;
+        }).join("") : `<div class="empty-state">ไม่มีรายการในช่วงเวลานี้</div>`}
+      </div>`;
+  }
+  function openStatDetailModal(kind) {
+    if (kind === "workday") { openWorkdayDetailModal(); return; }
+    const periodTasks = getPeriodTasks();
+    let title, filterFn;
+    if (kind === "inarea") { title = "ปฏิบัติงาน บปก."; filterFn = t => isHomeUnitPea(t.targetPEA) && !t.travelOrder; }
+    else if (kind === "travel") { title = "คำสั่งเดินทาง"; filterFn = t => t.travelOrder; }
+    else if (kind === "ot") { title = "OT"; filterFn = isOTTask; }
+    else if (kind === "taskcount") { title = "จำนวนงานทั้งหมด"; filterFn = () => true; }
+    else return;
+
+    const filtered = periodTasks.filter(filterFn);
+    const tasksByDate = {};
+    filtered.forEach(t => { (tasksByDate[t.date] = tasksByDate[t.date] || []).push(t); });
+    Object.values(tasksByDate).forEach(list => list.sort((a, b) => (a.appointTime || "").localeCompare(b.appointTime || "")));
+
+    modalBodyEl.innerHTML = statTaskListModalHtml(title, tasksByDate);
+    modalLocked = false;
+    modalBackdropEl.classList.add("open");
+    $("#modal-close-btn").addEventListener("click", closeModal);
+    modalBodyEl.querySelectorAll(".stat-detail-task").forEach(row => {
+      row.addEventListener("click", () => openModal(row.getAttribute("data-task-id")));
+    });
+  }
+  function openWorkdayDetailModal() {
+    const year = state.cursor.getFullYear(), month0 = state.cursor.getMonth();
+    const daysInMonth = new Date(year, month0 + 1, 0).getDate();
+    const rows = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+      const iso = `${year}-${String(month0 + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const dow = new Date(year, month0, day).getDay();
+      if (dow === 0 || dow === 6 || HOLIDAYS[iso]) continue;
+      const isPast = iso <= TODAY_ISO;
+      rows.push(`<div>${WD_FULL[dow]} ${day} ${THAI_MONTHS[month0]} ${beYear(fromISO(iso))} ${isPast ? "✅ ผ่านแล้ว" : "⏳ ยังไม่ถึง"}</div>`);
+    }
+    modalBodyEl.innerHTML = `
+      <div class="modal-head">
+        <div>
+          <div class="modal-id">สรุปตามช่วงเวลาที่กำลังแสดงอยู่</div>
+          <h2>วันทำการ</h2>
+        </div>
+        <button class="modal-close" id="modal-close-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="detail-section">
+          <div class="detail-section-title">วันทำการทั้งหมดในเดือนนี้ (${rows.length} วัน)</div>
+          <div class="detail-list">${rows.join("")}</div>
+        </div>
+      </div>`;
+    modalLocked = false;
+    modalBackdropEl.classList.add("open");
+    $("#modal-close-btn").addEventListener("click", closeModal);
   }
 
   /* ---------------- Toolbar ---------------- */

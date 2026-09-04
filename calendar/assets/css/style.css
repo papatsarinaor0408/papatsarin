@@ -363,7 +363,15 @@ body.role-reviewer .admin-only { display: none !important; }
   padding: 13px 16px;
   text-align: left;
   position: relative;
+  cursor: pointer;
+  transition: transform .1s, box-shadow .1s;
 }
+.stat-card:hover { box-shadow: var(--shadow-sm); transform: translateY(-1px); }
+.stat-detail-task {
+  cursor: pointer; padding: 5px 0; border-bottom: 1px solid var(--border-soft); font-size: 12.5px;
+}
+.stat-detail-task:last-child { border-bottom: none; }
+.stat-detail-task:hover { color: var(--pea-purple); }
 .stat-card .stat-label { font-size: 12px; color: var(--pea-purple-dark); margin-bottom: 6px; display:flex; align-items:center; gap:6px; }
 .stat-card .stat-value { font-size: 24px; font-weight: 600; color: var(--pea-purple-dark); font-variant-numeric: tabular-nums; }
 .stat-card.workday { background: var(--green-bg); }
