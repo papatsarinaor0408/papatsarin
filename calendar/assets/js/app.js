@@ -179,11 +179,12 @@
       const leave = leaves[0] || null;
       const tasksForDay = tasksForEmployeeOnDate(employeeName, iso);
       const worked = tasksForDay.length > 0;
+      // วันที่ลาแล้ว ไม่นับเป็นวันปฏิบัติงาน/OT/คำสั่งเดินทาง แม้จะมีงานติดอยู่ในระบบก็ตาม
       // นับเป็นวันโอที ถ้าเป็นวันเสาร์/อาทิตย์/วันหยุดนักขัตฤกษ์ หรือมีงานที่เวลานัดหมายหน้างานหลัง 16:30 น. (งานด่วนนอกเวลาราชการ)
-      const isOT = worked && (isWeekend || !!holiday || tasksForDay.some(t => t.appointTime && t.appointTime > OT_AFTER_HOURS_TIME));
-      const hasTravelOrder = tasksForDay.some(t => t.travelOrder);
+      const isOT = !leave && worked && (isWeekend || !!holiday || tasksForDay.some(t => t.appointTime && t.appointTime > OT_AFTER_HOURS_TIME));
+      const hasTravelOrder = !leave && tasksForDay.some(t => t.travelOrder);
       // "ปฏิบัติงาน บปก." = อยู่ที่การไฟฟ้าบางปะกงจริงๆ (ไม่ใช่แค่ areaStatus "ในพื้นที่" ทั่วไป) และไม่มีคำสั่งเดินทาง
-      const inArea = worked && tasksForDay.some(t => isHomeUnitPea(t.targetPEA) && !t.travelOrder);
+      const inArea = !leave && worked && tasksForDay.some(t => isHomeUnitPea(t.targetPEA) && !t.travelOrder);
       out.push({ iso, day, dow, holiday, isWeekend, leave, leaves, tasksForDay, worked, isOT, hasTravelOrder, inArea });
     }
     return out;
@@ -1321,7 +1322,7 @@
   function computeEmployeeMonthStats(employeeName, year, month0) {
     const monthData = getPersonMonthData(employeeName, year, month0);
     return {
-      workDays: monthData.filter(d => d.worked).length,
+      workDays: monthData.filter(d => d.worked && !d.leave).length,
       travelOrderDays: monthData.filter(d => d.hasTravelOrder).length,
       inAreaDays: monthData.filter(d => d.inArea).length,
       otDays: monthData.filter(d => d.isOT).length,
@@ -1387,7 +1388,7 @@
     const otDays = monthData.filter(d => d.isOT).length;
     const travelOrderDays = monthData.filter(d => d.hasTravelOrder).length;
     const inAreaDays = monthData.filter(d => d.inArea).length;
-    const taskCount = monthData.reduce((sum, d) => sum + d.tasksForDay.length, 0);
+    const taskCount = monthData.reduce((sum, d) => sum + (d.leave ? 0 : d.tasksForDay.length), 0);
     const bizDays = businessDaysProgress(year, month0);
 
     const leaveByType = {};
