@@ -1437,23 +1437,44 @@
           <div class="person-stat ot"><div class="person-stat-label">OT</div><div class="person-stat-value">${otDays} วัน</div></div>
           <div class="person-stat taskcount"><div class="person-stat-label">จำนวนงาน</div><div class="person-stat-value">${taskCount} งาน</div></div>
         </div>
-        ${Object.keys(leaveByType).length ? `<div class="person-leave-breakdown">${Object.entries(leaveByType).map(([t, c]) => `<span class="leave-type-chip">${esc(t)} ${c} วัน</span>`).join("")}</div>` : ""}
-        <div class="weekday-row">${WD_SHORT.map((w, i) => `<div class="wd ${i === 0 ? "sun" : i === 6 ? "sat" : ""}">${w}</div>`).join("")}</div>
-        <div class="person-month-grid">
-          ${cells.map(d => {
-            if (!d) return `<div class="person-day-cell empty"></div>`;
-            const cls = ["person-day-cell"];
-            if (d.isWeekend) cls.push("weekend");
-            if (d.holiday) cls.push("holiday");
-            if (d.leave) cls.push("has-leave");
-            if (d.iso === TODAY_ISO) cls.push("is-today");
-            return `<div class="${cls.join(" ")}" data-date="${d.iso}">
-              <div class="pd-num">${d.day}</div>
-              ${d.holiday ? `<div class="pd-holiday">${esc(d.holiday)}</div>` : ""}
-              ${d.leaves.map(l => `<div class="pd-leave-tag">${esc(l.leave_type)}</div>`).join("")}
-              ${d.worked ? `<div class="pd-work-tag ${d.isOT ? "ot" : ""}">${d.isOT ? "⚡" : ""} ${d.tasksForDay.length} งาน</div>` : ""}
-            </div>`;
-          }).join("")}
+        <div class="person-main-layout">
+          <div class="person-calendar-col">
+            <div class="weekday-row">${WD_SHORT.map((w, i) => `<div class="wd ${i === 0 ? "sun" : i === 6 ? "sat" : ""}">${w}</div>`).join("")}</div>
+            <div class="person-month-grid">
+              ${cells.map(d => {
+                if (!d) return `<div class="person-day-cell empty"></div>`;
+                const cls = ["person-day-cell"];
+                if (d.isWeekend) cls.push("weekend");
+                if (d.holiday) cls.push("holiday");
+                if (d.leave) cls.push("has-leave");
+                if (d.iso === TODAY_ISO) cls.push("is-today");
+                return `<div class="${cls.join(" ")}" data-date="${d.iso}">
+                  <div class="pd-num">${d.day}</div>
+                  ${d.holiday ? `<div class="pd-holiday">${esc(d.holiday)}</div>` : ""}
+                  ${d.leaves.map(l => `<div class="pd-leave-tag">${esc(l.leave_type)}</div>`).join("")}
+                  ${d.worked ? `<div class="pd-work-tag ${d.isOT ? "ot" : ""}">${d.isOT ? "⚡" : ""} ${d.tasksForDay.length} งาน</div>` : ""}
+                </div>`;
+              }).join("")}
+            </div>
+          </div>
+          <div class="person-leave-summary">
+            <div class="pls-head">
+              <div class="pls-title">🗒️ สรุปวันลาเดือนนี้</div>
+              <div class="pls-total ${leaveDays.length ? "has" : "none"}">${leaveDays.length ? `รวม ${leaveDays.length} วัน` : "ไม่มีวันลา"}</div>
+            </div>
+            ${leaveDays.length ? `
+            <div class="pls-list">
+              ${leaveDays.map(d => `
+                <div class="pls-row">
+                  <div class="pls-date">${WD_SHORT[d.dow]} ${d.day} ${THAI_MONTHS[month0]}</div>
+                  <div class="pls-types">${d.leaves.map(l => `<span class="pls-type-tag">${esc(l.leave_type)}</span>`).join("")}</div>
+                </div>`).join("")}
+            </div>
+            <div class="pls-breakdown">
+              ${Object.entries(leaveByType).map(([t, c]) => `<div class="pls-breakdown-row"><span>${esc(t)}</span><b>${c} วัน</b></div>`).join("")}
+            </div>
+            ` : `<div class="pls-empty">เดือนนี้ยังไม่มีการลา</div>`}
+          </div>
         </div>
 
         <div class="detail-section admin-only" style="margin-top:18px;">
