@@ -146,6 +146,15 @@
     if (!error && data) MONTHLY_TODOS = data;
   }
 
+  /* ---------------- Team plan Gantt (แผนงานประจำเดือน / คำสั่งเดินทางของทีม) ----------------
+     แผนงานแต่ละรายการ = ช่วงวันที่ (date_from..date_to) ที่มีคำสั่งเดินทางของ "ทั้งทีม" โดยค่าเริ่มต้น
+     ยกเว้นคนที่ถูกตัดออก (excluded_employees) เช่น คนที่ลาช่วงนั้น — เป็นข้อมูลของตัวเอง ไม่ผูกกับ calendar_tasks */
+  let TEAM_PLANS = [];
+  async function loadTeamPlans() {
+    const { data, error } = await CAL_SB.from("calendar_team_plans").select("*").order("date_from", { ascending: true });
+    if (!error && data) TEAM_PLANS = data;
+  }
+
   function leavesOnDate(employeeName, iso) {
     return LEAVES.filter(l => l.employee_name === employeeName && iso >= l.date_from && iso <= l.date_to);
   }
@@ -275,6 +284,7 @@
   /* ---------------- DOM refs ---------------- */
   const $ = sel => document.querySelector(sel);
   const statRowEl = $("#stat-row");
+  const ganttPanelEl = $("#gantt-panel");
   const todoMonthLabelEl = $("#todo-month-label");
   const todoListEl = $("#todo-list");
   const todoAddFormEl = $("#todo-add-form");
@@ -431,6 +441,149 @@
     modalLocked = false;
     modalBackdropEl.classList.add("open");
     $("#modal-close-btn").addEventListener("click", closeModal);
+  }
+
+  /* ---------------- Team plan Gantt (แผนงานประจำเดือน / คำสั่งเดินทางของทีม) ---------------- */
+  const GANTT_COLORS = ["#5EB6A0", "#3081AB", "#EBB348"];
+  function ganttPlanBounds(plan, monthStart, monthEnd) {
+    const from = fromISO(plan.date_from), to = fromISO(plan.date_to);
+    if (to < monthStart || from > monthEnd) return null;
+    const clippedFrom = from < monthStart ? monthStart : from;
+    const clippedTo = to > monthEnd ? monthEnd : to;
+    return { startDay: clippedFrom.getDate(), endDay: clippedTo.getDate() };
+  }
+  function ganttDurationLabel(plan) {
+    const days = Math.round((fromISO(plan.date_to) - fromISO(plan.date_from)) / 86400000) + 1;
+    return `${days} วัน`;
+  }
+  function ganttRowHtml(plan, i, monthStart, monthEnd, daysInMonth) {
+    const bounds = ganttPlanBounds(plan, monthStart, monthEnd);
+    const color = GANTT_COLORS[i % GANTT_COLORS.length];
+    const excluded = plan.excluded_employees || [];
+    return `
+      <div class="gantt-row">
+        <div class="gantt-row-label">
+          <div class="gantt-row-title">${esc(plan.title)}</div>
+          <div class="gantt-row-meta">${esc(plan.date_from)} – ${esc(plan.date_to)} · ${ganttDurationLabel(plan)}${excluded.length ? ` · ยกเว้น ${excluded.length} คน` : ""}</div>
+        </div>
+        <div class="gantt-row-track" style="grid-template-columns: repeat(${daysInMonth}, minmax(0,1fr));">
+          ${bounds ? `<div class="gantt-bar" style="grid-column: ${bounds.startDay} / ${bounds.endDay + 1}; background:${color};" title="${esc(plan.title)}">${esc(plan.title)}</div>` : ""}
+        </div>
+        <div class="gantt-row-actions admin-only">
+          <button type="button" class="gantt-icon-btn" data-action="exclude" data-id="${esc(plan.id)}" title="ยกเว้นบางคน (เช่นคนที่ลา)">👤</button>
+          <button type="button" class="gantt-icon-btn" data-action="delete" data-id="${esc(plan.id)}" title="ลบแผนงาน">🗑</button>
+        </div>
+      </div>`;
+  }
+  function ganttPanelHtml() {
+    const year = state.cursor.getFullYear(), month0 = state.cursor.getMonth();
+    const monthStart = new Date(year, month0, 1);
+    const monthEnd = new Date(year, month0 + 1, 0);
+    const daysInMonth = monthEnd.getDate();
+    const plans = TEAM_PLANS.filter(p => ganttPlanBounds(p, monthStart, monthEnd));
+    return `
+      <div class="gantt-toolbar">
+        <div class="gantt-title">📊 แผนงานประจำเดือน (คำสั่งเดินทางของทีม)</div>
+        <button type="button" class="btn-secondary admin-only" id="gantt-add-btn">+ เพิ่มแผนงาน</button>
+      </div>
+      <form id="gantt-add-form" class="gantt-add-form admin-only hidden">
+        <div class="form-grid">
+          <div class="form-field"><label>ชื่อแผนงาน <span class="req">*</span></label><input type="text" name="title" required placeholder="เช่น คำสั่งเดินทางออกพื้นที่ ก.ย." /></div>
+          <div class="form-field"><label>วันที่เริ่ม <span class="req">*</span></label><input type="date" name="dateFrom" required /></div>
+          <div class="form-field"><label>วันที่สิ้นสุด <span class="req">*</span></label><input type="date" name="dateTo" required /></div>
+        </div>
+        <div id="gantt-add-error"></div>
+        <div class="form-actions">
+          <span class="form-hint">ค่าเริ่มต้นมีผลกับทั้งทีม ตัดคนออกเฉพาะกรณีได้ภายหลัง (เช่น คนที่ลาช่วงนั้น)</span>
+          <div class="form-actions-right"><button type="submit" class="btn-primary">+ บันทึกแผนงาน</button></div>
+        </div>
+      </form>
+      ${plans.length ? `
+        <div class="gantt-wrap">
+          <div class="gantt-header-row">
+            <div class="gantt-row-label"></div>
+            <div class="gantt-row-track" style="grid-template-columns: repeat(${daysInMonth}, minmax(0,1fr));">
+              ${Array.from({ length: daysInMonth }, (_, i) => `<div class="gantt-daynum">${i + 1}</div>`).join("")}
+            </div>
+            <div class="gantt-row-actions"></div>
+          </div>
+          ${plans.map((p, i) => ganttRowHtml(p, i, monthStart, monthEnd, daysInMonth)).join("")}
+        </div>
+      ` : `<div class="gantt-empty">ยังไม่มีแผนงานในเดือนนี้</div>`}`;
+  }
+  function openGanttExcludeModal(planId) {
+    const plan = TEAM_PLANS.find(p => p.id === planId);
+    if (!plan) return;
+    const excluded = new Set(plan.excluded_employees || []);
+    modalBodyEl.innerHTML = `
+      <div class="modal-head">
+        <div><div class="modal-id">แผนงานทีม</div><h2>${esc(plan.title)}</h2></div>
+        <button class="modal-close" id="modal-close-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-hint" style="margin-bottom:10px;">ค่าเริ่มต้นคำสั่งนี้มีผลกับทั้งทีม ติ๊กออกเฉพาะคนที่ไม่เกี่ยวข้องช่วงนี้ (เช่น คนที่ลา)</div>
+        <div class="gantt-exclude-list">
+          ${EMPLOYEES.map(e => `
+            <label class="gantt-exclude-item">
+              <input type="checkbox" data-name="${esc(e.name)}" ${excluded.has(e.name) ? "" : "checked"} />
+              <span>${esc(e.name)}</span>
+            </label>`).join("")}
+        </div>
+      </div>`;
+    modalBackdropEl.classList.add("open");
+    $("#modal-close-btn").addEventListener("click", closeModal);
+    modalBodyEl.querySelectorAll(".gantt-exclude-item input").forEach(cb => {
+      cb.addEventListener("change", async () => {
+        const name = cb.getAttribute("data-name");
+        const set = new Set(plan.excluded_employees || []);
+        if (cb.checked) set.delete(name); else set.add(name);
+        const newExcluded = Array.from(set);
+        const { error } = await CAL_SB.from("calendar_team_plans").update({ excluded_employees: newExcluded }).eq("id", plan.id);
+        if (error) { alert("บันทึกไม่สำเร็จ: " + error.message); cb.checked = !cb.checked; return; }
+        plan.excluded_employees = newExcluded;
+        renderTeamPlanGantt();
+      });
+    });
+  }
+  function bindGanttEvents() {
+    const addBtn = $("#gantt-add-btn");
+    const addForm = $("#gantt-add-form");
+    if (addBtn && addForm) {
+      addBtn.addEventListener("click", () => addForm.classList.toggle("hidden"));
+      addForm.addEventListener("submit", async (ev) => {
+        ev.preventDefault();
+        const fd = new FormData(addForm);
+        const title = (fd.get("title") || "").trim();
+        const dateFrom = fd.get("dateFrom");
+        const dateTo = fd.get("dateTo");
+        const errEl = $("#gantt-add-error");
+        errEl.innerHTML = "";
+        if (!title || !dateFrom || !dateTo) { errEl.innerHTML = `<div class="form-error">กรุณากรอกให้ครบ</div>`; return; }
+        if (dateTo < dateFrom) { errEl.innerHTML = `<div class="form-error">วันสิ้นสุดต้องไม่ก่อนวันเริ่ม</div>`; return; }
+        const btn = addForm.querySelector("button[type=submit]");
+        btn.disabled = true;
+        const { error } = await CAL_SB.from("calendar_team_plans").insert([{ title, date_from: dateFrom, date_to: dateTo }]);
+        if (error) { errEl.innerHTML = `<div class="form-error">บันทึกไม่สำเร็จ: ${esc(error.message)}</div>`; btn.disabled = false; return; }
+        await loadTeamPlans();
+        renderTeamPlanGantt();
+      });
+    }
+    ganttPanelEl.querySelectorAll('[data-action="exclude"]').forEach(btn => {
+      btn.addEventListener("click", () => openGanttExcludeModal(btn.getAttribute("data-id")));
+    });
+    ganttPanelEl.querySelectorAll('[data-action="delete"]').forEach(btn => {
+      btn.addEventListener("click", async () => {
+        if (!confirm("ยืนยันลบแผนงานนี้?")) return;
+        const { error } = await CAL_SB.from("calendar_team_plans").delete().eq("id", btn.getAttribute("data-id"));
+        if (error) { alert("ลบไม่สำเร็จ: " + error.message); return; }
+        await loadTeamPlans();
+        renderTeamPlanGantt();
+      });
+    });
+  }
+  function renderTeamPlanGantt() {
+    ganttPanelEl.innerHTML = ganttPanelHtml();
+    bindGanttEvents();
   }
 
   /* ---------------- Toolbar ---------------- */
@@ -2818,6 +2971,7 @@
   function renderAll() {
     renderToolbar();
     renderStatRow();
+    renderTeamPlanGantt();
     renderTodoPanel();
     renderFilterBar();
     if (state.view === "month") renderMonthView();
@@ -2830,7 +2984,7 @@
   }
 
   async function init() {
-    await Promise.all([loadOptions(), loadTasks(), loadPeopleData(), loadMonthlyTodos()]);
+    await Promise.all([loadOptions(), loadTasks(), loadPeopleData(), loadMonthlyTodos(), loadTeamPlans()]);
     renderAll();
   }
 
