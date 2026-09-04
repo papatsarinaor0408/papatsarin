@@ -180,7 +180,7 @@
       const tasksForDay = tasksForEmployeeOnDate(employeeName, iso);
       const worked = tasksForDay.length > 0;
       // นับเป็นวันโอที ถ้าเป็นวันเสาร์/อาทิตย์/วันหยุดนักขัตฤกษ์ หรือมีงานที่เวลานัดหมายหน้างานหลัง 16:30 น. (งานด่วนนอกเวลาราชการ)
-      const isOT = worked && (isWeekend || !!holiday || tasksForDay.some(t => t.appointTime && t.appointTime >= OT_AFTER_HOURS_TIME));
+      const isOT = worked && (isWeekend || !!holiday || tasksForDay.some(t => t.appointTime && t.appointTime > OT_AFTER_HOURS_TIME));
       const hasTravelOrder = tasksForDay.some(t => t.travelOrder);
       // "ปฏิบัติงาน บปก." = อยู่ที่การไฟฟ้าบางปะกงจริงๆ (ไม่ใช่แค่ areaStatus "ในพื้นที่" ทั่วไป) และไม่มีคำสั่งเดินทาง
       const inArea = worked && tasksForDay.some(t => isHomeUnitPea(t.targetPEA) && !t.travelOrder);
@@ -324,7 +324,7 @@
   /* ---------------- Stat row (สรุปรวมทั้งทีม ตามช่วงที่กำลังดูอยู่) ---------------- */
   function isOTTask(t) {
     const dow = fromISO(t.date).getDay();
-    return dow === 0 || dow === 6 || !!HOLIDAYS[t.date] || (t.appointTime && t.appointTime >= OT_AFTER_HOURS_TIME);
+    return dow === 0 || dow === 6 || !!HOLIDAYS[t.date] || (t.appointTime && t.appointTime > OT_AFTER_HOURS_TIME);
   }
   function countUniqueDays(tasks, predicate) {
     const days = new Set();
