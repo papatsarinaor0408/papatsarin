@@ -1418,67 +1418,8 @@
           </div>
         </div>
         ${mode === "team" ? buildTeamSummaryHtml(year, month0) : `
-        ${empObj && (empObj.role_title || empObj.position || empObj.employee_no || empObj.duties) ? `
-        <div class="detail-section person-profile-card">
-          <div class="detail-section-title">ข้อมูลประจำตัว</div>
-          <div class="person-profile-head">
-            <div>
-              <b>${esc(empObj.name)}</b>${empObj.position ? ` <span class="form-hint">(${esc(empObj.position)})</span>` : ""}
-              ${empObj.employee_no ? `<div class="form-hint">รหัสพนักงาน ${esc(empObj.employee_no)}</div>` : ""}
-            </div>
-            ${empObj.role_title ? `<span class="role-title-badge">${esc(empObj.role_title)}</span>` : ""}
-          </div>
-          ${empObj.duties ? `<div class="person-duties-title">หน้าที่รับผิดชอบ</div><ul class="person-duties-list">${empObj.duties.split("\n").map(d => d.trim()).filter(Boolean).map(d => `<li>${esc(d)}</li>`).join("")}</ul>` : ""}
-        </div>` : ""}
-        <div class="person-stat-row">
-          <div class="person-stat workday"><div class="person-stat-label">วันทำการ</div><div class="person-stat-value">${bizDays.total}/${bizDays.elapsed}</div></div>
-          <div class="person-stat"><div class="person-stat-label">ปฏิบัติงาน บปก.</div><div class="person-stat-value">${inAreaDays} วัน</div></div>
-          <div class="person-stat travel"><div class="person-stat-label">คำสั่งเดินทาง</div><div class="person-stat-value">${travelOrderDays} วัน</div></div>
-          <div class="person-stat ot"><div class="person-stat-label">OT</div><div class="person-stat-value">${otDays} วัน</div></div>
-          <div class="person-stat taskcount"><div class="person-stat-label">จำนวนงาน</div><div class="person-stat-value">${taskCount} งาน</div></div>
-        </div>
-        <div class="person-main-layout">
-          <div class="person-calendar-col">
-            <div class="weekday-row">${WD_SHORT.map((w, i) => `<div class="wd ${i === 0 ? "sun" : i === 6 ? "sat" : ""}">${w}</div>`).join("")}</div>
-            <div class="person-month-grid">
-              ${cells.map(d => {
-                if (!d) return `<div class="person-day-cell empty"></div>`;
-                const cls = ["person-day-cell"];
-                if (d.isWeekend) cls.push("weekend");
-                if (d.holiday) cls.push("holiday");
-                if (d.leave) cls.push("has-leave");
-                if (d.iso === TODAY_ISO) cls.push("is-today");
-                return `<div class="${cls.join(" ")}" data-date="${d.iso}">
-                  <div class="pd-num">${d.day}</div>
-                  ${d.holiday ? `<div class="pd-holiday">${esc(d.holiday)}</div>` : ""}
-                  ${d.leaves.map(l => `<div class="pd-leave-tag">${esc(l.leave_type)}</div>`).join("")}
-                  ${d.worked ? `<div class="pd-work-tag ${d.isOT ? "ot" : ""}">${d.isOT ? "⚡" : ""} ${d.tasksForDay.length} งาน</div>` : ""}
-                </div>`;
-              }).join("")}
-            </div>
-          </div>
-          <div class="person-leave-summary">
-            <div class="pls-head">
-              <div class="pls-title">🗒️ สรุปวันลาเดือนนี้</div>
-              <div class="pls-total ${leaveDays.length ? "has" : "none"}">${leaveDays.length ? `รวม ${leaveDays.length} วัน` : "ไม่มีวันลา"}</div>
-            </div>
-            ${leaveDays.length ? `
-            <div class="pls-list">
-              ${leaveDays.map(d => `
-                <div class="pls-row">
-                  <div class="pls-date">${WD_SHORT[d.dow]} ${d.day} ${THAI_MONTHS[month0]}</div>
-                  <div class="pls-types">${d.leaves.map(l => `<span class="pls-type-tag">${esc(l.leave_type)}</span>`).join("")}</div>
-                </div>`).join("")}
-            </div>
-            <div class="pls-breakdown">
-              ${Object.entries(leaveByType).map(([t, c]) => `<div class="pls-breakdown-row"><span>${esc(t)}</span><b>${c} วัน</b></div>`).join("")}
-            </div>
-            ` : `<div class="pls-empty">เดือนนี้ยังไม่มีการลา</div>`}
-          </div>
-        </div>
-
-        <div class="detail-section admin-only" style="margin-top:18px;">
-          <div class="detail-section-title">บันทึกวันลาใหม่ (คลิกวันที่ในปฏิทินด้านบนเพื่อเติมวันที่ให้อัตโนมัติ)</div>
+        <div class="detail-section admin-only">
+          <div class="detail-section-title">บันทึกวันลาใหม่ (คลิกวันที่ในปฏิทินด้านล่างเพื่อเติมวันที่ให้อัตโนมัติ)</div>
           <form id="leave-form">
             <div class="form-grid">
               <div class="form-field">
@@ -1517,6 +1458,67 @@
               <div><b>${esc(l.leave_type)}</b> · ${esc(l.date_from)}${l.date_from !== l.date_to ? " ถึง " + esc(l.date_to) : ""}${l.note ? " · " + esc(l.note) : ""}</div>
               <button type="button" class="btn-danger leave-del-btn admin-only" data-id="${l.id}">🗑</button>
             </div>`).join("")}</div>` : `<div class="form-hint">ยังไม่มีประวัติการลา</div>`}
+        </div>
+
+        <div class="person-calendar-card">
+          ${empObj && (empObj.role_title || empObj.position || empObj.employee_no || empObj.duties) ? `
+          <div class="detail-section person-profile-card">
+            <div class="detail-section-title">ข้อมูลประจำตัว</div>
+            <div class="person-profile-head">
+              <div>
+                <b>${esc(empObj.name)}</b>${empObj.position ? ` <span class="form-hint">(${esc(empObj.position)})</span>` : ""}
+                ${empObj.employee_no ? `<div class="form-hint">รหัสพนักงาน ${esc(empObj.employee_no)}</div>` : ""}
+              </div>
+              ${empObj.role_title ? `<span class="role-title-badge">${esc(empObj.role_title)}</span>` : ""}
+            </div>
+            ${empObj.duties ? `<div class="person-duties-title">หน้าที่รับผิดชอบ</div><ul class="person-duties-list">${empObj.duties.split("\n").map(d => d.trim()).filter(Boolean).map(d => `<li>${esc(d)}</li>`).join("")}</ul>` : ""}
+          </div>` : ""}
+          <div class="person-stat-row">
+            <div class="person-stat workday"><div class="person-stat-label">วันทำการ</div><div class="person-stat-value">${bizDays.total}/${bizDays.elapsed}</div></div>
+            <div class="person-stat"><div class="person-stat-label">ปฏิบัติงาน บปก.</div><div class="person-stat-value">${inAreaDays} วัน</div></div>
+            <div class="person-stat travel"><div class="person-stat-label">คำสั่งเดินทาง</div><div class="person-stat-value">${travelOrderDays} วัน</div></div>
+            <div class="person-stat ot"><div class="person-stat-label">OT</div><div class="person-stat-value">${otDays} วัน</div></div>
+            <div class="person-stat taskcount"><div class="person-stat-label">จำนวนงาน</div><div class="person-stat-value">${taskCount} งาน</div></div>
+          </div>
+          <div class="person-main-layout">
+            <div class="person-calendar-col">
+              <div class="weekday-row">${WD_SHORT.map((w, i) => `<div class="wd ${i === 0 ? "sun" : i === 6 ? "sat" : ""}">${w}</div>`).join("")}</div>
+              <div class="person-month-grid">
+                ${cells.map(d => {
+                  if (!d) return `<div class="person-day-cell empty"></div>`;
+                  const cls = ["person-day-cell"];
+                  if (d.isWeekend) cls.push("weekend");
+                  if (d.holiday) cls.push("holiday");
+                  if (d.leave) cls.push("has-leave");
+                  if (d.iso === TODAY_ISO) cls.push("is-today");
+                  return `<div class="${cls.join(" ")}" data-date="${d.iso}">
+                    <div class="pd-num">${d.day}</div>
+                    ${d.holiday ? `<div class="pd-holiday">${esc(d.holiday)}</div>` : ""}
+                    ${d.leaves.map(l => `<div class="pd-leave-tag">${esc(l.leave_type)}</div>`).join("")}
+                    ${d.worked ? `<div class="pd-work-tag ${d.isOT ? "ot" : ""}">${d.isOT ? "⚡" : ""} ${d.tasksForDay.length} งาน</div>` : ""}
+                  </div>`;
+                }).join("")}
+              </div>
+            </div>
+            <div class="person-leave-summary">
+              <div class="pls-head">
+                <div class="pls-title">🗒️ สรุปวันลาเดือนนี้</div>
+                <div class="pls-total ${leaveDays.length ? "has" : "none"}">${leaveDays.length ? `รวม ${leaveDays.length} วัน` : "ไม่มีวันลา"}</div>
+              </div>
+              ${leaveDays.length ? `
+              <div class="pls-list">
+                ${leaveDays.map(d => `
+                  <div class="pls-row">
+                    <div class="pls-date">${WD_SHORT[d.dow]} ${d.day} ${THAI_MONTHS[month0]}</div>
+                    <div class="pls-types">${d.leaves.map(l => `<span class="pls-type-tag">${esc(l.leave_type)}</span>`).join("")}</div>
+                  </div>`).join("")}
+              </div>
+              <div class="pls-breakdown">
+                ${Object.entries(leaveByType).map(([t, c]) => `<div class="pls-breakdown-row"><span>${esc(t)}</span><b>${c} วัน</b></div>`).join("")}
+              </div>
+              ` : `<div class="pls-empty">เดือนนี้ยังไม่มีการลา</div>`}
+            </div>
+          </div>
         </div>
         `}
         ` : `<div class="empty-state">ยังไม่มีรายชื่อพนักงานในระบบ</div>`}`;
