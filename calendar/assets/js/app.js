@@ -464,6 +464,14 @@
     const days = Math.round((fromISO(plan.date_to) - fromISO(plan.date_from)) / 86400000) + 1;
     return `${days} วัน`;
   }
+  function ganttBarLabel(plan) {
+    const from = fromISO(plan.date_from), to = fromISO(plan.date_to);
+    if (from.getTime() === to.getTime()) return `${from.getDate()} ${THAI_MONTHS_ABBR[from.getMonth()]}`;
+    const sameMonth = from.getMonth() === to.getMonth() && from.getFullYear() === to.getFullYear();
+    return sameMonth
+      ? `${from.getDate()} - ${to.getDate()} ${THAI_MONTHS_ABBR[to.getMonth()]}`
+      : `${from.getDate()} ${THAI_MONTHS_ABBR[from.getMonth()]} - ${to.getDate()} ${THAI_MONTHS_ABBR[to.getMonth()]}`;
+  }
   // พื้นหลังคอลัมน์วันหยุดสุดสัปดาห์ — ไล่สีแดงจางๆ เฉพาะคอลัมน์เสาร์/อาทิตย์ ด้วย hard-stop gradient
   // (คำนวณตำแหน่ง % ของแต่ละวันเอง เพราะวันหยุดไม่ได้เรียงเป็นแพทเทิร์นซ้ำที่ใช้ repeating-gradient ได้ตรงๆ)
   function ganttWeekendBackground(year, month0, daysInMonth) {
@@ -488,17 +496,19 @@
     const bounds = ganttPlanBounds(plan, monthStart, monthEnd);
     const color = GANTT_COLORS[i % GANTT_COLORS.length];
     const dest = plan.target_pea || plan.work_area || plan.title || "แผนงานทีม";
+    const barLabel = ganttBarLabel(plan);
     return `
       <div class="gantt-row">
+        <div class="gantt-row-num">${i + 1}</div>
         <div class="gantt-row-label" data-action="detail" data-id="${esc(plan.id)}" title="คลิกดูรายละเอียด" style="--gantt-accent:${color}">
           <div class="gantt-row-title">📍 ${esc(dest)}</div>
         </div>
         <div class="gantt-row-track" style="${ganttTrackStyle(year, month0, daysInMonth)}">
-          ${bounds ? `<div class="gantt-bar" data-action="detail" data-id="${esc(plan.id)}" style="grid-column: ${bounds.startDay} / ${bounds.endDay + 1}; background:${color};" title="คลิกดูรายละเอียด: ${esc(dest)}">${esc(dest)}</div>` : ""}
+          ${bounds ? `<div class="gantt-bar" data-action="detail" data-id="${esc(plan.id)}" style="grid-column: ${bounds.startDay} / ${bounds.endDay + 1}; background:${color};" title="คลิกดูรายละเอียด: ${esc(dest)}">${esc(barLabel)}</div>` : ""}
         </div>
         <div class="gantt-row-actions admin-only">
           <button type="button" class="gantt-icon-btn" data-action="exclude" data-id="${esc(plan.id)}" title="ยกเว้นบางคน (เช่นคนที่ลา)">👤</button>
-          <button type="button" class="gantt-icon-btn" data-action="delete" data-id="${esc(plan.id)}" title="ลบแผนงาน">🗑</button>
+          <button type="button" class="gantt-icon-btn" data-action="delete" data-id="${esc(plan.id)}" title="ลบแผนงาน">⋮</button>
         </div>
       </div>`;
   }
@@ -573,7 +583,8 @@
       ${plans.length ? `
         <div class="gantt-wrap">
           <div class="gantt-header-row">
-            <div class="gantt-row-label"></div>
+            <div class="gantt-row-num">ลำดับ</div>
+            <div class="gantt-row-label">พื้นที่ปฏิบัติงาน</div>
             <div class="gantt-row-track" style="${ganttTrackStyle(year, month0, daysInMonth)}">
               ${Array.from({ length: daysInMonth }, (_, i) => {
                 const day = i + 1;
@@ -582,7 +593,7 @@
                 return `<div class="gantt-daynum ${isWeekend ? "weekend" : ""}"><div>${day}</div><div class="gantt-daynum-wd">${WD_SHORT[dow]}</div></div>`;
               }).join("")}
             </div>
-            <div class="gantt-row-actions"></div>
+            <div class="gantt-row-actions">ผู้รับผิดชอบ</div>
           </div>
           ${plans.map((p, i) => ganttRowHtml(p, i, year, month0, monthStart, monthEnd, daysInMonth)).join("")}
         </div>
