@@ -496,10 +496,14 @@
 
       const shown = dayTasks.slice(0, 3);
       const more = dayTasks.length - shown.length;
+      const isOTDay = dayTasks.length > 0 && (dow === 0 || dow === 6 || !!holiday);
       html += `<div class="${classes.join(" ")}" data-date="${iso}">
         <div class="day-cell-head">
           <span class="day-num">${d.getDate()}</span>
-          <span class="day-count-badge ${dayTasks.length === 0 ? "zero" : ""}">${dayTasks.length} งาน</span>
+          <div class="day-cell-head-right">
+            ${isOTDay ? `<span class="day-ot-badge">⚡ OT</span>` : ""}
+            <span class="day-count-badge ${dayTasks.length === 0 ? "zero" : ""}">${dayTasks.length} งาน</span>
+          </div>
         </div>
         ${holiday ? `<div class="holiday-name">${esc(holiday)}</div>` : ""}
         <div class="day-cards">

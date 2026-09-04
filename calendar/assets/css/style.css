@@ -567,11 +567,16 @@ body.role-reviewer .admin-only { display: none !important; }
   background: var(--accent); color: #fff; width: 22px; height: 22px; border-radius: 50%;
   display:flex; align-items:center; justify-content:center; font-size: 12.5px;
 }
+.day-cell-head-right { display: flex; align-items: center; gap: 4px; }
 .day-count-badge {
   font-size: 10.5px; color: var(--pea-purple-dark); background: var(--pea-purple-light);
   border-radius: 999px; padding: 1px 7px; font-weight: 500; white-space: nowrap;
 }
 .day-count-badge.zero { color: var(--text-faint); background: transparent; }
+.day-ot-badge {
+  font-size: 9.5px; color: var(--urgent); background: var(--urgent-bg); font-weight: 700;
+  border-radius: 999px; padding: 1px 6px; white-space: nowrap;
+}
 .holiday-name {
   font-size: 10px; color: var(--holiday-text); font-weight: 600; line-height: 1.25;
   margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box;
@@ -955,6 +960,7 @@ body.role-reviewer .admin-only { display: none !important; }
   .day-cell.is-today .day-num { width: 17px; height: 17px; font-size: 10px; }
   .day-count-badge { font-size: 8px; padding: 1px 5px; }
   .day-count-badge.zero { display: none; }
+  .day-ot-badge { font-size: 7px; padding: 1px 4px; }
   .holiday-name { font-size: 7.5px; margin-bottom: 2px; -webkit-line-clamp: 2; }
   .day-cards { flex-direction: row; flex-wrap: wrap; gap: 3px; margin-top: auto; }
   .mini-card {
