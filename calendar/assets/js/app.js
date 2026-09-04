@@ -464,6 +464,12 @@
     const days = Math.round((fromISO(plan.date_to) - fromISO(plan.date_from)) / 86400000) + 1;
     return `${days} วัน`;
   }
+  // เส้นตารางบางๆ ไล่ตามความกว้างคอลัมน์วัน (แต่ละคอลัมน์กว้าง 100%/daysInMonth) ให้ดูออกว่า
+  // แถบสีเริ่ม-จบตรงวันไหน ใช้ background-image เส้นเดียวไล่ซ้ำ (background-size) แทนการเพิ่ม DOM ต่อวัน
+  function ganttTrackStyle(daysInMonth) {
+    const colPct = 100 / daysInMonth;
+    return `grid-template-columns: repeat(${daysInMonth}, minmax(0,1fr)); background-image: linear-gradient(to right, #E2E2E2 1px, transparent 1px); background-size: ${colPct}% 100%;`;
+  }
   function ganttRowHtml(plan, i, monthStart, monthEnd, daysInMonth) {
     const bounds = ganttPlanBounds(plan, monthStart, monthEnd);
     const color = GANTT_COLORS[i % GANTT_COLORS.length];
@@ -473,7 +479,7 @@
         <div class="gantt-row-label" data-action="detail" data-id="${esc(plan.id)}" title="คลิกดูรายละเอียด">
           <div class="gantt-row-title">📍 ${esc(dest)}</div>
         </div>
-        <div class="gantt-row-track" style="grid-template-columns: repeat(${daysInMonth}, minmax(0,1fr));">
+        <div class="gantt-row-track" style="${ganttTrackStyle(daysInMonth)}">
           ${bounds ? `<div class="gantt-bar" data-action="detail" data-id="${esc(plan.id)}" style="grid-column: ${bounds.startDay} / ${bounds.endDay + 1}; background:${color};" title="คลิกดูรายละเอียด: ${esc(dest)}">${esc(dest)}</div>` : ""}
         </div>
         <div class="gantt-row-actions admin-only">
