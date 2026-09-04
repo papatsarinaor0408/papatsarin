@@ -2877,7 +2877,7 @@
       </header>
       <div class="ov-body">
         <div class="ov-stat-row">
-          ${ovStatCardHtml("👥", "staff", "กำลังคนทั้งหมด", `${totalStaff} คน`)}
+          ${ovStatCardHtml("👥", "staff", "ทีมปฏิบัติงาน", `${totalStaff} คน`)}
           ${ovStatCardHtml("📋", "tasks", "งานเดือนนี้", `${monthTasks.length} งาน`)}
           ${ovStatCardHtml("✅", "avail", "ความพร้อมทีม (วันนี้)", `${availPct}%`)}
           ${ovStatCardHtml("✈️", "travel", "คำสั่งเดินทาง", `${travelDays} วัน`)}
