@@ -2783,6 +2783,56 @@
   function closeOvModal() { ovModalBackdropEl.classList.remove("open"); }
   ovModalBackdropEl.addEventListener("click", (ev) => { if (ev.target === ovModalBackdropEl) closeOvModal(); });
 
+  // เวอร์ชันอ่านอย่างเดียวของตาราง Gantt สำหรับหน้าภาพรวม (Visitor) — ไม่มีปุ่มเพิ่ม/แก้ไข/ลบ
+  // เพราะผู้เข้าชมโหมดนี้ไม่ได้ล็อกอิน จึงไม่มี CURRENT_USER ให้ตรวจสิทธิ์แบบหน้าแอปหลัก
+  function ovGanttRowHtml(group, i, year, month0, monthStart, monthEnd, daysInMonth) {
+    const color = GANTT_COLORS[i % GANTT_COLORS.length];
+    const dest = group.key;
+    const bars = group.plans.map(plan => {
+      const bounds = ganttPlanBounds(plan, monthStart, monthEnd);
+      if (!bounds) return "";
+      const barLabel = ganttBarLabel(plan);
+      return `<div class="gantt-bar" style="grid-column: ${bounds.startDay} / ${bounds.endDay + 1}; background:${color}; cursor:default;" title="${esc(dest)} (${esc(barLabel)})"></div>`;
+    }).join("");
+    return `
+      <div class="gantt-row">
+        <div class="gantt-row-num">${i + 1}</div>
+        <div class="gantt-row-label" style="--gantt-accent:${color}">
+          <div class="gantt-row-title">${esc(dest)}</div>
+        </div>
+        <div class="gantt-row-track" style="${ganttTrackStyle(year, month0, daysInMonth)}">
+          ${bars}
+        </div>
+      </div>`;
+  }
+  function ovGanttPanelHtml(year, month0) {
+    const monthStart = new Date(year, month0, 1);
+    const monthEnd = new Date(year, month0 + 1, 0);
+    const daysInMonth = monthEnd.getDate();
+    const plans = TEAM_PLANS.filter(p => ganttPlanBounds(p, monthStart, monthEnd));
+    const groups = ganttGroupPlans(plans);
+    return `
+      <div class="ov-panel">
+        <div class="ov-panel-title">🗺️ แผนปฏิบัติการ (คำสั่งเดินทางของทีม)</div>
+        ${groups.length ? `
+          <div class="gantt-wrap">
+            <div class="gantt-header-row">
+              <div class="gantt-row-num">ลำดับ</div>
+              <div class="gantt-row-label">พื้นที่ปฏิบัติงาน</div>
+              <div class="gantt-row-track" style="${ganttTrackStyle(year, month0, daysInMonth)}">
+                ${Array.from({ length: daysInMonth }, (_, i) => {
+                  const day = i + 1;
+                  const dow = new Date(year, month0, day).getDay();
+                  const isWeekend = dow === 0 || dow === 6;
+                  return `<div class="gantt-daynum ${isWeekend ? "weekend" : ""}"><div>${day}</div><div class="gantt-daynum-wd">${WD_SHORT[dow]}</div></div>`;
+                }).join("")}
+              </div>
+            </div>
+            ${groups.map((g, i) => ovGanttRowHtml(g, i, year, month0, monthStart, monthEnd, daysInMonth)).join("")}
+          </div>
+        ` : `<div class="gantt-empty">ยังไม่มีแผนงานในเดือนนี้</div>`}
+      </div>`;
+  }
   function overviewPageHtml(year, month0) {
     const bizDays = businessDaysProgress(year, month0);
     const monthTasks = tasksInMonth(year, month0);
@@ -2833,6 +2883,8 @@
           ${ovStatCardHtml("✈️", "travel", "คำสั่งเดินทาง", `${travelDays} วัน`)}
           ${ovStatCardHtml("⚡", "ot", "OT", `${otDays} วัน`)}
         </div>
+
+        ${ovGanttPanelHtml(year, month0)}
 
         <div class="ov-panel">
           <div class="ov-panel-title">👥 สถานะทีมวันนี้</div>
@@ -2901,7 +2953,7 @@
     overviewPageEl.classList.remove("hidden");
     overviewPageBodyEl.innerHTML = `<div class="empty-state">กำลังโหลดข้อมูลภาพรวม...</div>`;
     window.scrollTo(0, 0);
-    await Promise.all([loadTasks(), loadPeopleData()]);
+    await Promise.all([loadTasks(), loadPeopleData(), loadTeamPlans()]);
     ovState.cursor = new Date(TODAY);
     renderOverviewPage();
   }
