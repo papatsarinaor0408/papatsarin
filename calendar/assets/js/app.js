@@ -42,6 +42,14 @@
       input.value = digits.length >= 3 ? digits.slice(0, 2) + ":" + digits.slice(2) : digits;
     });
   }
+  // คลิกตรงไหนก็ได้ในช่องวันที่ (ไม่ใช่แค่ไอคอนปฏิทินเล็กๆ) ก็เปิดปฏิทินให้เลือกเลย — ผูกที่ document
+  // แบบ event delegation ครั้งเดียว ครอบคลุมช่อง <input type="date"> ทุกช่องทั้งแอป ไม่ต้องผูกทีละฟอร์ม
+  document.addEventListener("click", (ev) => {
+    const el = ev.target.closest('input[type="date"]');
+    if (el && !el.disabled && !el.readOnly && typeof el.showPicker === "function") {
+      try { el.showPicker(); } catch (e) {}
+    }
+  });
 
   const TODAY = new Date();
   const TODAY_ISO = toISO(TODAY);
