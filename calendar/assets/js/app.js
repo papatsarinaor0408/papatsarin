@@ -465,6 +465,8 @@
         <div class="gantt-row-label">
           <div class="gantt-row-title">${esc(plan.title)}</div>
           <div class="gantt-row-meta">${esc(plan.date_from)} – ${esc(plan.date_to)} · ${ganttDurationLabel(plan)}${excluded.length ? ` · ยกเว้น ${excluded.length} คน` : ""}</div>
+          ${plan.work_area || plan.target_pea ? `<div class="gantt-row-meta">📍 ${esc(plan.work_area || "-")} → ${esc(plan.target_pea || "-")} ${plan.area_status === "out" ? "🟠" : "🟢"}</div>` : ""}
+          ${plan.coordinator ? `<div class="gantt-row-meta">👤 ${esc(plan.coordinator)}${plan.coordinator_phone ? ` · ${esc(plan.coordinator_phone)}` : ""}</div>` : ""}
         </div>
         <div class="gantt-row-track" style="grid-template-columns: repeat(${daysInMonth}, minmax(0,1fr));">
           ${bounds ? `<div class="gantt-bar" style="grid-column: ${bounds.startDay} / ${bounds.endDay + 1}; background:${color};" title="${esc(plan.title)}">${esc(plan.title)}</div>` : ""}
@@ -491,6 +493,30 @@
           <div class="form-field"><label>ชื่อแผนงาน <span class="req">*</span></label><input type="text" name="title" required placeholder="เช่น คำสั่งเดินทางออกพื้นที่ ก.ย." /></div>
           <div class="form-field"><label>วันที่เริ่ม <span class="req">*</span></label><input type="date" name="dateFrom" required /></div>
           <div class="form-field"><label>วันที่สิ้นสุด <span class="req">*</span></label><input type="date" name="dateTo" required /></div>
+          <div class="form-field">
+            <label>พื้นที่ปฏิบัติงาน</label>
+            <select name="workArea">
+              <option value="">— ไม่ระบุ —</option>
+              ${WORK_AREAS.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="form-field">
+            <label>การไฟฟ้าปลายทาง</label>
+            <select name="targetPEA">
+              <option value="">— ไม่ระบุ —</option>
+              ${combinedOptions(TARGET_PEA_OFFICES, x => x.targetPEA).map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("")}
+            </select>
+            <div class="form-hint">เลือกพื้นที่ปฏิบัติงานก่อน รายการนี้จะกรองเหลือเฉพาะการไฟฟ้าในจังหวัดนั้นให้อัตโนมัติ</div>
+          </div>
+          <div class="form-field span2">
+            <label>สถานะพื้นที่ปฏิบัติงาน</label>
+            <div class="radio-group" id="gantt-area-status-group">
+              <label class="radio-option checked-in"><input type="radio" name="areaStatus" value="in" checked/> 🟢 ในพื้นที่ต้นสังกัด</label>
+              <label class="radio-option"><input type="radio" name="areaStatus" value="out"/> 🟠 นอกพื้นที่ (มีคำสั่งเดินทาง)</label>
+            </div>
+          </div>
+          <div class="form-field"><label>ผู้ประสานงาน/เจ้าของงาน</label><input type="text" name="coordinator" /></div>
+          <div class="form-field"><label>เบอร์โทรผู้ประสานงาน</label><input type="tel" name="coordinatorPhone" placeholder="08x-xxx-xxxx" /></div>
         </div>
         <div id="gantt-add-error"></div>
         <div class="form-actions">
@@ -550,6 +576,29 @@
     const addForm = $("#gantt-add-form");
     if (addBtn && addForm) {
       addBtn.addEventListener("click", () => addForm.classList.toggle("hidden"));
+
+      // เลือก "พื้นที่ปฏิบัติงาน" แล้วกรอง "การไฟฟ้าปลายทาง" เหลือเฉพาะจังหวัดนั้น (เหมือนฟอร์มเพิ่มงานหลัก)
+      const workAreaSel = addForm.querySelector('select[name=workArea]');
+      const targetPeaSel = addForm.querySelector('select[name=targetPEA]');
+      workAreaSel.addEventListener("change", () => {
+        const allOpts = combinedOptions(TARGET_PEA_OFFICES, x => x.targetPEA);
+        const filtered = targetPeaOptionsForWorkArea(allOpts, workAreaSel.value);
+        targetPeaSel.innerHTML = `<option value="">— ไม่ระบุ —</option>` + filtered.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+      });
+      function syncGanttAreaStatus() {
+        const checked = addForm.querySelector("input[name=areaStatus]:checked");
+        if (!checked) return;
+        addForm.querySelectorAll("#gantt-area-status-group .radio-option").forEach(o => o.classList.remove("checked-in", "checked-out"));
+        checked.closest(".radio-option").classList.add(checked.value === "in" ? "checked-in" : "checked-out");
+      }
+      addForm.querySelectorAll("input[name=areaStatus]").forEach(r => r.addEventListener("change", syncGanttAreaStatus));
+      targetPeaSel.addEventListener("change", () => {
+        if (isHomeUnitPea(targetPeaSel.value)) {
+          const inRadio = addForm.querySelector('input[name=areaStatus][value=in]');
+          if (inRadio && !inRadio.checked) { inRadio.checked = true; syncGanttAreaStatus(); }
+        }
+      });
+
       addForm.addEventListener("submit", async (ev) => {
         ev.preventDefault();
         const fd = new FormData(addForm);
@@ -562,7 +611,15 @@
         if (dateTo < dateFrom) { errEl.innerHTML = `<div class="form-error">วันสิ้นสุดต้องไม่ก่อนวันเริ่ม</div>`; return; }
         const btn = addForm.querySelector("button[type=submit]");
         btn.disabled = true;
-        const { error } = await CAL_SB.from("calendar_team_plans").insert([{ title, date_from: dateFrom, date_to: dateTo }]);
+        const row = {
+          title, date_from: dateFrom, date_to: dateTo,
+          work_area: (fd.get("workArea") || "").trim() || null,
+          target_pea: (fd.get("targetPEA") || "").trim() || null,
+          area_status: fd.get("areaStatus") || "in",
+          coordinator: (fd.get("coordinator") || "").trim() || null,
+          coordinator_phone: (fd.get("coordinatorPhone") || "").trim() || null
+        };
+        const { error } = await CAL_SB.from("calendar_team_plans").insert([row]);
         if (error) { errEl.innerHTML = `<div class="form-error">บันทึกไม่สำเร็จ: ${esc(error.message)}</div>`; btn.disabled = false; return; }
         await loadTeamPlans();
         renderTeamPlanGantt();
