@@ -459,15 +459,14 @@
   function ganttRowHtml(plan, i, monthStart, monthEnd, daysInMonth) {
     const bounds = ganttPlanBounds(plan, monthStart, monthEnd);
     const color = GANTT_COLORS[i % GANTT_COLORS.length];
-    const dest = plan.target_pea || plan.work_area || "-";
+    const dest = plan.target_pea || plan.work_area || plan.title || "แผนงานทีม";
     return `
       <div class="gantt-row">
         <div class="gantt-row-label" data-action="detail" data-id="${esc(plan.id)}" title="คลิกดูรายละเอียด">
-          <div class="gantt-row-title">${esc(plan.title)}</div>
-          <div class="gantt-row-meta">📍 ${esc(dest)}</div>
+          <div class="gantt-row-title">📍 ${esc(dest)}</div>
         </div>
         <div class="gantt-row-track" style="grid-template-columns: repeat(${daysInMonth}, minmax(0,1fr));">
-          ${bounds ? `<div class="gantt-bar" data-action="detail" data-id="${esc(plan.id)}" style="grid-column: ${bounds.startDay} / ${bounds.endDay + 1}; background:${color};" title="คลิกดูรายละเอียด: ${esc(plan.title)}">${esc(plan.title)}</div>` : ""}
+          ${bounds ? `<div class="gantt-bar" data-action="detail" data-id="${esc(plan.id)}" style="grid-column: ${bounds.startDay} / ${bounds.endDay + 1}; background:${color};" title="คลิกดูรายละเอียด: ${esc(dest)}">${esc(dest)}</div>` : ""}
         </div>
         <div class="gantt-row-actions admin-only">
           <button type="button" class="gantt-icon-btn" data-action="exclude" data-id="${esc(plan.id)}" title="ยกเว้นบางคน (เช่นคนที่ลา)">👤</button>
@@ -488,7 +487,6 @@
       </div>
       <form id="gantt-add-form" class="gantt-add-form admin-only hidden">
         <div class="form-grid">
-          <div class="form-field"><label>ชื่อแผนงาน <span class="req">*</span></label><input type="text" name="title" required placeholder="เช่น คำสั่งเดินทางออกพื้นที่ ก.ย." /></div>
           <div class="form-field"><label>วันที่เริ่ม <span class="req">*</span></label><input type="date" name="dateFrom" required /></div>
           <div class="form-field"><label>วันที่สิ้นสุด <span class="req">*</span></label><input type="date" name="dateTo" required /></div>
           <div class="form-field">
@@ -499,12 +497,12 @@
             </select>
           </div>
           <div class="form-field">
-            <label>การไฟฟ้าปลายทาง</label>
-            <select name="targetPEA">
-              <option value="">— ไม่ระบุ —</option>
+            <label>การไฟฟ้าปลายทาง <span class="req">*</span></label>
+            <select name="targetPEA" required>
+              <option value="" selected disabled>— เลือกการไฟฟ้าปลายทาง —</option>
               ${combinedOptions(TARGET_PEA_OFFICES, x => x.targetPEA).map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("")}
             </select>
-            <div class="form-hint">เลือกพื้นที่ปฏิบัติงานก่อน รายการนี้จะกรองเหลือเฉพาะการไฟฟ้าในจังหวัดนั้นให้อัตโนมัติ</div>
+            <div class="form-hint">เลือกพื้นที่ปฏิบัติงานก่อน รายการนี้จะกรองเหลือเฉพาะการไฟฟ้าในจังหวัดนั้นให้อัตโนมัติ — ชื่อแผนงานจะใช้การไฟฟ้าปลายทางนี้เป็นชื่อแสดงผลอัตโนมัติ</div>
           </div>
           <div class="form-field span2">
             <label>สถานะพื้นที่ปฏิบัติงาน</label>
@@ -550,9 +548,10 @@
     const plan = TEAM_PLANS.find(p => p.id === planId);
     if (!plan) return;
     const excluded = plan.excluded_employees || [];
+    const dest = plan.target_pea || plan.work_area || plan.title || "แผนงานทีม";
     modalBodyEl.innerHTML = `
       <div class="modal-head">
-        <div><div class="modal-id">แผนงานทีม</div><h2>${esc(plan.title)}</h2></div>
+        <div><div class="modal-id">แผนงานทีม</div><h2>📍 ${esc(dest)}</h2></div>
         <button class="modal-close" id="modal-close-btn">✕</button>
       </div>
       <div class="modal-body">
@@ -577,9 +576,10 @@
     const plan = TEAM_PLANS.find(p => p.id === planId);
     if (!plan) return;
     const excluded = new Set(plan.excluded_employees || []);
+    const dest = plan.target_pea || plan.work_area || plan.title || "แผนงานทีม";
     modalBodyEl.innerHTML = `
       <div class="modal-head">
-        <div><div class="modal-id">แผนงานทีม</div><h2>${esc(plan.title)}</h2></div>
+        <div><div class="modal-id">แผนงานทีม</div><h2>📍 ${esc(dest)}</h2></div>
         <button class="modal-close" id="modal-close-btn">✕</button>
       </div>
       <div class="modal-body">
@@ -619,7 +619,7 @@
       workAreaSel.addEventListener("change", () => {
         const allOpts = combinedOptions(TARGET_PEA_OFFICES, x => x.targetPEA);
         const filtered = targetPeaOptionsForWorkArea(allOpts, workAreaSel.value);
-        targetPeaSel.innerHTML = `<option value="">— ไม่ระบุ —</option>` + filtered.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+        targetPeaSel.innerHTML = `<option value="" selected disabled>— เลือกการไฟฟ้าปลายทาง —</option>` + filtered.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
       });
       function syncGanttAreaStatus() {
         const checked = addForm.querySelector("input[name=areaStatus]:checked");
@@ -646,20 +646,21 @@
       addForm.addEventListener("submit", async (ev) => {
         ev.preventDefault();
         const fd = new FormData(addForm);
-        const title = (fd.get("title") || "").trim();
+        const targetPEA = (fd.get("targetPEA") || "").trim();
+        const workArea = (fd.get("workArea") || "").trim();
         const dateFrom = fd.get("dateFrom");
         const dateTo = fd.get("dateTo");
         const errEl = $("#gantt-add-error");
         errEl.innerHTML = "";
-        if (!title || !dateFrom || !dateTo) { errEl.innerHTML = `<div class="form-error">กรุณากรอกให้ครบ</div>`; return; }
+        if (!targetPEA || !dateFrom || !dateTo) { errEl.innerHTML = `<div class="form-error">กรุณากรอกให้ครบ</div>`; return; }
         if (dateTo < dateFrom) { errEl.innerHTML = `<div class="form-error">วันสิ้นสุดต้องไม่ก่อนวันเริ่ม</div>`; return; }
         const btn = addForm.querySelector("button[type=submit]");
         btn.disabled = true;
         const budgetRefStatus = fd.get("budgetRefStatus") || "none";
         const row = {
-          title, date_from: dateFrom, date_to: dateTo,
-          work_area: (fd.get("workArea") || "").trim() || null,
-          target_pea: (fd.get("targetPEA") || "").trim() || null,
+          title: targetPEA, date_from: dateFrom, date_to: dateTo,
+          work_area: workArea || null,
+          target_pea: targetPEA,
           area_status: fd.get("areaStatus") || "in",
           coordinator: (fd.get("coordinator") || "").trim() || null,
           coordinator_phone: (fd.get("coordinatorPhone") || "").trim() || null,
