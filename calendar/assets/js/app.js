@@ -1577,22 +1577,22 @@
     if (!value) return "";
     return value.split(" | ").map(part => `<div>${esc(part.trim())}</div>`).join("");
   }
-  function leaveTypeCardHtml(t) {
+  const LEAVE_CAT_ICON_COLORS = ["#0ea5e9", "#7c3aed", "#f97316", "#ec4899", "#8b5cf6", "#14b8a6"];
+  function leaveTypeCardHtml(t, i) {
+    const iconColor = LEAVE_CAT_ICON_COLORS[i % LEAVE_CAT_ICON_COLORS.length];
     return `
-      <div class="leave-type-card">
-        <div class="leave-type-head">
-          <div class="leave-type-icon">${t.icon}</div>
-          <div>
-            <div class="leave-type-no">หมวด ${esc(t.no)}</div>
-            <div class="leave-type-title">${esc(t.title)}</div>
-          </div>
+      <div class="leave-cat-card">
+        <div class="leave-cat-head">
+          <div class="leave-cat-icon" style="background:${iconColor}">${t.icon}</div>
+          <span class="leave-cat-badge">หมวด ${esc(t.no)}</span>
         </div>
-        <div class="leave-row"><div class="leave-row-label">คุณสมบัติ/อายุงาน</div><div class="leave-row-value">${leaveMultilineHtml(t.eligibility)}</div></div>
-        <div class="leave-row"><div class="leave-row-label">โควตา</div><div class="leave-row-value">${leaveMultilineHtml(t.quota)}</div></div>
-        <div class="leave-row"><div class="leave-row-label">วิธีนับวัน</div><div class="leave-row-value">${leaveMultilineHtml(t.dayCount)}</div></div>
-        <div class="leave-row"><div class="leave-row-label">สิทธิรับเงินเดือน</div><div class="leave-row-value">${leaveMultilineHtml(t.salary)}</div></div>
-        <div class="leave-row"><div class="leave-row-label">เอกสาร/การยื่น</div><div class="leave-row-value">${leaveMultilineHtml(t.docs)}</div></div>
-        <div class="leave-gap-box"><span class="leave-gap-icon">⚠️</span><div><b>Gap / ข้อควรระวัง</b><div>${leaveMultilineHtml(t.gap)}</div></div></div>
+        <div class="leave-cat-title">${esc(t.title)}</div>
+        <div class="leave-cat-row"><div class="leave-cat-label">คุณสมบัติ/ขอบเขต</div><div class="leave-cat-value">${leaveMultilineHtml(t.eligibility)}</div></div>
+        <div class="leave-cat-row"><div class="leave-cat-label">โควตา</div><div class="leave-cat-value">${leaveMultilineHtml(t.quota)}</div></div>
+        <div class="leave-cat-row"><div class="leave-cat-label">วิธีนับวัน</div><div class="leave-cat-value">${leaveMultilineHtml(t.dayCount)}</div></div>
+        <div class="leave-cat-row"><div class="leave-cat-label">สิทธิรับเงินเดือน</div><div class="leave-cat-value">${leaveMultilineHtml(t.salary)}</div></div>
+        <div class="leave-cat-row"><div class="leave-cat-label">เอกสาร/การยื่น</div><div class="leave-cat-value">${leaveMultilineHtml(t.docs)}</div></div>
+        <div class="leave-cat-gap-box"><span class="leave-cat-gap-icon">⚠️</span><div><b>Gap / ข้อควรระวัง</b><div>${leaveMultilineHtml(t.gap)}</div></div></div>
       </div>`;
   }
   function leaveGapCardHtml(g) {
@@ -1659,7 +1659,10 @@
     return `
       <div class="leave-section">
         <div class="leave-section-title"><span class="leave-section-badge">1/4</span> สรุปสิทธิการลา ${LEAVE_REG_TYPES.length} หมวด</div>
-        <div class="leave-type-grid">${LEAVE_REG_TYPES.map(leaveTypeCardHtml).join("")}</div>
+        <div class="leave-cat-grid">${LEAVE_REG_TYPES.map(leaveTypeCardHtml).join("")}</div>
+        <div class="audit-table-footnote">
+          <span>ℹ️ หมายเหตุ: สิทธิการลาแบ่งตามระเบียบมาตรฐาน กฟภ. โปรดตรวจสอบระเบียบปัจจุบันและประสานฝ่ายทรัพยากรบุคคลก่อนดำเนินการทุกครั้ง</span>
+        </div>
       </div>
       <div class="leave-section">
         <div class="leave-section-title"><span class="leave-section-badge">2/4</span> การวิเคราะห์ปิด Gap เชิงปฏิบัติการและข้อยกเว้น</div>

@@ -211,6 +211,33 @@ body.role-reviewer .admin-only { display: none !important; }
 .leave-gap-box b { color: var(--orange); }
 .leave-gap-icon { font-size: 15px; flex-shrink: 0; }
 
+/* ---------------- Leave category cards (สรุปสิทธิการลา) ---------------- */
+.leave-cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.leave-cat-card {
+  background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px;
+  box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 8px;
+}
+.leave-cat-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+.leave-cat-icon {
+  width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  font-size: 19px; color: #fff; flex-shrink: 0;
+}
+.leave-cat-badge {
+  font-size: 10.5px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+  background: var(--ink); color: #fff; white-space: nowrap;
+}
+.leave-cat-title { font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.35; margin-bottom: 2px; }
+.leave-cat-row { display: flex; gap: 10px; font-size: 12px; line-height: 1.55; }
+.leave-cat-label { flex: 0 0 100px; font-weight: 700; color: var(--text); }
+.leave-cat-value { flex: 1; color: var(--text); }
+.leave-cat-gap-box {
+  margin-top: 6px; display: flex; gap: 8px; background: var(--orange-bg); border: 1px solid var(--orange-border);
+  border-radius: var(--radius-sm); padding: 10px; font-size: 11.5px; line-height: 1.55; color: var(--orange);
+}
+.leave-cat-gap-box b { color: var(--orange); }
+.leave-cat-gap-box > div > div + div { margin-top: 4px; }
+.leave-cat-gap-icon { font-size: 15px; flex-shrink: 0; }
+
 .leave-gap-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 14px; }
 .leave-gap-card {
   background: var(--white); border: 1px solid var(--border); border-left: 4px solid var(--border); border-radius: var(--radius);
