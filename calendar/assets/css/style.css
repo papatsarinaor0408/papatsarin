@@ -512,20 +512,42 @@ body.role-reviewer .admin-only { display: none !important; }
 .gantt-panel { margin-bottom: 16px; }
 .gantt-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
 .gantt-title { font-size: 13px; font-weight: 700; color: #111111; }
+.gantt-toolbar-v2 { align-items: flex-start; margin-bottom: 14px; }
+.gantt-title-v2 {
+  font-size: 21px; font-weight: 800; letter-spacing: -.01em;
+  background: linear-gradient(90deg, var(--pea-purple) 0%, #3081AB 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.gantt-subtitle-v2 { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
+.gantt-toolbar-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.gantt-month-pill {
+  display: flex; align-items: center; gap: 8px; background: #F2F2F2; border: 1px solid #E2E2E2;
+  border-radius: 999px; padding: 6px 8px 6px 12px; font-size: 12.5px; font-weight: 600; color: #111111;
+}
+.gantt-month-pill-label { min-width: 96px; text-align: center; }
+.gantt-month-nav-btn {
+  border: none; background: #FFFFFF; width: 24px; height: 24px; border-radius: 50%; cursor: pointer;
+  font-size: 13px; color: var(--pea-purple); display: flex; align-items: center; justify-content: center;
+}
+.gantt-month-nav-btn:hover { background: var(--pea-purple-light); }
 .gantt-add-form { background: #F2F2F2; border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 12px; }
 .gantt-add-form.hidden { display: none; }
 .gantt-wrap { border: 1px solid #E2E2E2; border-radius: var(--radius); background: #FFFFFF; overflow-x: auto; }
 .gantt-header-row, .gantt-row { display: flex; align-items: stretch; border-bottom: 1px solid #E2E2E2; min-width: fit-content; }
 .gantt-row:last-child { border-bottom: none; }
 .gantt-header-row { background: #F2F2F2; }
-.gantt-row-label { flex: 0 0 210px; padding: 10px 12px; border-right: 1px solid #E2E2E2; }
+.gantt-row-label { flex: 0 0 210px; padding: 10px 12px 10px 16px; border-right: 1px solid #E2E2E2; position: relative; }
 .gantt-row-label[data-action] { cursor: pointer; }
 .gantt-row-label[data-action]:hover { background: #F2F2F2; }
+.gantt-row-label::before { content: ""; position: absolute; left: 6px; top: 9px; bottom: 9px; width: 4px; border-radius: 2px; background: var(--gantt-accent, transparent); }
 .gantt-row-title { font-size: 12.5px; font-weight: 700; color: #111111; }
 .gantt-row-meta { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
 .gantt-row-track { flex: 1 1 auto; display: grid; min-width: 360px; position: relative; }
-.gantt-daynum { text-align: center; padding: 9px 2px; font-size: 10.5px; font-weight: 700; color: #111111; border-right: 1px solid #E2E2E2; }
+.gantt-daynum { text-align: center; padding: 6px 2px; font-size: 10.5px; font-weight: 700; color: #111111; border-right: 1px solid #E2E2E2; line-height: 1.5; }
 .gantt-daynum:last-child { border-right: none; }
+.gantt-daynum-wd { font-size: 9px; font-weight: 500; color: var(--text-muted); }
+.gantt-daynum.weekend { color: #dc2626; }
+.gantt-daynum.weekend .gantt-daynum-wd { color: #dc2626; }
 .gantt-bar {
   border-radius: 6px; color: #fff; font-size: 10.5px; font-weight: 600; display: flex; align-items: center;
   padding: 0 8px; height: 22px; align-self: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;

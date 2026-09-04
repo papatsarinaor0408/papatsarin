@@ -464,22 +464,36 @@
     const days = Math.round((fromISO(plan.date_to) - fromISO(plan.date_from)) / 86400000) + 1;
     return `${days} วัน`;
   }
+  // พื้นหลังคอลัมน์วันหยุดสุดสัปดาห์ — ไล่สีแดงจางๆ เฉพาะคอลัมน์เสาร์/อาทิตย์ ด้วย hard-stop gradient
+  // (คำนวณตำแหน่ง % ของแต่ละวันเอง เพราะวันหยุดไม่ได้เรียงเป็นแพทเทิร์นซ้ำที่ใช้ repeating-gradient ได้ตรงๆ)
+  function ganttWeekendBackground(year, month0, daysInMonth) {
+    const colPct = 100 / daysInMonth;
+    const parts = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dow = new Date(year, month0, d).getDay();
+      const color = (dow === 0 || dow === 6) ? "rgba(220,38,38,0.07)" : "transparent";
+      parts.push(`${color} ${((d - 1) * colPct).toFixed(4)}%`, `${color} ${(d * colPct).toFixed(4)}%`);
+    }
+    return `linear-gradient(to right, ${parts.join(", ")})`;
+  }
   // เส้นตารางบางๆ ไล่ตามความกว้างคอลัมน์วัน (แต่ละคอลัมน์กว้าง 100%/daysInMonth) ให้ดูออกว่า
   // แถบสีเริ่ม-จบตรงวันไหน ใช้ background-image เส้นเดียวไล่ซ้ำ (background-size) แทนการเพิ่ม DOM ต่อวัน
-  function ganttTrackStyle(daysInMonth) {
+  // ซ้อนทับกับพื้นหลังคอลัมน์วันหยุดสุดสัปดาห์อีกชั้นหนึ่ง
+  function ganttTrackStyle(year, month0, daysInMonth) {
     const colPct = 100 / daysInMonth;
-    return `grid-template-columns: repeat(${daysInMonth}, minmax(0,1fr)); background-image: linear-gradient(to right, #E2E2E2 1px, transparent 1px); background-size: ${colPct}% 100%;`;
+    const weekendBg = ganttWeekendBackground(year, month0, daysInMonth);
+    return `grid-template-columns: repeat(${daysInMonth}, minmax(0,1fr)); background-image: ${weekendBg}, linear-gradient(to right, #E2E2E2 1px, transparent 1px); background-size: 100% 100%, ${colPct}% 100%;`;
   }
-  function ganttRowHtml(plan, i, monthStart, monthEnd, daysInMonth) {
+  function ganttRowHtml(plan, i, year, month0, monthStart, monthEnd, daysInMonth) {
     const bounds = ganttPlanBounds(plan, monthStart, monthEnd);
     const color = GANTT_COLORS[i % GANTT_COLORS.length];
     const dest = plan.target_pea || plan.work_area || plan.title || "แผนงานทีม";
     return `
       <div class="gantt-row">
-        <div class="gantt-row-label" data-action="detail" data-id="${esc(plan.id)}" title="คลิกดูรายละเอียด">
+        <div class="gantt-row-label" data-action="detail" data-id="${esc(plan.id)}" title="คลิกดูรายละเอียด" style="--gantt-accent:${color}">
           <div class="gantt-row-title">📍 ${esc(dest)}</div>
         </div>
-        <div class="gantt-row-track" style="${ganttTrackStyle(daysInMonth)}">
+        <div class="gantt-row-track" style="${ganttTrackStyle(year, month0, daysInMonth)}">
           ${bounds ? `<div class="gantt-bar" data-action="detail" data-id="${esc(plan.id)}" style="grid-column: ${bounds.startDay} / ${bounds.endDay + 1}; background:${color};" title="คลิกดูรายละเอียด: ${esc(dest)}">${esc(dest)}</div>` : ""}
         </div>
         <div class="gantt-row-actions admin-only">
@@ -495,9 +509,20 @@
     const daysInMonth = monthEnd.getDate();
     const plans = TEAM_PLANS.filter(p => ganttPlanBounds(p, monthStart, monthEnd));
     return `
-      <div class="gantt-toolbar">
-        <div class="gantt-title">📊 แผนงานประจำเดือน (คำสั่งเดินทางของทีม)</div>
-        <button type="button" class="btn-secondary admin-only" id="gantt-add-btn">+ เพิ่มแผนงาน</button>
+      <div class="gantt-toolbar gantt-toolbar-v2">
+        <div>
+          <div class="gantt-title-v2">Operational Schedule</div>
+          <div class="gantt-subtitle-v2">แผนงานประจำเดือน (คำสั่งเดินทางของทีม)</div>
+        </div>
+        <div class="gantt-toolbar-right">
+          <div class="gantt-month-pill">
+            <span>📅</span>
+            <button type="button" class="gantt-month-nav-btn" id="gantt-prev">‹</button>
+            <span class="gantt-month-pill-label">${THAI_MONTHS[month0]} ${beYear(monthStart)}</span>
+            <button type="button" class="gantt-month-nav-btn" id="gantt-next">›</button>
+          </div>
+          <button type="button" class="btn-secondary admin-only" id="gantt-add-btn">+ เพิ่มแผนงาน</button>
+        </div>
       </div>
       <form id="gantt-add-form" class="gantt-add-form admin-only hidden">
         <div class="form-grid">
@@ -549,12 +574,17 @@
         <div class="gantt-wrap">
           <div class="gantt-header-row">
             <div class="gantt-row-label"></div>
-            <div class="gantt-row-track" style="grid-template-columns: repeat(${daysInMonth}, minmax(0,1fr));">
-              ${Array.from({ length: daysInMonth }, (_, i) => `<div class="gantt-daynum">${i + 1}</div>`).join("")}
+            <div class="gantt-row-track" style="${ganttTrackStyle(year, month0, daysInMonth)}">
+              ${Array.from({ length: daysInMonth }, (_, i) => {
+                const day = i + 1;
+                const dow = new Date(year, month0, day).getDay();
+                const isWeekend = dow === 0 || dow === 6;
+                return `<div class="gantt-daynum ${isWeekend ? "weekend" : ""}"><div>${day}</div><div class="gantt-daynum-wd">${WD_SHORT[dow]}</div></div>`;
+              }).join("")}
             </div>
             <div class="gantt-row-actions"></div>
           </div>
-          ${plans.map((p, i) => ganttRowHtml(p, i, monthStart, monthEnd, daysInMonth)).join("")}
+          ${plans.map((p, i) => ganttRowHtml(p, i, year, month0, monthStart, monthEnd, daysInMonth)).join("")}
         </div>
       ` : `<div class="gantt-empty">ยังไม่มีแผนงานในเดือนนี้</div>`}`;
   }
@@ -622,6 +652,11 @@
     });
   }
   function bindGanttEvents() {
+    // ปุ่มเลื่อนเดือนในการ์ด Gantt ใช้ตัวเดียวกับ toolbar หลัก (navigate) ให้เดือนที่ดูอยู่ตรงกันเสมอ
+    const ganttPrevBtn = $("#gantt-prev");
+    const ganttNextBtn = $("#gantt-next");
+    if (ganttPrevBtn) ganttPrevBtn.addEventListener("click", () => navigate(-1));
+    if (ganttNextBtn) ganttNextBtn.addEventListener("click", () => navigate(1));
     const addBtn = $("#gantt-add-btn");
     const addForm = $("#gantt-add-form");
     if (addBtn && addForm) {
