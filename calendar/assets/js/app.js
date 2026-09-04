@@ -2321,11 +2321,11 @@
       </div>`;
   }
   const OV_DIST_SEGMENTS = [
-    { key: "hotline", label: "Hotline", color: "#7c2d12", desc: "งานในพื้นที่ กฟฟ.บางปะกง ไม่มีคำสั่งเดินทาง" },
-    { key: "travel", label: "Travel", color: "#b91c1c", desc: "งานที่มีคำสั่งเดินทางออกนอกพื้นที่" },
-    { key: "office", label: "Office", color: "#c2410c", desc: "งานนอกพื้นที่บ้าน ไม่มีคำสั่งเดินทาง" },
-    { key: "ot", label: "OT", color: "#ea580c", desc: "งานที่นับเป็นวันโอที (นอกเวลา/วันหยุด)" },
-    { key: "other", label: "Other", color: "#f59e0b", desc: "งานที่ไม่ได้ระบุการไฟฟ้าปลายทาง" }
+    { key: "hotline", label: "Local Duty", color: "#7c2d12", desc: "งานในพื้นที่ กฟฟ.บางปะกง ไม่มีคำสั่งเดินทาง" },
+    { key: "travel", label: "Official Travel", color: "#b91c1c", desc: "งานที่มีคำสั่งเดินทางออกนอกพื้นที่" },
+    { key: "office", label: "Off-site Duty", color: "#c2410c", desc: "งานนอกพื้นที่บ้าน ไม่มีคำสั่งเดินทาง" },
+    { key: "ot", label: "Overtime (OT)", color: "#ea580c", desc: "งานที่นับเป็นวันโอที (นอกเวลา/วันหยุด)" },
+    { key: "other", label: "Unspecified", color: "#f59e0b", desc: "งานที่ไม่ได้ระบุการไฟฟ้าปลายทาง" }
   ];
   function ovDonutHtml(dist) {
     const total = Object.values(dist).reduce((a, b) => a + b, 0);
@@ -2465,7 +2465,7 @@
               </div>
             </div>
             <div class="ov-panel">
-              <div class="ov-panel-title">🥧 Work Distribution</div>
+              <div class="ov-panel-title">🥧 Work Assignment Breakdown</div>
               ${ovDonutHtml(dist)}
             </div>
           </div>
