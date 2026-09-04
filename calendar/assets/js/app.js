@@ -2397,7 +2397,7 @@
       <div class="team-summary-wrap">
         <table class="team-summary-table">
           <thead><tr>
-            <th>พนักงาน</th><th>บทบาท</th><th>ปฏิบัติงาน / วันทำการ</th><th>คำสั่งเดินทาง (วัน)</th><th>OT (วัน)</th><th>ลา (วัน)</th><th>ความพร้อม</th>
+            <th>พนักงาน</th><th>บทบาท</th><th>ปฏิบัติงาน / วันทำการ</th><th>คำสั่งเดินทาง (วัน)</th><th>OT (วัน)</th><th>ลา (วัน)</th><th>Work Activity</th>
           </tr></thead>
           <tbody>
             ${sorted.map(e => {
