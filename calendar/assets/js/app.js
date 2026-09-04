@@ -1781,26 +1781,85 @@
         </table>
       </div>`;
   }
+  const AUDIT_PENALTY_GROUP_ICONS = {
+    "ประธานกรรมการ กฟภ.": "👑",
+    "ผู้ว่าการ หรือ รองผู้ว่าการ": "👥",
+    "ผู้ช่วยผู้ว่าการ / ผอ.ฝ่าย / รอง ผอ.ฝ่าย": "🛡️",
+    "ผอ.กอง / หน.กอง / รอง หน.กอง": "🏢"
+  };
+  function auditPenaltyGroups() {
+    const map = new Map();
+    AUDIT_PENALTY_AUTHORITY.forEach(r => {
+      if (!map.has(r.authority)) map.set(r.authority, []);
+      map.get(r.authority).push(r);
+    });
+    return Array.from(map.entries()).map(([authority, rows]) => ({ authority, rows }));
+  }
   function auditPenaltyTableHtml() {
+    const groups = auditPenaltyGroups();
     return `
+      <div class="audit-penalty-search">
+        <input type="text" id="audit-penalty-search" placeholder="🔍 ค้นหาตำแหน่ง..." />
+      </div>
       <div class="equip-table-wrap">
-        <table class="equip-table leave-approval-table">
+        <table class="equip-table audit-penalty-table" id="audit-penalty-table">
           <thead><tr>
-            <th>ผู้บังคับบัญชาผู้มีอำนาจ</th><th>ตำแหน่งพนักงานผู้กระทำผิด</th><th>เพดานลดเงินเดือน</th>
-            <th>เพดานตัดเงินเดือน</th><th>ระยะเวลาตัดเงินเดือน</th><th>อำนาจสั่งไล่ออก/ปลดออก</th>
+            <th>ระดับ</th><th>ตำแหน่งพนักงานผู้กระทำผิด</th><th>ลดเงินเดือน</th>
+            <th>ตัดเงินเดือน</th><th>ระยะเวลา</th><th>อำนาจสั่งไล่ออก/ปลดออก</th>
           </tr></thead>
           <tbody>
-            ${AUDIT_PENALTY_AUTHORITY.map(r => `<tr>
-              <td class="leave-impact-type">${esc(r.authority)}</td>
-              <td>${esc(r.position)}</td>
-              <td>${esc(r.reduceCap)}</td>
-              <td>${esc(r.deductCap)}</td>
-              <td>${esc(r.months)}</td>
-              <td>${esc(r.dismissal)}</td>
-            </tr>`).join("")}
+            ${groups.map((g, gi) => `
+              <tr class="audit-penalty-group-row" data-group="${gi}">
+                <td colspan="6">
+                  <div class="audit-penalty-group-head" data-group-toggle="${gi}">
+                    <span class="audit-penalty-group-badge">${gi + 1}</span>
+                    <span class="audit-penalty-group-icon">${AUDIT_PENALTY_GROUP_ICONS[g.authority] || "🧑‍💼"}</span>
+                    <span class="audit-penalty-group-title">${esc(g.authority)}</span>
+                    <span class="audit-penalty-group-chevron">▾</span>
+                  </div>
+                </td>
+              </tr>
+              ${g.rows.map((r, ri) => `
+                <tr class="audit-penalty-data-row" data-group="${gi}" data-search="${esc((r.position || "").toLowerCase())}">
+                  <td class="audit-penalty-row-idx">${String(ri + 1).padStart(2, "0")}</td>
+                  <td>${esc(r.position.replace(/^\d+\.\s*/, ""))}</td>
+                  <td>${r.reduceCap === "ไม่มีอำนาจสั่งลด" ? `<span class="audit-dash">–</span>` : `<span class="audit-pill orange">${esc(r.reduceCap)}</span>`}</td>
+                  <td><span class="audit-pill red">${esc(r.deductCap)}</span></td>
+                  <td><span class="audit-pill blue">${esc(r.months)}</span></td>
+                  <td><span class="audit-pill ${r.dismissal.startsWith("ไม่มีอำนาจ") ? "gray" : "green"}">${esc(r.dismissal)}</span></td>
+                </tr>`).join("")}
+            `).join("")}
           </tbody>
         </table>
       </div>`;
+  }
+  function bindAuditPenaltyTableEvents() {
+    const tableEl = $("#audit-penalty-table");
+    if (!tableEl) return;
+    tableEl.querySelectorAll("[data-group-toggle]").forEach(headEl => {
+      headEl.addEventListener("click", () => {
+        const gi = headEl.getAttribute("data-group-toggle");
+        const collapsed = headEl.classList.toggle("collapsed");
+        tableEl.querySelectorAll(`.audit-penalty-data-row[data-group="${gi}"]`).forEach(row => {
+          row.classList.toggle("audit-penalty-row-hidden", collapsed);
+        });
+        headEl.querySelector(".audit-penalty-group-chevron").textContent = collapsed ? "▸" : "▾";
+      });
+    });
+    const searchEl = $("#audit-penalty-search");
+    if (searchEl) searchEl.addEventListener("input", () => {
+      const q = searchEl.value.trim().toLowerCase();
+      tableEl.querySelectorAll(".audit-penalty-group-head").forEach(h => { h.classList.remove("collapsed"); h.querySelector(".audit-penalty-group-chevron").textContent = "▾"; });
+      const visibleGroups = new Set();
+      tableEl.querySelectorAll(".audit-penalty-data-row").forEach(row => {
+        const match = !q || row.getAttribute("data-search").includes(q);
+        row.classList.toggle("audit-penalty-row-hidden", !match);
+        if (match) visibleGroups.add(row.getAttribute("data-group"));
+      });
+      tableEl.querySelectorAll(".audit-penalty-group-row").forEach(gRow => {
+        gRow.classList.toggle("audit-penalty-row-hidden", !visibleGroups.has(gRow.getAttribute("data-group")));
+      });
+    });
   }
   function auditInvestigationCardHtml(s) {
     return `
@@ -1912,6 +1971,7 @@
   }
   function openAuditPage() {
     auditPageBodyEl.innerHTML = auditPageHtml();
+    bindAuditPenaltyTableEvents();
     appShellEl.classList.add("hidden");
     auditPageEl.classList.remove("hidden");
     window.scrollTo(0, 0);
