@@ -326,12 +326,17 @@
     const dow = fromISO(t.date).getDay();
     return dow === 0 || dow === 6 || !!HOLIDAYS[t.date] || (t.appointTime && t.appointTime >= OT_AFTER_HOURS_TIME);
   }
+  function countUniqueDays(tasks, predicate) {
+    const days = new Set();
+    tasks.forEach(t => { if (predicate(t)) days.add(t.date); });
+    return days.size;
+  }
   function renderStatRow() {
     const periodTasks = getPeriodTasks();
     const bizDays = businessDaysProgress(state.cursor.getFullYear(), state.cursor.getMonth());
-    const inAreaCount = periodTasks.filter(t => isHomeUnitPea(t.targetPEA) && !t.travelOrder).length;
-    const travelOrderCount = periodTasks.filter(t => t.travelOrder).length;
-    const otCount = periodTasks.filter(isOTTask).length;
+    const inAreaCount = countUniqueDays(periodTasks, t => isHomeUnitPea(t.targetPEA) && !t.travelOrder);
+    const travelOrderCount = countUniqueDays(periodTasks, t => t.travelOrder);
+    const otCount = countUniqueDays(periodTasks, isOTTask);
     statRowEl.innerHTML = `
       <div class="stat-card workday"><div class="stat-label">วันทำการ</div><div class="stat-value">${bizDays.total}/${bizDays.elapsed}</div></div>
       <div class="stat-card inarea"><div class="stat-label">ปฏิบัติงาน บปก.</div><div class="stat-value">${inAreaCount} วัน</div></div>
