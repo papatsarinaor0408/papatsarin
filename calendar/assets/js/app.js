@@ -1746,11 +1746,13 @@
             ${LEAVE_REG_IMPACTS.map((r, i) => `
               <tr class="leave-impact2-row">
                 <td class="leave-impact2-type">
-                  <span class="leave-impact2-num" style="background:${LEAVE_CAT_ICON_COLORS[i % LEAVE_CAT_ICON_COLORS.length]}">${i + 1}</span>
-                  <div class="leave-impact2-type-title">${LEAVE_IMPACT_ICONS[i] || ""} ${esc(r.type)}</div>
+                  <div class="leave-impact2-type-inner">
+                    <span class="leave-impact2-num" style="background:${LEAVE_CAT_ICON_COLORS[i % LEAVE_CAT_ICON_COLORS.length]}">${i + 1}</span>
+                    <div class="leave-impact2-type-title">${LEAVE_IMPACT_ICONS[i] || ""} ${esc(r.type)}</div>
+                  </div>
                 </td>
-                ${LEAVE_IMPACT_COLUMNS.map(c => `<td><span class="leave-impact2-pill ${leaveImpactTone(r[c.key])}">${esc(r[c.key])}</span></td>`).join("")}
-                <td class="leave-impact2-summary">${esc(r.summary)}</td>
+                ${LEAVE_IMPACT_COLUMNS.map(c => `<td data-label="${esc(c.icon)} ${esc(c.label)}"><span class="leave-impact2-pill ${leaveImpactTone(r[c.key])}">${esc(r[c.key])}</span></td>`).join("")}
+                <td class="leave-impact2-summary" data-label="📋 สรุปภาพรวม">${esc(r.summary)}</td>
               </tr>`).join("")}
           </tbody>
         </table>
