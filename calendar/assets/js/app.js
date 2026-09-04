@@ -519,6 +519,9 @@
       const barLabel = ganttBarLabel(plan);
       return `<div class="gantt-bar" data-action="detail" data-id="${esc(plan.id)}" style="grid-column: ${bounds.startDay} / ${bounds.endDay + 1}; background:${color};" title="คลิกดูรายละเอียด: ${esc(dest)} (${esc(barLabel)})"></div>`;
     }).join("");
+    // แถวที่มีแผนงานเดียว กดไอคอนท้ายแถวจัดการได้ตรงตัวเลย — แถวที่ปลายทางซ้ำ (หลายแผนงาน) ให้คลิกที่แถบสีของแต่ละช่วง
+    // เพื่อเปิดรายละเอียดแล้วจัดการจากในนั้นแทน (ไม่งั้นจะไม่รู้ว่าไอคอนท้ายแถวหมายถึงแผนงานไหน)
+    const singlePlan = group.plans.length === 1 ? group.plans[0] : null;
     return `
       <div class="gantt-row">
         <div class="gantt-row-num">${i + 1}</div>
@@ -527,6 +530,12 @@
         </div>
         <div class="gantt-row-track" style="${ganttTrackStyle(year, month0, daysInMonth)}">
           ${bars}
+        </div>
+        <div class="gantt-row-actions admin-only">
+          ${singlePlan ? `
+            <button type="button" class="gantt-icon-btn" data-action="exclude" data-id="${esc(singlePlan.id)}" title="ยกเว้นบางคน (เช่นคนที่ลา)">👤</button>
+            <button type="button" class="gantt-icon-btn" data-action="delete" data-id="${esc(singlePlan.id)}" title="ลบแผนงาน">🗑</button>
+          ` : ""}
         </div>
       </div>`;
   }
@@ -612,6 +621,7 @@
                 return `<div class="gantt-daynum ${isWeekend ? "weekend" : ""}"><div>${day}</div><div class="gantt-daynum-wd">${WD_SHORT[dow]}</div></div>`;
               }).join("")}
             </div>
+            <div class="gantt-row-actions">ผู้รับผิดชอบ</div>
           </div>
           ${groups.map((g, i) => ganttRowHtml(g, i, year, month0, monthStart, monthEnd, daysInMonth)).join("")}
         </div>
@@ -766,6 +776,18 @@
     }
     ganttPanelEl.querySelectorAll('[data-action="detail"]').forEach(el => {
       el.addEventListener("click", () => openGanttDetailModal(el.getAttribute("data-id")));
+    });
+    ganttPanelEl.querySelectorAll('[data-action="exclude"]').forEach(btn => {
+      btn.addEventListener("click", () => openGanttExcludeModal(btn.getAttribute("data-id")));
+    });
+    ganttPanelEl.querySelectorAll('[data-action="delete"]').forEach(btn => {
+      btn.addEventListener("click", async () => {
+        if (!confirm("ยืนยันลบแผนงานนี้?")) return;
+        const { error } = await CAL_SB.from("calendar_team_plans").delete().eq("id", btn.getAttribute("data-id"));
+        if (error) { alert("ลบไม่สำเร็จ: " + error.message); return; }
+        await loadTeamPlans();
+        renderTeamPlanGantt();
+      });
     });
   }
   function renderTeamPlanGantt() {
