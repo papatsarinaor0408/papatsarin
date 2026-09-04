@@ -492,23 +492,41 @@
     const weekendBg = ganttWeekendBackground(year, month0, daysInMonth);
     return `grid-template-columns: repeat(${daysInMonth}, minmax(0,1fr)); background-image: ${weekendBg}, linear-gradient(to right, #E2E2E2 1px, transparent 1px); background-size: 100% 100%, ${colPct}% 100%;`;
   }
-  function ganttRowHtml(plan, i, year, month0, monthStart, monthEnd, daysInMonth) {
-    const bounds = ganttPlanBounds(plan, monthStart, monthEnd);
+  // จัดกลุ่มแผนงานที่ปลายทางเดียวกันไว้แถวเดียวกัน (คนละช่วงวันที่ก็ยังเป็นแถวเดียว) แทนที่จะขึ้นแถวซ้ำ
+  function ganttGroupKey(plan) {
+    return plan.target_pea || plan.work_area || plan.title || "แผนงานทีม";
+  }
+  function ganttGroupPlans(plans) {
+    const groups = [];
+    const byKey = new Map();
+    plans.forEach(p => {
+      const key = ganttGroupKey(p);
+      if (!byKey.has(key)) {
+        const g = { key, plans: [] };
+        byKey.set(key, g);
+        groups.push(g);
+      }
+      byKey.get(key).plans.push(p);
+    });
+    return groups;
+  }
+  function ganttRowHtml(group, i, year, month0, monthStart, monthEnd, daysInMonth) {
     const color = GANTT_COLORS[i % GANTT_COLORS.length];
-    const dest = plan.target_pea || plan.work_area || plan.title || "แผนงานทีม";
-    const barLabel = ganttBarLabel(plan);
+    const dest = group.key;
+    const bars = group.plans.map(plan => {
+      const bounds = ganttPlanBounds(plan, monthStart, monthEnd);
+      if (!bounds) return "";
+      const barLabel = ganttBarLabel(plan);
+      return `<div class="gantt-bar" data-action="detail" data-id="${esc(plan.id)}" style="grid-column: ${bounds.startDay} / ${bounds.endDay + 1}; background:${color};" title="คลิกดูรายละเอียด: ${esc(dest)} (${esc(barLabel)})">${esc(barLabel)}</div>`;
+    }).join("");
     return `
       <div class="gantt-row">
         <div class="gantt-row-num">${i + 1}</div>
-        <div class="gantt-row-label" data-action="detail" data-id="${esc(plan.id)}" title="คลิกดูรายละเอียด" style="--gantt-accent:${color}">
+        <div class="gantt-row-label" style="--gantt-accent:${color}">
           <div class="gantt-row-title">📍 ${esc(dest)}</div>
         </div>
         <div class="gantt-row-track" style="${ganttTrackStyle(year, month0, daysInMonth)}">
-          ${bounds ? `<div class="gantt-bar" data-action="detail" data-id="${esc(plan.id)}" style="grid-column: ${bounds.startDay} / ${bounds.endDay + 1}; background:${color};" title="คลิกดูรายละเอียด: ${esc(dest)}">${esc(barLabel)}</div>` : ""}
-        </div>
-        <div class="gantt-row-actions admin-only">
-          <button type="button" class="gantt-icon-btn" data-action="exclude" data-id="${esc(plan.id)}" title="ยกเว้นบางคน (เช่นคนที่ลา)">👤</button>
-          <button type="button" class="gantt-icon-btn" data-action="delete" data-id="${esc(plan.id)}" title="ลบแผนงาน">⋮</button>
+          ${bars}
         </div>
       </div>`;
   }
@@ -518,6 +536,7 @@
     const monthEnd = new Date(year, month0 + 1, 0);
     const daysInMonth = monthEnd.getDate();
     const plans = TEAM_PLANS.filter(p => ganttPlanBounds(p, monthStart, monthEnd));
+    const groups = ganttGroupPlans(plans);
     return `
       <div class="gantt-toolbar gantt-toolbar-v2">
         <div>
@@ -580,7 +599,7 @@
           <div class="form-actions-right"><button type="submit" class="btn-primary">+ บันทึกแผนงาน</button></div>
         </div>
       </form>
-      ${plans.length ? `
+      ${groups.length ? `
         <div class="gantt-wrap">
           <div class="gantt-header-row">
             <div class="gantt-row-num">ลำดับ</div>
@@ -593,9 +612,8 @@
                 return `<div class="gantt-daynum ${isWeekend ? "weekend" : ""}"><div>${day}</div><div class="gantt-daynum-wd">${WD_SHORT[dow]}</div></div>`;
               }).join("")}
             </div>
-            <div class="gantt-row-actions">ผู้รับผิดชอบ</div>
           </div>
-          ${plans.map((p, i) => ganttRowHtml(p, i, year, month0, monthStart, monthEnd, daysInMonth)).join("")}
+          ${groups.map((g, i) => ganttRowHtml(g, i, year, month0, monthStart, monthEnd, daysInMonth)).join("")}
         </div>
       ` : `<div class="gantt-empty">ยังไม่มีแผนงานในเดือนนี้</div>`}`;
   }
@@ -623,9 +641,22 @@
           <div class="detail-section-title">ผู้ที่ยกเว้นจากแผนงานนี้ (เช่น คนที่ลา)</div>
           ${excluded.length ? `<div class="gantt-exclude-summary">${excluded.map(n => `<span class="pls-type-tag">${esc(n)}</span>`).join("")}</div>` : `<div class="form-hint">ไม่มีใครถูกยกเว้น — มีผลกับทั้งทีม</div>`}
         </div>
+      </div>
+      <div class="detail-actions admin-only">
+        <button class="btn-secondary" id="gantt-exclude-btn">👤 ยกเว้นบางคน</button>
+        <button class="btn-danger" id="gantt-delete-btn">🗑 ลบแผนงาน</button>
       </div>`;
     modalBackdropEl.classList.add("open");
     $("#modal-close-btn").addEventListener("click", closeModal);
+    $("#gantt-exclude-btn").addEventListener("click", () => openGanttExcludeModal(plan.id));
+    $("#gantt-delete-btn").addEventListener("click", async () => {
+      if (!confirm("ยืนยันลบแผนงานนี้?")) return;
+      const { error } = await CAL_SB.from("calendar_team_plans").delete().eq("id", plan.id);
+      if (error) { alert("ลบไม่สำเร็จ: " + error.message); return; }
+      await loadTeamPlans();
+      renderTeamPlanGantt();
+      closeModal();
+    });
   }
   function openGanttExcludeModal(planId) {
     const plan = TEAM_PLANS.find(p => p.id === planId);
@@ -735,18 +766,6 @@
     }
     ganttPanelEl.querySelectorAll('[data-action="detail"]').forEach(el => {
       el.addEventListener("click", () => openGanttDetailModal(el.getAttribute("data-id")));
-    });
-    ganttPanelEl.querySelectorAll('[data-action="exclude"]').forEach(btn => {
-      btn.addEventListener("click", () => openGanttExcludeModal(btn.getAttribute("data-id")));
-    });
-    ganttPanelEl.querySelectorAll('[data-action="delete"]').forEach(btn => {
-      btn.addEventListener("click", async () => {
-        if (!confirm("ยืนยันลบแผนงานนี้?")) return;
-        const { error } = await CAL_SB.from("calendar_team_plans").delete().eq("id", btn.getAttribute("data-id"));
-        if (error) { alert("ลบไม่สำเร็จ: " + error.message); return; }
-        await loadTeamPlans();
-        renderTeamPlanGantt();
-      });
     });
   }
   function renderTeamPlanGantt() {
