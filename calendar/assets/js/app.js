@@ -2360,11 +2360,11 @@
       </div>`;
   }
   const OV_DIST_SEGMENTS = [
-    { key: "hotline", label: "Hotline", color: "#5b2a86" },
-    { key: "travel", label: "Travel", color: "#2554c7" },
-    { key: "office", label: "Office", color: "#f97316" },
-    { key: "ot", label: "OT", color: "#15803d" },
-    { key: "other", label: "Other", color: "#94a3b8" }
+    { key: "hotline", label: "Hotline", color: "#7c2d12", desc: "งานในพื้นที่ กฟฟ.บางปะกง ไม่มีคำสั่งเดินทาง" },
+    { key: "travel", label: "Travel", color: "#b91c1c", desc: "งานที่มีคำสั่งเดินทางออกนอกพื้นที่" },
+    { key: "office", label: "Office", color: "#c2410c", desc: "งานนอกพื้นที่บ้าน ไม่มีคำสั่งเดินทาง" },
+    { key: "ot", label: "OT", color: "#ea580c", desc: "งานที่นับเป็นวันโอที (นอกเวลา/วันหยุด)" },
+    { key: "other", label: "Other", color: "#f59e0b", desc: "งานที่ไม่ได้ระบุการไฟฟ้าปลายทาง" }
   ];
   function ovDonutHtml(dist) {
     const total = Object.values(dist).reduce((a, b) => a + b, 0);
@@ -2382,7 +2382,10 @@
           ${OV_DIST_SEGMENTS.map(s => {
             const val = dist[s.key] || 0;
             const pct = total ? Math.round(val / total * 100) : 0;
-            return `<div class="ov-donut-legend-row"><span class="ov-donut-dot" style="background:${s.color}"></span><span>${esc(s.label)}</span><b>${val} (${pct}%)</b></div>`;
+            return `<div class="ov-donut-legend-row">
+              <span class="ov-donut-dot" style="background:${s.color}"></span>
+              <div class="ov-donut-legend-text"><div class="ov-donut-legend-head"><span>${esc(s.label)}</span><b>${val} (${pct}%)</b></div><div class="ov-donut-legend-desc">${esc(s.desc)}</div></div>
+            </div>`;
           }).join("")}
         </div>
       </div>`;
@@ -2505,7 +2508,7 @@
             <div class="ov-panel">
               <div class="ov-panel-title">📈 Team Capacity</div>
               <div class="ov-capacity-list">
-                ${EMPLOYEES.map(e => ovCapacityRowHtml(e, year, month0, bizDays.total)).join("")}
+                ${EMPLOYEES.slice().sort((a, b) => (b.role_title ? 1 : 0) - (a.role_title ? 1 : 0)).map(e => ovCapacityRowHtml(e, year, month0, bizDays.total)).join("")}
               </div>
             </div>
             <div class="ov-panel">
