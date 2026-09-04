@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=23" />
+<link rel="stylesheet" href="assets/css/style.css?v=24" />
 </head>
 <body>
 
@@ -36,8 +36,28 @@
       <button type="submit" class="btn-primary login-submit-btn">เข้าสู่ระบบ</button>
     </form>
     <div class="login-hint">ใช้รหัสประจำตัวพนักงานเป็น User · รหัสผ่านแรกเข้าคือ <b>12345</b> (ระบบจะให้ตั้งรหัสผ่านใหม่ทันทีหลังเข้าสู่ระบบครั้งแรก)</div>
+
+    <div class="login-divider"><span>หรือ</span></div>
+    <button type="button" class="btn-secondary login-visitor-toggle-btn" id="visitor-toggle-btn">👁️ เข้าชมภาพรวม (Visitor · View Only)</button>
+    <form id="visitor-form" class="hidden">
+      <div class="form-field">
+        <label>รหัสประจำตัว <span class="req">*</span></label>
+        <input type="text" name="visitorEmployeeNo" inputmode="numeric" required placeholder="เช่น 520011" />
+      </div>
+      <div class="form-field">
+        <label>ชื่อ-นามสกุล <span class="req">*</span></label>
+        <input type="text" name="visitorName" required placeholder="เช่น นายสมชาย ใจดี" />
+      </div>
+      <div id="visitor-form-error"></div>
+      <button type="submit" class="btn-primary login-submit-btn">เข้าชมภาพรวม</button>
+    </form>
+    <div class="login-hint">โหมด Visitor ไม่ต้องใช้รหัสผ่าน แต่ต้องระบุตัวตนก่อนเข้าชม เพื่อบันทึกประวัติการเข้าชมระบบ</div>
   </div>
   <div class="login-credit">2 Sep 2026 &middot; Developed by นายเอกราช ทองค่ำ พชง.6 (502244) ผปบ. กฟส.บปก. &middot; All rights reserved.</div>
+</div>
+
+<div id="overview-page" class="hidden">
+  <div id="overview-page-body"></div>
 </div>
 
 <div id="app-root" class="hidden">
@@ -185,6 +205,6 @@
 <script src="assets/js/vendor/supabase-js.min.js"></script>
 <script src="assets/js/supabaseClient.js"></script>
 <script src="assets/js/data.js?v=4"></script>
-<script src="assets/js/app.js?v=18"></script>
+<script src="assets/js/app.js?v=19"></script>
 </body>
 </html>

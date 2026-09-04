@@ -7,6 +7,7 @@
   /* ---------------- Constants ---------------- */
   const THAI_MONTHS = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
     "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+  const THAI_MONTHS_ABBR = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
   const WD_SHORT = ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"];
   const WD_FULL = ["วันอาทิตย์","วันจันทร์","วันอังคาร","วันพุธ","วันพฤหัสบดี","วันศุกร์","วันเสาร์"];
 
@@ -318,6 +319,10 @@
   const userNameLabelEl = $("#user-name-label");
   const changePasswordBtnEl = $("#change-password-btn");
   const logoutBtnEl = $("#logout-btn");
+  const visitorToggleBtnEl = $("#visitor-toggle-btn");
+  const visitorFormEl = $("#visitor-form");
+  const overviewPageEl = $("#overview-page");
+  const overviewPageBodyEl = $("#overview-page-body");
 
   /* ---------------- Header today badge ---------------- */
   todayBadgeEl.textContent = `วันนี้ ${WD_FULL[TODAY.getDay()]} ${TODAY.getDate()} ${THAI_MONTHS[TODAY.getMonth()]} พ.ศ. ${beYear(TODAY)}`;
@@ -2227,7 +2232,7 @@
               <td>${esc(r.employee_name)}</td>
               <td>${esc(r.position || "-")}</td>
               <td>${esc(r.department || "-")}</td>
-              <td><span class="access-log-role-text ${r.role === "admin" ? "admin" : "reviewer"}">${r.role === "admin" ? "ผู้ดูแลระบบ" : "ผู้ดูข้อมูล"}</span></td>
+              <td><span class="access-log-role-text ${r.role === "admin" ? "admin" : r.role === "visitor" ? "visitor" : "reviewer"}">${r.role === "admin" ? "ผู้ดูแลระบบ" : r.role === "visitor" ? "ผู้เยี่ยมชม (Visitor)" : "ผู้ดูข้อมูล"}</span></td>
               <td><span class="access-log-event-badge ${r.event === "logout" ? "logout" : "login"}">${r.event === "logout" ? "ออกจากระบบ" : "เข้าสู่ระบบ"}</span></td>
             </tr>`).join("") : `<tr><td colspan="7" style="text-align:center; color:var(--text-faint);">ยังไม่มีประวัติการเข้าใช้งาน</td></tr>`}
           </tbody>
@@ -2240,6 +2245,334 @@
   }
   accessLogBtnEl.addEventListener("click", openAccessLogPage);
   accessLogBackBtnEl.addEventListener("click", closeAccessLogPage);
+
+  /* ---------------- Visitor overview (Operations Overview) — read-only, no login required ----------------
+     สำหรับผู้ที่ไม่มีบัญชี/รหัสผ่าน: ระบุรหัสประจำตัว+ชื่อ-นามสกุลเพื่อบันทึกประวัติการเข้าชม (calendar_access_log,
+     role="visitor") แล้วเข้าดูหน้าภาพรวม (อ่านอย่างเดียว) แยกต่างหากจากแอปหลักทั้งหมด ไม่มีสิทธิ์แก้ไขข้อมูลใดๆ */
+  const ovState = { cursor: new Date(TODAY) };
+
+  function ovMinStaffing() { return Math.max(1, Math.ceil(EMPLOYEES.length / 2)); }
+  function ovEmployeeStatusOnDate(empName, iso) {
+    if (leavesOnDate(empName, iso).length) return "leave";
+    const tasks = tasksForEmployeeOnDate(empName, iso);
+    if (tasks.some(t => t.travelOrder)) return "travel";
+    if (tasks.some(t => !isHomeUnitPea(t.targetPEA))) return "out";
+    return "available";
+  }
+  function ovTeamStatusForDate(iso) {
+    const buckets = { available: [], out: [], travel: [], leave: [] };
+    EMPLOYEES.forEach(e => buckets[ovEmployeeStatusOnDate(e.name, iso)].push(e.name));
+    return buckets;
+  }
+  function tasksInMonth(year, month0) {
+    return TASKS.filter(t => { const d = fromISO(t.date); return d.getFullYear() === year && d.getMonth() === month0; });
+  }
+  function ovMonthAvailability(year, month0) {
+    const daysInMonth = new Date(year, month0 + 1, 0).getDate();
+    const out = [];
+    for (let day = 1; day <= daysInMonth; day++) {
+      const iso = `${year}-${String(month0 + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const dow = new Date(year, month0, day).getDay();
+      const b = ovTeamStatusForDate(iso);
+      out.push({ iso, day, dow, available: b.available.length, out: b.out.length, travel: b.travel.length, leave: b.leave.length });
+    }
+    return out;
+  }
+  function ovWorkDistribution(tasks) {
+    const buckets = { hotline: 0, travel: 0, ot: 0, office: 0, other: 0 };
+    tasks.forEach(t => {
+      if (t.travelOrder) buckets.travel++;
+      else if (isOTTask(t)) buckets.ot++;
+      else if (isHomeUnitPea(t.targetPEA)) buckets.hotline++;
+      else if (t.targetPEA) buckets.office++;
+      else buckets.other++;
+    });
+    return buckets;
+  }
+  function isOTForEmployeeOnDate(empName, iso) {
+    if (leavesOnDate(empName, iso).length) return false;
+    const tasks = tasksForEmployeeOnDate(empName, iso);
+    if (!tasks.length) return false;
+    const dow = fromISO(iso).getDay();
+    return dow === 0 || dow === 6 || !!HOLIDAYS[iso] || tasks.some(t => t.appointTime && t.appointTime > OT_AFTER_HOURS_TIME);
+  }
+  // ประเด็นที่ต้องติดตาม — คำนวณจริงจากข้อมูล ไม่ใส่รายการหลอกๆ ถ้าไม่มีเงื่อนไขเข้าเกณฑ์ก็ปล่อยว่าง
+  function ovAlerts(year, month0) {
+    const alerts = [];
+    const minStaffing = ovMinStaffing();
+    const avail = ovMonthAvailability(year, month0);
+    const upcoming = avail.filter(d => d.iso >= TODAY_ISO);
+    const lowDay = upcoming.find(d => d.available <= minStaffing);
+    if (lowDay) {
+      const isBelow = lowDay.available < minStaffing;
+      alerts.push({
+        level: isBelow ? "danger" : "warn",
+        title: `${lowDay.day} ${THAI_MONTHS_ABBR[month0]}`,
+        desc: `กำลังคนพร้อมปฏิบัติงานเหลือ ${lowDay.available} คน ${isBelow ? "ต่ำกว่า" : "ใกล้"} Minimum Staffing (${minStaffing} คน)`
+      });
+    }
+    const window7 = upcoming.slice(0, 7);
+    if (window7.length) {
+      const otCounts = {};
+      EMPLOYEES.forEach(e => { otCounts[e.name] = 0; });
+      window7.forEach(d => { EMPLOYEES.forEach(e => { if (isOTForEmployeeOnDate(e.name, d.iso)) otCounts[e.name]++; }); });
+      const risky = Object.entries(otCounts).filter(([, c]) => c >= 2).sort((a, b) => b[1] - a[1])[0];
+      if (risky) {
+        alerts.push({ level: "info", title: "แนวโน้ม OT สะสม", desc: `พบ OT ${risky[0]} ${risky[1]} วัน ภายใน 7 วันข้างหน้า เสี่ยงต่อภาระงานสะสม` });
+      }
+    }
+    return alerts;
+  }
+
+  function ovStatCardHtml(icon, cls, label, value) {
+    return `<div class="ov-stat-card ${cls}"><div class="ov-stat-icon">${icon}</div><div><div class="ov-stat-value">${esc(value)}</div><div class="ov-stat-label">${esc(label)}</div></div></div>`;
+  }
+  function ovStatusBarHtml(counts, total) {
+    const pct = k => total ? (counts[k] / total * 100) : 0;
+    return `
+      <div class="ov-status-bar">
+        <div class="ov-status-seg available" style="width:${pct("available")}%"></div>
+        <div class="ov-status-seg out" style="width:${pct("out")}%"></div>
+        <div class="ov-status-seg travel" style="width:${pct("travel")}%"></div>
+        <div class="ov-status-seg leave" style="width:${pct("leave")}%"></div>
+      </div>`;
+  }
+  function ovCalCellHtml(d) {
+    const parts = [];
+    if (d.available) parts.push(`<span class="ov-cal-num available">${d.available}</span>`);
+    if (d.out) parts.push(`<span class="ov-cal-num out">${d.out}</span>`);
+    if (d.travel) parts.push(`<span class="ov-cal-num travel">${d.travel}</span>`);
+    if (d.leave) parts.push(`<span class="ov-cal-num leave">${d.leave}</span>`);
+    return `<div class="ov-cal-cell ${d.iso === TODAY_ISO ? "is-today" : ""}"><div class="ov-cal-day">${d.day}</div><div class="ov-cal-nums">${parts.join("")}</div></div>`;
+  }
+  function ovAlertCardHtml(a) {
+    const icon = a.level === "danger" ? "⛔" : a.level === "warn" ? "⚠️" : "ℹ️";
+    return `<div class="ov-alert-card ${a.level}"><span class="ov-alert-icon">${icon}</span><div><b>${esc(a.title)}</b><div class="ov-alert-desc">${esc(a.desc)}</div></div></div>`;
+  }
+  function ovCapacityRowHtml(emp, year, month0, bizDaysTotal) {
+    const stats = computeEmployeeMonthStats(emp.name, year, month0);
+    const pct = bizDaysTotal ? Math.round(stats.workDays / bizDaysTotal * 100) : 0;
+    return `
+      <div class="ov-capacity-row">
+        <div class="ov-capacity-name">${esc(emp.name)}${emp.role_title ? ` <span class="role-title-badge">${esc(emp.role_title)}</span>` : ""}</div>
+        <div class="ov-capacity-bar-wrap"><div class="ov-capacity-bar" style="width:${pct}%"></div></div>
+        <div class="ov-capacity-pct">${pct}%</div>
+      </div>`;
+  }
+  const OV_DIST_SEGMENTS = [
+    { key: "hotline", label: "Hotline", color: "#5b2a86" },
+    { key: "travel", label: "Travel", color: "#2554c7" },
+    { key: "office", label: "Office", color: "#f97316" },
+    { key: "ot", label: "OT", color: "#15803d" },
+    { key: "other", label: "Other", color: "#94a3b8" }
+  ];
+  function ovDonutHtml(dist) {
+    const total = Object.values(dist).reduce((a, b) => a + b, 0);
+    let acc = 0;
+    const stops = OV_DIST_SEGMENTS.map(s => {
+      const val = dist[s.key] || 0;
+      const pct = total ? (val / total * 100) : 0;
+      const from = acc; acc += pct;
+      return `${s.color} ${from}% ${acc}%`;
+    }).join(", ");
+    return `
+      <div class="ov-donut-wrap">
+        <div class="ov-donut" style="background: conic-gradient(${total ? stops : "var(--border-soft) 0% 100%"});"><div class="ov-donut-hole"><b>${total}</b><span>งาน</span></div></div>
+        <div class="ov-donut-legend">
+          ${OV_DIST_SEGMENTS.map(s => {
+            const val = dist[s.key] || 0;
+            const pct = total ? Math.round(val / total * 100) : 0;
+            return `<div class="ov-donut-legend-row"><span class="ov-donut-dot" style="background:${s.color}"></span><span>${esc(s.label)}</span><b>${val} (${pct}%)</b></div>`;
+          }).join("")}
+        </div>
+      </div>`;
+  }
+  function ovSummaryTableHtml(year, month0) {
+    const bizDays = businessDaysProgress(year, month0);
+    const sorted = EMPLOYEES.slice().sort((a, b) => (b.role_title ? 1 : 0) - (a.role_title ? 1 : 0));
+    return `
+      <div class="team-summary-wrap">
+        <table class="team-summary-table">
+          <thead><tr>
+            <th>พนักงาน</th><th>บทบาท</th><th>ปฏิบัติงาน / วันทำการ</th><th>คำสั่งเดินทาง (วัน)</th><th>OT (วัน)</th><th>ลา (วัน)</th><th>ความพร้อม</th>
+          </tr></thead>
+          <tbody>
+            ${sorted.map(e => {
+              const stats = computeEmployeeMonthStats(e.name, year, month0);
+              const pct = bizDays.total ? Math.round(stats.workDays / bizDays.total * 100) : 0;
+              const pctColor = pct >= 80 ? "var(--green)" : pct >= 60 ? "var(--orange)" : "var(--red)";
+              return `<tr>
+                <td class="ts-name-cell">${esc(e.name)}${e.role_title ? ` <span class="role-title-badge">${esc(e.role_title)}</span>` : ""}</td>
+                <td>${esc(e.position || "-")}</td>
+                <td>${stats.workDays} / ${bizDays.total} วัน</td>
+                <td>${stats.travelOrderDays}</td>
+                <td>${stats.otDays}</td>
+                <td>${stats.leaveDays}</td>
+                <td><b style="color:${pctColor}">${pct}%</b></td>
+              </tr>`;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>`;
+  }
+  function overviewPageHtml(year, month0) {
+    const bizDays = businessDaysProgress(year, month0);
+    const monthTasks = tasksInMonth(year, month0);
+    const todayStatus = ovTeamStatusForDate(TODAY_ISO);
+    const totalStaff = EMPLOYEES.length;
+    const availPct = totalStaff ? Math.round(todayStatus.available.length / totalStaff * 100) : 0;
+    const travelDays = countUniqueDays(monthTasks, t => t.travelOrder);
+    const otDays = countUniqueDays(monthTasks, isOTTask);
+    const alerts = ovAlerts(year, month0);
+    const minStaffing = ovMinStaffing();
+    const avail = ovMonthAvailability(year, month0);
+    const dist = ovWorkDistribution(monthTasks);
+
+    const startDow = new Date(year, month0, 1).getDay();
+    const cells = [];
+    for (let i = 0; i < startDow; i++) cells.push(null);
+    avail.forEach(d => cells.push(d));
+    while (cells.length % 7 !== 0) cells.push(null);
+
+    return `
+      <header class="ov-header">
+        <div class="ov-header-inner">
+          <div class="ov-brand">
+            <div class="app-brand-mark">⚡</div>
+            <div>
+              <h1>HOTLINE PEA BPK — Operations Overview</h1>
+              <div class="sub">ภาพรวมกำลังคน แผนปฏิบัติงาน และสถานะความพร้อมทีม Hotline</div>
+            </div>
+          </div>
+          <div class="ov-header-right">
+            <div class="ov-header-nav">
+              <button type="button" class="nav-btn" id="ov-prev">‹</button>
+              <span class="ov-header-month">${THAI_MONTHS[month0]} พ.ศ. ${beYear(new Date(year, month0, 1))}</span>
+              <button type="button" class="nav-btn" id="ov-next">›</button>
+            </div>
+            <span class="ov-mode-badge">👁️ Reviewer Mode · View Only</span>
+            <span class="ov-static-select">หน่วยงาน: กฟฟ.บางปะกง</span>
+            <span class="ov-static-select">ทีม: Hotline PEA BPK</span>
+            <button type="button" class="btn-secondary" id="ov-export-btn">⬆ Export</button>
+            <button type="button" class="btn-secondary" id="ov-exit-btn">ออกจากหน้าภาพรวม</button>
+          </div>
+        </div>
+      </header>
+      <div class="ov-body">
+        <div class="ov-stat-row">
+          ${ovStatCardHtml("👥", "staff", "กำลังคนทั้งหมด", `${totalStaff} คน`)}
+          ${ovStatCardHtml("📋", "tasks", "งานเดือนนี้", `${monthTasks.length} งาน`)}
+          ${ovStatCardHtml("✅", "avail", "ความพร้อมทีม (วันนี้)", `${availPct}%`)}
+          ${ovStatCardHtml("✈️", "travel", "คำสั่งเดินทาง", `${travelDays} วัน`)}
+          ${ovStatCardHtml("⚡", "ot", "OT", `${otDays} วัน`)}
+          ${ovStatCardHtml("🔔", "alert", "รายการต้องติดตาม", `${alerts.length} รายการ`)}
+        </div>
+
+        <div class="ov-row2">
+          <div class="ov-panel">
+            <div class="ov-panel-title">👥 สถานะทีมวันนี้</div>
+            <div class="ov-status-legend">
+              <div class="ov-status-item"><span class="dot available"></span>พร้อมปฏิบัติงาน <b>${todayStatus.available.length} คน</b></div>
+              <div class="ov-status-item"><span class="dot out"></span>นอกพื้นที่ <b>${todayStatus.out.length} คน</b></div>
+              <div class="ov-status-item"><span class="dot travel"></span>คำสั่งเดินทาง <b>${todayStatus.travel.length} คน</b></div>
+              <div class="ov-status-item"><span class="dot leave"></span>ลา <b>${todayStatus.leave.length} คน</b></div>
+            </div>
+            <div class="ov-avail-head"><span>Team Availability</span><b>${availPct}%</b></div>
+            ${ovStatusBarHtml({ available: todayStatus.available.length, out: todayStatus.out.length, travel: todayStatus.travel.length, leave: todayStatus.leave.length }, totalStaff)}
+            <div class="ov-avail-note">ขั้นต่ำที่กำหนด: ${minStaffing} คน / ปัจจุบันพร้อม ${todayStatus.available.length} คน</div>
+          </div>
+          <div class="ov-panel">
+            <div class="ov-panel-title">🔔 ประเด็นที่ต้องติดตาม</div>
+            ${alerts.length ? `<div class="ov-alert-list">${alerts.map(ovAlertCardHtml).join("")}</div>` : `<div class="ov-empty-note">ไม่มีประเด็นที่ต้องติดตามในขณะนี้</div>`}
+          </div>
+        </div>
+
+        <div class="ov-row3">
+          <div class="ov-panel ov-cal-panel">
+            <div class="ov-panel-title">📅 ปฏิทินความพร้อมกำลังคน</div>
+            <div class="weekday-row">${WD_SHORT.map((w, i) => `<div class="wd ${i === 0 ? "sun" : i === 6 ? "sat" : ""}">${w}</div>`).join("")}</div>
+            <div class="ov-cal-grid">
+              ${cells.map(d => d ? ovCalCellHtml(d) : `<div class="ov-cal-cell empty"></div>`).join("")}
+            </div>
+            <div class="ov-cal-legend">
+              <div class="ov-status-item"><span class="dot available"></span>พร้อมปฏิบัติงาน</div>
+              <div class="ov-status-item"><span class="dot out"></span>นอกพื้นที่</div>
+              <div class="ov-status-item"><span class="dot travel"></span>คำสั่งเดินทาง</div>
+              <div class="ov-status-item"><span class="dot leave"></span>ลา</div>
+            </div>
+          </div>
+          <div class="ov-side-col">
+            <div class="ov-panel">
+              <div class="ov-panel-title">📈 Team Capacity</div>
+              <div class="ov-capacity-list">
+                ${EMPLOYEES.map(e => ovCapacityRowHtml(e, year, month0, bizDays.total)).join("")}
+              </div>
+            </div>
+            <div class="ov-panel">
+              <div class="ov-panel-title">🥧 Work Distribution</div>
+              ${ovDonutHtml(dist)}
+            </div>
+          </div>
+        </div>
+
+        <div class="ov-panel">
+          <div class="ov-panel-title">📄 สรุปผลการปฏิบัติงานรายบุคคล (${THAI_MONTHS[month0]} พ.ศ. ${beYear(new Date(year, month0, 1))})</div>
+          ${EMPLOYEES.length ? ovSummaryTableHtml(year, month0) : `<div class="empty-state">ยังไม่มีรายชื่อพนักงานในระบบ</div>`}
+        </div>
+
+        <div class="ov-footer-note">ข้อมูลทั้งหมดคำนวณจากฐานข้อมูลจริงของระบบปฏิทินงาน Hotline PEA BPK ณ เวลาที่เข้าชม · โหมด Visitor เป็นการดูข้อมูลอย่างเดียว ไม่สามารถแก้ไขข้อมูลได้</div>
+      </div>`;
+  }
+  function renderOverviewPage() {
+    overviewPageBodyEl.innerHTML = overviewPageHtml(ovState.cursor.getFullYear(), ovState.cursor.getMonth());
+    bindOverviewEvents();
+  }
+  function bindOverviewEvents() {
+    $("#ov-prev").addEventListener("click", () => { ovState.cursor = addMonths(ovState.cursor, -1); renderOverviewPage(); });
+    $("#ov-next").addEventListener("click", () => { ovState.cursor = addMonths(ovState.cursor, 1); renderOverviewPage(); });
+    $("#ov-export-btn").addEventListener("click", () => window.print());
+    $("#ov-exit-btn").addEventListener("click", closeOverviewPage);
+  }
+  async function openVisitorOverview() {
+    loginScreenEl.classList.add("hidden");
+    overviewPageEl.classList.remove("hidden");
+    overviewPageBodyEl.innerHTML = `<div class="empty-state">กำลังโหลดข้อมูลภาพรวม...</div>`;
+    window.scrollTo(0, 0);
+    await Promise.all([loadTasks(), loadPeopleData()]);
+    ovState.cursor = new Date(TODAY);
+    renderOverviewPage();
+  }
+  function closeOverviewPage() {
+    overviewPageEl.classList.add("hidden");
+    loginScreenEl.classList.remove("hidden");
+    visitorFormEl.classList.add("hidden");
+    visitorFormEl.reset();
+  }
+  visitorToggleBtnEl.addEventListener("click", () => { visitorFormEl.classList.toggle("hidden"); });
+  visitorFormEl.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const fd = new FormData(visitorFormEl);
+    const visitorEmployeeNo = (fd.get("visitorEmployeeNo") || "").trim();
+    const visitorName = (fd.get("visitorName") || "").trim();
+    const errEl = $("#visitor-form-error");
+    errEl.innerHTML = "";
+    if (!visitorEmployeeNo || !visitorName) { errEl.innerHTML = `<div class="form-error">กรุณากรอกรหัสประจำตัวและชื่อ-นามสกุลให้ครบ</div>`; return; }
+    const btn = visitorFormEl.querySelector("button[type=submit]");
+    btn.disabled = true;
+    btn.textContent = "กำลังเข้าสู่ระบบ...";
+    const { error } = await CAL_SB.from("calendar_access_log").insert([{
+      employee_no: visitorEmployeeNo, employee_name: visitorName, position: null, department: HOME_UNIT_PEA, role: "visitor", event: "login"
+    }]);
+    if (error) {
+      errEl.innerHTML = `<div class="form-error">บันทึกประวัติการเข้าชมไม่สำเร็จ: ${esc(error.message)}</div>`;
+      btn.disabled = false;
+      btn.textContent = "เข้าชมภาพรวม";
+      return;
+    }
+    btn.disabled = false;
+    btn.textContent = "เข้าชมภาพรวม";
+    await openVisitorOverview();
+  });
 
   /* ---------------- Password change (บังคับเปลี่ยนตอนแรกเข้า / เปลี่ยนเองภายหลังได้) ---------------- */
   function buildPasswordChangeHtml(forced) {
