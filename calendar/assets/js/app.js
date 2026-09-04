@@ -2916,7 +2916,7 @@
 
         <div class="ov-row3">
           <div class="ov-panel ov-cal-panel">
-            <div class="ov-panel-title">📅 ปฏิทินความพร้อมกำลังคน</div>
+            <div class="ov-panel-title">📅 Schedule</div>
             <div class="weekday-row">${WD_SHORT.map((w, i) => `<div class="wd ${i === 0 ? "sun" : i === 6 ? "sat" : ""}">${w}</div>`).join("")}</div>
             <div class="ov-cal-grid">
               ${cells.map(d => d ? ovCalCellHtml(d) : `<div class="ov-cal-cell empty"></div>`).join("")}
