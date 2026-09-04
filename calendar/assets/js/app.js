@@ -517,7 +517,7 @@
       const bounds = ganttPlanBounds(plan, monthStart, monthEnd);
       if (!bounds) return "";
       const barLabel = ganttBarLabel(plan);
-      return `<div class="gantt-bar" data-action="detail" data-id="${esc(plan.id)}" style="grid-column: ${bounds.startDay} / ${bounds.endDay + 1}; background:${color};" title="คลิกดูรายละเอียด: ${esc(dest)} (${esc(barLabel)})">${esc(barLabel)}</div>`;
+      return `<div class="gantt-bar" data-action="detail" data-id="${esc(plan.id)}" style="grid-column: ${bounds.startDay} / ${bounds.endDay + 1}; background:${color};" title="คลิกดูรายละเอียด: ${esc(dest)} (${esc(barLabel)})"></div>`;
     }).join("");
     return `
       <div class="gantt-row">
