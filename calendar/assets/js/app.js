@@ -2289,41 +2289,6 @@
     });
     return buckets;
   }
-  function isOTForEmployeeOnDate(empName, iso) {
-    if (leavesOnDate(empName, iso).length) return false;
-    const tasks = tasksForEmployeeOnDate(empName, iso);
-    if (!tasks.length) return false;
-    const dow = fromISO(iso).getDay();
-    return dow === 0 || dow === 6 || !!HOLIDAYS[iso] || tasks.some(t => t.appointTime && t.appointTime > OT_AFTER_HOURS_TIME);
-  }
-  // ประเด็นที่ต้องติดตาม — คำนวณจริงจากข้อมูล ไม่ใส่รายการหลอกๆ ถ้าไม่มีเงื่อนไขเข้าเกณฑ์ก็ปล่อยว่าง
-  function ovAlerts(year, month0) {
-    const alerts = [];
-    const minStaffing = ovMinStaffing();
-    const avail = ovMonthAvailability(year, month0);
-    const upcoming = avail.filter(d => d.iso >= TODAY_ISO);
-    const lowDay = upcoming.find(d => d.available <= minStaffing);
-    if (lowDay) {
-      const isBelow = lowDay.available < minStaffing;
-      alerts.push({
-        level: isBelow ? "danger" : "warn",
-        title: `${lowDay.day} ${THAI_MONTHS_ABBR[month0]}`,
-        desc: `กำลังคนพร้อมปฏิบัติงานเหลือ ${lowDay.available} คน ${isBelow ? "ต่ำกว่า" : "ใกล้"} Minimum Staffing (${minStaffing} คน)`
-      });
-    }
-    const window7 = upcoming.slice(0, 7);
-    if (window7.length) {
-      const otCounts = {};
-      EMPLOYEES.forEach(e => { otCounts[e.name] = 0; });
-      window7.forEach(d => { EMPLOYEES.forEach(e => { if (isOTForEmployeeOnDate(e.name, d.iso)) otCounts[e.name]++; }); });
-      const risky = Object.entries(otCounts).filter(([, c]) => c >= 2).sort((a, b) => b[1] - a[1])[0];
-      if (risky) {
-        alerts.push({ level: "info", title: "แนวโน้ม OT สะสม", desc: `พบ OT ${risky[0]} ${risky[1]} วัน ภายใน 7 วันข้างหน้า เสี่ยงต่อภาระงานสะสม` });
-      }
-    }
-    return alerts;
-  }
-
   function ovStatCardHtml(icon, cls, label, value) {
     return `<div class="ov-stat-card ${cls}"><div class="ov-stat-icon">${icon}</div><div><div class="ov-stat-value">${esc(value)}</div><div class="ov-stat-label">${esc(label)}</div></div></div>`;
   }
@@ -2344,10 +2309,6 @@
     if (d.travel) parts.push(`<span class="ov-cal-num travel">${d.travel}</span>`);
     if (d.leave) parts.push(`<span class="ov-cal-num leave">${d.leave}</span>`);
     return `<div class="ov-cal-cell ${d.iso === TODAY_ISO ? "is-today" : ""}"><div class="ov-cal-day">${d.day}</div><div class="ov-cal-nums">${parts.join("")}</div></div>`;
-  }
-  function ovAlertCardHtml(a) {
-    const icon = a.level === "danger" ? "⛔" : a.level === "warn" ? "⚠️" : "ℹ️";
-    return `<div class="ov-alert-card ${a.level}"><span class="ov-alert-icon">${icon}</span><div><b>${esc(a.title)}</b><div class="ov-alert-desc">${esc(a.desc)}</div></div></div>`;
   }
   function ovCapacityRowHtml(emp, year, month0, bizDaysTotal) {
     const stats = computeEmployeeMonthStats(emp.name, year, month0);
@@ -2426,7 +2387,6 @@
     const availPct = totalStaff ? Math.round(todayStatus.available.length / totalStaff * 100) : 0;
     const travelDays = countUniqueDays(monthTasks, t => t.travelOrder);
     const otDays = countUniqueDays(monthTasks, isOTTask);
-    const alerts = ovAlerts(year, month0);
     const minStaffing = ovMinStaffing();
     const avail = ovMonthAvailability(year, month0);
     const dist = ovWorkDistribution(monthTasks);
@@ -2468,26 +2428,19 @@
           ${ovStatCardHtml("✅", "avail", "ความพร้อมทีม (วันนี้)", `${availPct}%`)}
           ${ovStatCardHtml("✈️", "travel", "คำสั่งเดินทาง", `${travelDays} วัน`)}
           ${ovStatCardHtml("⚡", "ot", "OT", `${otDays} วัน`)}
-          ${ovStatCardHtml("🔔", "alert", "รายการต้องติดตาม", `${alerts.length} รายการ`)}
         </div>
 
-        <div class="ov-row2">
-          <div class="ov-panel">
-            <div class="ov-panel-title">👥 สถานะทีมวันนี้</div>
-            <div class="ov-status-legend">
-              <div class="ov-status-item"><span class="dot available"></span>พร้อมปฏิบัติงาน <b>${todayStatus.available.length} คน</b></div>
-              <div class="ov-status-item"><span class="dot out"></span>นอกพื้นที่ <b>${todayStatus.out.length} คน</b></div>
-              <div class="ov-status-item"><span class="dot travel"></span>คำสั่งเดินทาง <b>${todayStatus.travel.length} คน</b></div>
-              <div class="ov-status-item"><span class="dot leave"></span>ลา <b>${todayStatus.leave.length} คน</b></div>
-            </div>
-            <div class="ov-avail-head"><span>Team Availability</span><b>${availPct}%</b></div>
-            ${ovStatusBarHtml({ available: todayStatus.available.length, out: todayStatus.out.length, travel: todayStatus.travel.length, leave: todayStatus.leave.length }, totalStaff)}
-            <div class="ov-avail-note">ขั้นต่ำที่กำหนด: ${minStaffing} คน / ปัจจุบันพร้อม ${todayStatus.available.length} คน</div>
+        <div class="ov-panel">
+          <div class="ov-panel-title">👥 สถานะทีมวันนี้</div>
+          <div class="ov-status-legend ov-status-legend-row">
+            <div class="ov-status-item"><span class="dot available"></span>พร้อมปฏิบัติงาน <b>${todayStatus.available.length} คน</b></div>
+            <div class="ov-status-item"><span class="dot out"></span>นอกพื้นที่ <b>${todayStatus.out.length} คน</b></div>
+            <div class="ov-status-item"><span class="dot travel"></span>คำสั่งเดินทาง <b>${todayStatus.travel.length} คน</b></div>
+            <div class="ov-status-item"><span class="dot leave"></span>ลา <b>${todayStatus.leave.length} คน</b></div>
           </div>
-          <div class="ov-panel">
-            <div class="ov-panel-title">🔔 ประเด็นที่ต้องติดตาม</div>
-            ${alerts.length ? `<div class="ov-alert-list">${alerts.map(ovAlertCardHtml).join("")}</div>` : `<div class="ov-empty-note">ไม่มีประเด็นที่ต้องติดตามในขณะนี้</div>`}
-          </div>
+          <div class="ov-avail-head"><span>Team Availability</span><b>${availPct}%</b></div>
+          ${ovStatusBarHtml({ available: todayStatus.available.length, out: todayStatus.out.length, travel: todayStatus.travel.length, leave: todayStatus.leave.length }, totalStaff)}
+          <div class="ov-avail-note">ขั้นต่ำที่กำหนด: ${minStaffing} คน / ปัจจุบันพร้อม ${todayStatus.available.length} คน</div>
         </div>
 
         <div class="ov-row3">
