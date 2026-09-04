@@ -2805,6 +2805,20 @@
         </div>
       </div>`;
   }
+  // จอมือถือแคบเกินกว่าจะบีบตารางรายวันทั้งเดือนให้อ่านออก เลยแสดงเป็นการ์ดรายการแทน
+  // (สลับด้วย CSS media query เหมือนตารางระเบียบการลาที่ทำไว้ก่อนหน้า ไม่ใช้ JS ตรวจขนาดจอ)
+  function ovGanttMobileListHtml(groups) {
+    return `<div class="gantt-mobile-list">
+      ${groups.map((g, i) => {
+        const color = GANTT_COLORS[i % GANTT_COLORS.length];
+        const ranges = g.plans.map(plan => `<span class="gantt-mobile-range" style="background:${color}">${esc(ganttBarLabel(plan))}</span>`).join("");
+        return `<div class="gantt-mobile-item" style="--gantt-accent:${color}">
+          <div class="gantt-mobile-dest">${esc(g.key)}</div>
+          <div class="gantt-mobile-ranges">${ranges}</div>
+        </div>`;
+      }).join("")}
+    </div>`;
+  }
   function ovGanttPanelHtml(year, month0) {
     const monthStart = new Date(year, month0, 1);
     const monthEnd = new Date(year, month0 + 1, 0);
@@ -2815,6 +2829,7 @@
       <div class="ov-panel">
         <div class="ov-panel-title">🗺️ แผนปฏิบัติการ (คำสั่งเดินทางของทีม)</div>
         ${groups.length ? `
+          ${ovGanttMobileListHtml(groups)}
           <div class="gantt-wrap">
             <div class="gantt-header-row">
               <div class="gantt-row-num">ลำดับ</div>
