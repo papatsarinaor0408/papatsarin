@@ -909,8 +909,10 @@
   });
 
   /* ---------------- Card renderers ---------------- */
-  function areaClass(t) { return t.areaStatus === "in" ? "" : "out"; }
-  function areaLabel(t) { return t.areaStatus === "in" ? "ในพื้นที่" : "นอกพื้นที่"; }
+  // งานประเภทเฉพาะกิจนอกเขต (แข่งทักษะ/ประชุม/อบรมนอกเขต 2 ฯลฯ) ให้ขึ้นสีม่วง แยกจากงานในพื้นที่ (เขียว)
+  // และงานนอกพื้นที่แต่ยังอยู่ในเขตรับผิดชอบ (ส้ม) เพราะเป็นคนละลักษณะงานกัน ไม่ใช่แผนงานประจำ
+  function areaClass(t) { return t.workArea === OTHER_REGION_WORK_AREA ? "special" : (t.areaStatus === "in" ? "" : "out"); }
+  function areaLabel(t) { return t.workArea === OTHER_REGION_WORK_AREA ? "ภารกิจนอกเขต" : (t.areaStatus === "in" ? "ในพื้นที่" : "นอกพื้นที่"); }
 
   function miniCardHtml(t) {
     return `<div class="mini-card ${areaClass(t)}" data-task="${t.id}" title="${esc(t.title)} · ${esc(t.targetPEA)}">
@@ -925,7 +927,7 @@
       <div class="tc-title">${esc(t.title)}</div>
       <div class="tc-area">📍 ${esc(t.workArea)} · ${esc(t.targetPEA)}</div>
       <div class="tc-badges">
-        <span class="pill ${t.areaStatus === "in" ? "pill-in" : "pill-out"}">${areaLabel(t)}</span>
+        <span class="pill ${areaClass(t) === "special" ? "pill-special" : (t.areaStatus === "in" ? "pill-in" : "pill-out")}">${areaLabel(t)}</span>
         ${t.priority === "ด่วน" ? `<span class="pill pill-urgent">ด่วน</span>` : ""}
         ${t.circuits.length ? `<span class="pill pill-circuit">${t.circuits.length} วงจร</span>` : ""}
       </div>
@@ -1130,7 +1132,7 @@
           <div class="modal-id">รหัสงาน ${esc(t.id)}</div>
           <h2>${esc(t.title)}</h2>
           <div class="modal-badges">
-            <span class="pill ${t.areaStatus === "in" ? "pill-in" : "pill-out"}">${areaLabel(t)}</span>
+            <span class="pill ${areaClass(t) === "special" ? "pill-special" : (t.areaStatus === "in" ? "pill-in" : "pill-out")}">${areaLabel(t)}</span>
             ${t.priority === "ด่วน" ? `<span class="pill pill-urgent">งานด่วน</span>` : ""}
             <span class="status-pill status-${esc(t.status)}">${esc(t.status)}</span>
           </div>
