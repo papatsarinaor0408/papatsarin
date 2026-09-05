@@ -2888,13 +2888,8 @@
   function ovDateWorkListHtml(iso) {
     const d = fromISO(iso);
     const tasks = TASKS.filter(t => t.date === iso);
-    const byEmployee = {};
-    tasks.forEach(t => {
-      (t.teamMembers && t.teamMembers.length ? t.teamMembers : ["ยังไม่ระบุผู้ปฏิบัติงาน"]).forEach(m => {
-        (byEmployee[m] = byEmployee[m] || []).push(t);
-      });
-    });
-    const names = Object.keys(byEmployee).sort();
+    // จัดกลุ่มตามงาน (คนที่ไปงานเดียวกันจะได้อยู่รวมกัน) แทนกลุ่มตามรายชื่อคน ซึ่งพองาน
+    // เดียวกันมีคนไปหลายคน จะเห็นเป็นบล็อกซ้ำๆ กระจายกันจนดูไม่ออกว่าใครไปงานเดียวกันบ้าง
     return `
       <div class="modal-head">
         <div>
@@ -2904,13 +2899,14 @@
         <button class="modal-close" id="ov-modal-close-btn">✕</button>
       </div>
       <div class="modal-body">
-        ${names.length ? names.map(name => `
-          <div class="detail-section">
-            <div class="detail-section-title">${esc(name)}</div>
-            <div class="detail-list">
-              ${byEmployee[name].map(t => `<div class="ov-work-item"><b>${esc(t.workArea || "-")}</b><span>${esc(t.title)}</span></div>`).join("")}
-            </div>
-          </div>`).join("") : `<div class="empty-state">ไม่มีงานในวันนี้</div>`}
+        ${tasks.length ? tasks.map(t => {
+          const members = t.teamMembers && t.teamMembers.length ? t.teamMembers : ["ยังไม่ระบุผู้ปฏิบัติงาน"];
+          return `
+            <div class="detail-section">
+              <div class="detail-section-title"><b>${esc(t.workArea || "-")}</b> ${esc(t.title)}</div>
+              <div class="todo-assignee-tags">${members.map(n => `<span class="todo-assignee-tag">👤 ${esc(n)}</span>`).join("")}</div>
+            </div>`;
+        }).join("") : `<div class="empty-state">ไม่มีงานในวันนี้</div>`}
       </div>`;
   }
   function openOvDateModal(iso) {
