@@ -122,6 +122,9 @@ button, input, select, textarea { font-family: inherit; }
 
 /* ---------------- Role gating: reviewer accounts cannot see edit/admin controls ---------------- */
 body.role-reviewer .admin-only { display: none !important; }
+/* หน้าภาพรวม (Visitor) ไม่มี CURRENT_USER ให้เช็กสิทธิ์แบบหน้าแอปหลัก เผื่อมีการ reuse markup ที่มี
+   ปุ่มแก้ไข/ลบ (class admin-only) มาแสดงในหน้านี้ ให้ซ่อนไว้เสมอกันปุ่มค้างที่กดแล้วไม่ทำงานจริง */
+#overview-page .admin-only { display: none !important; }
 
 /* ---------------- Login screen ---------------- */
 .login-screen {

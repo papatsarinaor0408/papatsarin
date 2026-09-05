@@ -2926,6 +2926,20 @@
         ` : `<div class="gantt-empty">ยังไม่มีแผนงานในเดือนนี้</div>`}
       </div>`;
   }
+  function ovTodoPanelHtml(year, month0) {
+    const month = month0 + 1;
+    const items = MONTHLY_TODOS
+      .filter(t => t.target_month === month && t.target_year === year)
+      .slice()
+      .sort((a, b) => (a.done === b.done ? a.created_at.localeCompare(b.created_at) : a.done ? 1 : -1));
+    return `
+      <div class="ov-panel">
+        <div class="ov-panel-title">📌 งานที่ต้องทำเดือนนี้ (${THAI_MONTHS[month0]} พ.ศ. ${beYear(new Date(year, month0, 1))})</div>
+        <div class="todo-list">
+          ${items.length ? items.map(todoRowHtml).join("") : `<div class="todo-empty">ยังไม่มีรายการงานที่ต้องทำเดือนนี้</div>`}
+        </div>
+      </div>`;
+  }
   function overviewPageHtml(year, month0) {
     const bizDays = businessDaysProgress(year, month0);
     const monthTasks = tasksInMonth(year, month0);
@@ -2978,6 +2992,8 @@
         </div>
 
         ${ovGanttPanelHtml(year, month0)}
+
+        ${ovTodoPanelHtml(year, month0)}
 
         <div class="ov-panel">
           <div class="ov-panel-title">👥 สถานะทีมวันนี้</div>
@@ -3050,7 +3066,7 @@
     overviewPageEl.classList.remove("hidden");
     overviewPageBodyEl.innerHTML = `<div class="empty-state">กำลังโหลดข้อมูลภาพรวม...</div>`;
     window.scrollTo(0, 0);
-    await Promise.all([loadTasks(), loadPeopleData(), loadTeamPlans()]);
+    await Promise.all([loadTasks(), loadPeopleData(), loadTeamPlans(), loadMonthlyTodos()]);
     ovState.cursor = new Date(TODAY);
     renderOverviewPage();
   }
