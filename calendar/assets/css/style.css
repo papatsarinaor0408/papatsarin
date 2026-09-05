@@ -620,6 +620,20 @@ body.role-reviewer .admin-only { display: none !important; }
   border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; background: var(--bg);
 }
 .todo-row.done { background: var(--green-bg); border-color: var(--green-border); }
+.todo-group { border: 1px solid var(--border-soft); border-radius: var(--radius-sm); overflow: hidden; }
+.todo-group-toggle {
+  width: 100%; display: flex; align-items: center; gap: 8px; padding: 9px 12px;
+  background: var(--pea-purple-light); border: none; cursor: pointer; font-family: inherit; text-align: left;
+}
+.todo-group-caret { font-size: 11px; color: var(--pea-purple); transition: transform .15s; }
+.todo-group:not(.open) .todo-group-caret { transform: rotate(-90deg); }
+.todo-group-label { font-size: 13px; font-weight: 700; color: var(--ink); }
+.todo-group-count {
+  margin-left: auto; font-size: 11px; font-weight: 700; color: var(--pea-purple);
+  background: var(--pea-purple-soft); border-radius: 999px; padding: 1px 8px;
+}
+.todo-group-body { display: none; flex-direction: column; gap: 6px; padding: 8px; }
+.todo-group.open .todo-group-body { display: flex; }
 .todo-row-main { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
 .todo-status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .todo-status-dot.done { background: var(--green-dot); }

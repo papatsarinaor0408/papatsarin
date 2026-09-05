@@ -3420,18 +3420,34 @@
       renderTodoPanel();
     });
   }
+  // แยกเป็น 2 กลุ่มพับเก็บได้ (รอดำเนินการ/ดำเนินการแล้ว) กันรายการที่เสร็จแล้วสะสมยาวจนต้องเลื่อนดูเยอะ
+  function todoGroupHtml(key, label, items, openByDefault) {
+    if (!items.length) return "";
+    return `
+      <div class="todo-group ${openByDefault ? "open" : ""}" data-group="${key}">
+        <button type="button" class="todo-group-toggle">
+          <span class="todo-group-caret">▾</span>
+          <span class="todo-group-label">${esc(label)}</span>
+          <span class="todo-group-count">${items.length}</span>
+        </button>
+        <div class="todo-group-body">${items.map(todoRowHtml).join("")}</div>
+      </div>`;
+  }
   function renderTodoPanel() {
     const year = state.cursor.getFullYear(), month = state.cursor.getMonth() + 1;
     todoMonthLabelEl.textContent = `(${THAI_MONTHS[month - 1]} พ.ศ. ${beYear(state.cursor)})`;
-    const items = MONTHLY_TODOS
-      .filter(t => t.target_month === month && t.target_year === year)
-      .slice()
-      .sort((a, b) => (a.done === b.done ? a.created_at.localeCompare(b.created_at) : a.done ? 1 : -1));
-    todoListEl.innerHTML = items.length ? items.map(todoRowHtml).join("")
+    const items = MONTHLY_TODOS.filter(t => t.target_month === month && t.target_year === year);
+    const pending = items.filter(t => !t.done).slice().sort((a, b) => a.created_at.localeCompare(b.created_at));
+    const done = items.filter(t => t.done).slice().sort((a, b) => (b.done_date || "").localeCompare(a.done_date || ""));
+    todoListEl.innerHTML = items.length
+      ? todoGroupHtml("pending", "รอดำเนินการ", pending, true) + todoGroupHtml("done", "ดำเนินการแล้ว", done, false)
       : `<div class="todo-empty">ยังไม่มีรายการงานที่ต้องทำเดือนนี้</div>`;
     bindTodoPanelEvents(year, month);
   }
   function bindTodoPanelEvents(year, month) {
+    todoListEl.querySelectorAll(".todo-group-toggle").forEach(btn => {
+      btn.addEventListener("click", () => btn.closest(".todo-group").classList.toggle("open"));
+    });
     todoListEl.querySelectorAll(".todo-mark-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         if (!isAdmin()) return;
