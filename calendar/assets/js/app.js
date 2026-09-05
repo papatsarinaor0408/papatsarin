@@ -2683,7 +2683,8 @@
     // กันสับสนว่าเป็นสถานะที่ยืนยันแล้ว
     const isFuture = d.iso > TODAY_ISO;
     const parts = [];
-    if (d.available) parts.push(`<span class="ov-cal-num ${isFuture ? "future" : "available"}">${d.available}</span>`);
+    // วันที่มีทั้งโอที (ม่วง) และพร้อมปฏิบัติงาน (เขียว) พร้อมกัน ให้โชว์แค่ม่วง กันตัวเลขซ้อนกันแน่นเกินไป
+    if (d.available && !d.ot) parts.push(`<span class="ov-cal-num ${isFuture ? "future" : "available"}">${d.available}</span>`);
     if (d.out) parts.push(`<span class="ov-cal-num out">${d.out}</span>`);
     if (d.travel) parts.push(`<span class="ov-cal-num travel">${d.travel}</span>`);
     if (d.leave) parts.push(`<span class="ov-cal-num leave">${d.leave}</span>`);
