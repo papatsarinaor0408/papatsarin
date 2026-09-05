@@ -750,9 +750,11 @@ body.role-reviewer .admin-only { display: none !important; }
 
 .day-plan-badges { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 3px; }
 .day-plan-badge {
-  font-size: 9.5px; color: var(--orange); background: var(--orange-bg); font-weight: 600;
+  font-size: 9.5px; font-weight: 600;
   border-radius: 999px; padding: 1px 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
 }
+.day-plan-badge.in { color: var(--green); background: var(--green-bg); }
+.day-plan-badge.out { color: var(--orange); background: var(--orange-bg); }
 .day-cards { display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
 .mini-card {
   font-size: 10.5px; padding: 3px 6px; border-radius: 6px; border-left: 3px solid var(--green-dot);

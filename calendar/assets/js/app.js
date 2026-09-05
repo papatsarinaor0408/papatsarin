@@ -967,7 +967,7 @@
           </div>
         </div>
         ${holiday ? `<div class="holiday-name">${esc(holiday)}</div>` : ""}
-        ${dayPlans.length ? `<div class="day-plan-badges">${dayPlans.map(p => `<span class="day-plan-badge" title="แผนงานทีม: ${esc(p.target_pea || p.work_area || p.title || "")}">🧭 ${esc(p.target_pea || p.work_area || p.title || "แผนงานทีม")}</span>`).join("")}</div>` : ""}
+        ${dayPlans.length ? `<div class="day-plan-badges">${dayPlans.map(p => `<span class="day-plan-badge ${p.area_status === "out" ? "out" : "in"}" title="แผนงานทีม: ${esc(p.target_pea || p.work_area || p.title || "")}">🧭 ${esc(p.target_pea || p.work_area || p.title || "แผนงานทีม")}</span>`).join("")}</div>` : ""}
         <div class="day-cards">
           ${shown.map(miniCardHtml).join("")}
           ${more > 0 ? `<div class="mini-more">+${more} เพิ่มเติม</div>` : ""}
