@@ -453,6 +453,11 @@
   }
 
   /* ---------------- Team plan Gantt (แผนงานประจำเดือน / คำสั่งเดินทางของทีม) ---------------- */
+  // แผนงานทีมที่ครอบคลุมวันนั้น (ไม่ว่าจะมีงานรายวันของใครถูกกรอกไว้ในวันนั้นจริงหรือยัง) — ใช้โชว์
+  // เป็นป้ายในช่องวันของปฏิทินหลัก ให้เห็นว่าวันนั้นมีแผนเดินทางทีมอยู่แล้ว แม้ยังไม่มีงานรายวัน
+  function plansForDate(iso) {
+    return TEAM_PLANS.filter(p => iso >= p.date_from && iso <= p.date_to);
+  }
   const GANTT_COLORS = ["#5EB6A0", "#3081AB", "#EBB348"];
   function ganttPlanBounds(plan, monthStart, monthEnd) {
     const from = fromISO(plan.date_from), to = fromISO(plan.date_to);
@@ -952,6 +957,7 @@
       const shown = dayTasks.slice(0, 3);
       const more = dayTasks.length - shown.length;
       const isOTDay = dayTasks.length > 0 && (dow === 0 || dow === 6 || !!holiday);
+      const dayPlans = plansForDate(iso);
       html += `<div class="${classes.join(" ")}" data-date="${iso}">
         <div class="day-cell-head">
           <span class="day-num">${d.getDate()}</span>
@@ -961,6 +967,7 @@
           </div>
         </div>
         ${holiday ? `<div class="holiday-name">${esc(holiday)}</div>` : ""}
+        ${dayPlans.length ? `<div class="day-plan-badges">${dayPlans.map(p => `<span class="day-plan-badge" title="แผนงานทีม: ${esc(p.target_pea || p.work_area || p.title || "")}">🧭 ${esc(p.target_pea || p.work_area || p.title || "แผนงานทีม")}</span>`).join("")}</div>` : ""}
         <div class="day-cards">
           ${shown.map(miniCardHtml).join("")}
           ${more > 0 ? `<div class="mini-more">+${more} เพิ่มเติม</div>` : ""}
