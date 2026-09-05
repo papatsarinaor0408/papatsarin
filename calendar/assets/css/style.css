@@ -1198,6 +1198,7 @@ body.role-reviewer .admin-only { display: none !important; }
 .dot.out, .ov-cal-num.out { background: #2554c7; }
 .dot.travel, .ov-cal-num.travel { background: var(--orange); }
 .dot.leave, .ov-cal-num.leave { background: var(--text-muted); }
+.dot.ot, .ov-cal-num.ot { background: var(--pea-purple); }
 .ov-cal-num.future { background: var(--text-faint); }
 .ov-avail-head { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
 .ov-avail-head b { color: var(--ink); font-size: 14px; }

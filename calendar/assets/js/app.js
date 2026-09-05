@@ -2631,6 +2631,18 @@
   function tasksInMonth(year, month0) {
     return TASKS.filter(t => { const d = fromISO(t.date); return d.getFullYear() === year && d.getMonth() === month0; });
   }
+  // นับ "คนที่มีชื่อทำงานวันนั้น" เฉพาะวันหยุดราชการ/วันหยุดนักขัตฤกษ์ (เสาร์-อาทิตย์ หรืออยู่ใน HOLIDAYS)
+  // เป็นตัวเลขโอทีของวันนั้นในปฏิทินภาพรวม — ไม่รวมเงื่อนไข "นัดหมายหลังเวลา" ของ isOTTask เพราะอันนั้นวัดโอทีระดับงาน ไม่ใช่ระดับวันหยุด
+  function isHolidayDate(iso) {
+    const dow = fromISO(iso).getDay();
+    return dow === 0 || dow === 6 || !!HOLIDAYS[iso];
+  }
+  function ovOTCountForDate(iso) {
+    if (!isHolidayDate(iso)) return 0;
+    const names = new Set();
+    TASKS.filter(t => t.date === iso).forEach(t => (t.teamMembers || []).forEach(m => names.add(m)));
+    return names.size;
+  }
   function ovMonthAvailability(year, month0) {
     const daysInMonth = new Date(year, month0 + 1, 0).getDate();
     const out = [];
@@ -2638,7 +2650,7 @@
       const iso = `${year}-${String(month0 + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       const dow = new Date(year, month0, day).getDay();
       const b = ovTeamStatusForDate(iso);
-      out.push({ iso, day, dow, available: b.available.length, out: b.out.length, travel: b.travel.length, leave: b.leave.length });
+      out.push({ iso, day, dow, available: b.available.length, out: b.out.length, travel: b.travel.length, leave: b.leave.length, ot: ovOTCountForDate(iso) });
     }
     return out;
   }
@@ -2675,6 +2687,7 @@
     if (d.out) parts.push(`<span class="ov-cal-num out">${d.out}</span>`);
     if (d.travel) parts.push(`<span class="ov-cal-num travel">${d.travel}</span>`);
     if (d.leave) parts.push(`<span class="ov-cal-num leave">${d.leave}</span>`);
+    if (d.ot) parts.push(`<span class="ov-cal-num ot" title="โอที (วันหยุดราชการ/นักขัตฤกษ์)">⚡${d.ot}</span>`);
     return `<div class="ov-cal-cell ${d.iso === TODAY_ISO ? "is-today" : ""}" data-iso="${d.iso}"><div class="ov-cal-day">${d.day}</div><div class="ov-cal-nums">${parts.join("")}</div></div>`;
   }
   function ovCapacityRowHtml(emp, year, month0, bizDaysTotal) {
@@ -2959,6 +2972,7 @@
               <div class="ov-status-item"><span class="dot out"></span>นอกพื้นที่</div>
               <div class="ov-status-item"><span class="dot travel"></span>คำสั่งเดินทาง</div>
               <div class="ov-status-item"><span class="dot leave"></span>ลา</div>
+              <div class="ov-status-item"><span class="dot ot"></span>โอที (วันหยุดราชการ/นักขัตฤกษ์)</div>
             </div>
           </div>
           <div class="ov-side-col">
