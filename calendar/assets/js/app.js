@@ -1721,8 +1721,9 @@
 
   // งานที่กรอกในปฏิทินแล้วออกนอกพื้นที่ต้นสังกัด (areaStatus "out") ให้ขึ้นในตารางแผนงานประจำเดือนด้วย
   // โดยไม่ต้องมากรอกซ้ำ — เติมแค่ตอนยังไม่มีแผนงานปลายทางเดียวกันครอบคลุมวันนั้นอยู่แล้ว กันสร้างซ้ำซ้อน
+  // ยกเว้นภารกิจนอกเขต (สีม่วง) เพราะมักเป็นคำสั่งเฉพาะบุคคล (เช่น หัวหน้าไปประชุมคนเดียว) ไม่ใช่แผนงานทั้งทีม
   async function ensureTeamPlanForTask(row) {
-    if (row.area_status !== "out" || !row.target_pea) return;
+    if (row.area_status !== "out" || !row.target_pea || row.work_area === OTHER_REGION_WORK_AREA) return;
     const covered = TEAM_PLANS.some(p => p.target_pea === row.target_pea && row.task_date >= p.date_from && row.task_date <= p.date_to);
     if (covered) return;
     const planRow = {
