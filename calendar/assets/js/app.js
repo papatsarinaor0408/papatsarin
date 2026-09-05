@@ -2675,7 +2675,7 @@
     if (d.out) parts.push(`<span class="ov-cal-num out">${d.out}</span>`);
     if (d.travel) parts.push(`<span class="ov-cal-num travel">${d.travel}</span>`);
     if (d.leave) parts.push(`<span class="ov-cal-num leave">${d.leave}</span>`);
-    return `<div class="ov-cal-cell ${d.iso === TODAY_ISO ? "is-today" : ""}"><div class="ov-cal-day">${d.day}</div><div class="ov-cal-nums">${parts.join("")}</div></div>`;
+    return `<div class="ov-cal-cell ${d.iso === TODAY_ISO ? "is-today" : ""}" data-iso="${d.iso}"><div class="ov-cal-day">${d.day}</div><div class="ov-cal-nums">${parts.join("")}</div></div>`;
   }
   function ovCapacityRowHtml(emp, year, month0, bizDaysTotal) {
     const stats = computeEmployeeMonthStats(emp.name, year, month0);
@@ -2777,6 +2777,39 @@
   }
   function openOvEmployeeModal(employeeName, year, month0) {
     ovModalBodyEl.innerHTML = ovEmployeeWorkListHtml(employeeName, year, month0);
+    ovModalBackdropEl.classList.add("open");
+    $("#ov-modal-close-btn").addEventListener("click", closeOvModal);
+  }
+  function ovDateWorkListHtml(iso) {
+    const d = fromISO(iso);
+    const tasks = TASKS.filter(t => t.date === iso);
+    const byEmployee = {};
+    tasks.forEach(t => {
+      (t.teamMembers && t.teamMembers.length ? t.teamMembers : ["ยังไม่ระบุผู้ปฏิบัติงาน"]).forEach(m => {
+        (byEmployee[m] = byEmployee[m] || []).push(t);
+      });
+    });
+    const names = Object.keys(byEmployee).sort();
+    return `
+      <div class="modal-head">
+        <div>
+          <div class="modal-id">พื้นที่ปฏิบัติงานวันนี้</div>
+          <h2>${WD_FULL[d.getDay()]} ${d.getDate()} ${THAI_MONTHS[d.getMonth()]} พ.ศ. ${beYear(d)}</h2>
+        </div>
+        <button class="modal-close" id="ov-modal-close-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        ${names.length ? names.map(name => `
+          <div class="detail-section">
+            <div class="detail-section-title">${esc(name)}</div>
+            <div class="detail-list">
+              ${byEmployee[name].map(t => `<div class="ov-work-item"><b>${esc(t.workArea || "-")}</b><span>${esc(t.title)}</span></div>`).join("")}
+            </div>
+          </div>`).join("") : `<div class="empty-state">ไม่มีงานในวันนี้</div>`}
+      </div>`;
+  }
+  function openOvDateModal(iso) {
+    ovModalBodyEl.innerHTML = ovDateWorkListHtml(iso);
     ovModalBackdropEl.classList.add("open");
     $("#ov-modal-close-btn").addEventListener("click", closeOvModal);
   }
@@ -2961,6 +2994,9 @@
     $("#ov-exit-btn").addEventListener("click", closeOverviewPage);
     overviewPageBodyEl.querySelectorAll(".ov-summary-row").forEach(row => {
       row.addEventListener("click", () => openOvEmployeeModal(row.getAttribute("data-employee"), ovState.cursor.getFullYear(), ovState.cursor.getMonth()));
+    });
+    overviewPageBodyEl.querySelectorAll(".ov-cal-cell[data-iso]").forEach(cell => {
+      cell.addEventListener("click", () => openOvDateModal(cell.getAttribute("data-iso")));
     });
   }
   async function openVisitorOverview() {

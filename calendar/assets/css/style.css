@@ -1212,8 +1212,10 @@ body.role-reviewer .admin-only { display: none !important; }
 .ov-side-col { display: flex; flex-direction: column; gap: 16px; }
 
 .ov-cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-bottom: 12px; }
-.ov-cal-cell { min-height: 58px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 5px; background: var(--white); }
-.ov-cal-cell.empty { visibility: hidden; border: none; }
+.ov-cal-cell { min-height: 58px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 5px; background: var(--white); cursor: pointer; }
+.ov-cal-cell:hover { background: var(--pea-purple-light); }
+.ov-cal-cell.empty { visibility: hidden; border: none; cursor: default; }
+.ov-cal-cell.empty:hover { background: var(--white); }
 .ov-cal-cell.is-today { box-shadow: 0 0 0 2px var(--accent) inset; }
 .ov-cal-day { font-size: 11px; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
 .ov-cal-nums { display: flex; flex-wrap: wrap; gap: 3px; }
