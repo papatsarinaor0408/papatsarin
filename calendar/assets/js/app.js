@@ -3308,9 +3308,59 @@
           ${item.done
             ? `<button type="button" class="btn-secondary todo-undo-btn">ยกเลิกเครื่องหมาย</button>`
             : `<button type="button" class="btn-primary todo-mark-btn">ดำเนินการแล้ว</button>`}
+          <button type="button" class="btn-secondary todo-edit-btn" title="แก้ไขรายการ">✎</button>
           <button type="button" class="btn-danger todo-del-btn" title="ลบรายการ">🗑</button>
         </div>
       </div>`;
+  }
+  // แก้ไขชื่องาน/คนที่มอบหมายของรายการที่บันทึกไปแล้ว เผื่อกรอกผิดตอนแรก
+  function openTodoEditModal(id) {
+    const item = MONTHLY_TODOS.find(t => t.id === id);
+    if (!item) return;
+    const assignees = new Set(item.assignees || []);
+    modalBodyEl.innerHTML = `
+      <div class="modal-head">
+        <div><div class="modal-id">แก้ไขงานที่ต้องทำเดือนนี้</div><h2>แก้ไขรายการ</h2></div>
+        <button class="modal-close" id="modal-close-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-field">
+          <label>ชื่องาน <span class="req">*</span></label>
+          <input type="text" id="todo-edit-title-input" value="${esc(item.title)}" required />
+        </div>
+        <div class="form-field">
+          <label>มอบหมายให้ (เลือกได้หลายคน ไม่บังคับ)</label>
+          <div class="todo-assignee-picker">
+            ${EMPLOYEES.map(e => `<label class="check-option"><input type="checkbox" name="editAssignee" value="${esc(e.name)}" ${assignees.has(e.name) ? "checked" : ""} /> ${esc(e.name)}</label>`).join("") || `<span class="form-hint">ยังไม่มีรายชื่อพนักงานในระบบ</span>`}
+          </div>
+        </div>
+        <div id="todo-edit-error"></div>
+        <div class="form-actions">
+          <div class="form-actions-right"><button type="button" class="btn-primary" id="todo-edit-save-btn">💾 บันทึก</button></div>
+        </div>
+      </div>`;
+    modalBackdropEl.classList.add("open");
+    $("#modal-close-btn").addEventListener("click", closeModal);
+    $("#todo-edit-save-btn").addEventListener("click", async () => {
+      const title = $("#todo-edit-title-input").value.trim();
+      if (!title) {
+        $("#todo-edit-error").innerHTML = `<div class="form-error">กรุณากรอกชื่องาน</div>`;
+        return;
+      }
+      const newAssignees = Array.from(modalBodyEl.querySelectorAll('input[name=editAssignee]:checked')).map(cb => cb.value);
+      const btn = $("#todo-edit-save-btn");
+      btn.disabled = true;
+      const { error } = await CAL_SB.from("calendar_monthly_todos")
+        .update({ title, assignees: newAssignees, updated_at: new Date().toISOString() }).eq("id", id);
+      if (error) {
+        $("#todo-edit-error").innerHTML = `<div class="form-error">บันทึกไม่สำเร็จ: ${esc(error.message)}</div>`;
+        btn.disabled = false;
+        return;
+      }
+      closeModal();
+      await loadMonthlyTodos();
+      renderTodoPanel();
+    });
   }
   // กดดำเนินการแล้ว เปิดป๊อปอัพให้เลือกวันที่เสร็จก่อน แทนที่จะมีช่องวันที่ค้างโชว์ในแถวตลอด (ผู้ใช้งานสับสน)
   function openTodoDoneModal(id) {
@@ -3366,6 +3416,13 @@
         if (!isAdmin()) return;
         const id = btn.closest(".todo-row").getAttribute("data-id");
         openTodoDoneModal(id);
+      });
+    });
+    todoListEl.querySelectorAll(".todo-edit-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        if (!isAdmin()) return;
+        const id = btn.closest(".todo-row").getAttribute("data-id");
+        openTodoEditModal(id);
       });
     });
     todoListEl.querySelectorAll(".todo-undo-btn").forEach(btn => {
