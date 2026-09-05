@@ -1669,9 +1669,32 @@
     }
 
     await loadTasks();
+    await ensureTeamPlanForTask(row);
     state.selectedDate = fromISO(date);
     closeModal();
     renderAll();
+  }
+
+  // งานที่กรอกในปฏิทินแล้วออกนอกพื้นที่ต้นสังกัด (areaStatus "out") ให้ขึ้นในตารางแผนงานประจำเดือนด้วย
+  // โดยไม่ต้องมากรอกซ้ำ — เติมแค่ตอนยังไม่มีแผนงานปลายทางเดียวกันครอบคลุมวันนั้นอยู่แล้ว กันสร้างซ้ำซ้อน
+  async function ensureTeamPlanForTask(row) {
+    if (row.area_status !== "out" || !row.target_pea) return;
+    const covered = TEAM_PLANS.some(p => p.target_pea === row.target_pea && row.task_date >= p.date_from && row.task_date <= p.date_to);
+    if (covered) return;
+    const planRow = {
+      title: row.target_pea,
+      date_from: row.task_date,
+      date_to: row.task_date,
+      work_area: row.work_area || null,
+      target_pea: row.target_pea,
+      area_status: "out",
+      coordinator: row.coordinator || null,
+      coordinator_phone: row.coordinator_phone || null,
+      budget_ref_status: "none",
+      budget_ref_no: null
+    };
+    const { error } = await CAL_SB.from("calendar_team_plans").insert([planRow]);
+    if (!error) await loadTeamPlans();
   }
 
   async function deleteTask(t) {
