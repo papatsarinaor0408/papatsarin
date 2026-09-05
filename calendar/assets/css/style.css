@@ -65,6 +65,11 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* พื้นหลังลายหกเหลี่ยมจางๆ เฉพาะหน้าแอปหลังล็อกอิน (ไม่ใช้กับหน้าล็อกอิน) */
+#app-root, #overview-page {
+  background: var(--bg) url("../img/app-bg.jpg") top center / cover no-repeat fixed;
+}
+
 button, input, select, textarea { font-family: inherit; }
 
 .hidden { display: none !important; }
@@ -1155,7 +1160,7 @@ body.role-reviewer .admin-only { display: none !important; }
 }
 
 /* ==================== Visitor Operations Overview (read-only dashboard) ==================== */
-#overview-page { min-height: 100vh; background: var(--bg, #f8f6fc); }
+#overview-page { min-height: 100vh; }
 .ov-header { background: var(--pea-purple); color: #fff; padding: 14px 24px; }
 .ov-header-inner { max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .ov-header .ov-brand { display: flex; align-items: center; gap: 12px; }
