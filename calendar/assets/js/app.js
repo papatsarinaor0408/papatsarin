@@ -337,6 +337,7 @@
   const userNameLabelEl = $("#user-name-label");
   const changePasswordBtnEl = $("#change-password-btn");
   const logoutBtnEl = $("#logout-btn");
+  const viewOverviewBtnEl = $("#view-overview-btn");
   const visitorToggleBtnEl = $("#visitor-toggle-btn");
   const visitorFormEl = $("#visitor-form");
   const overviewPageEl = $("#overview-page");
@@ -3023,12 +3024,25 @@
     ovState.cursor = new Date(TODAY);
     renderOverviewPage();
   }
+  // ผู้ล็อกอินอยู่แล้ว (แอดมิน/ผู้ดูข้อมูล) กดดูมุมมอง Visitor ได้โดยไม่ต้องออกจากระบบ — ใช้ข้อมูลที่โหลดไว้แล้วจาก init()
+  function openOverviewFromApp() {
+    appRootEl.classList.add("hidden");
+    overviewPageEl.classList.remove("hidden");
+    window.scrollTo(0, 0);
+    ovState.cursor = new Date(TODAY);
+    renderOverviewPage();
+  }
   function closeOverviewPage() {
     overviewPageEl.classList.add("hidden");
-    loginScreenEl.classList.remove("hidden");
-    visitorFormEl.classList.add("hidden");
-    visitorFormEl.reset();
+    if (CURRENT_USER) {
+      appRootEl.classList.remove("hidden");
+    } else {
+      loginScreenEl.classList.remove("hidden");
+      visitorFormEl.classList.add("hidden");
+      visitorFormEl.reset();
+    }
   }
+  if (viewOverviewBtnEl) viewOverviewBtnEl.addEventListener("click", openOverviewFromApp);
   visitorToggleBtnEl.addEventListener("click", () => { visitorFormEl.classList.toggle("hidden"); });
   visitorFormEl.addEventListener("submit", async (ev) => {
     ev.preventDefault();
