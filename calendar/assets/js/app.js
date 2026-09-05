@@ -16,6 +16,9 @@
   const HOME_UNIT_PEA_VARIANTS = ["กฟฟ.บางปะกง", "PEA อำเภอบางปะกง"];
   const HOME_UNIT_PEA = HOME_UNIT_PEA_VARIANTS[0];
   function isHomeUnitPea(targetPea) { return HOME_UNIT_PEA_VARIANTS.includes((targetPea || "").trim()); }
+  // ตัวเลือกพิเศษสำหรับงานที่ไปพื้นที่นอกเขตรับผิดชอบ (แต่ยังเป็น กฟภ. เหมือนกัน) ซึ่งไม่อยู่ในรายชื่อ
+  // จังหวัด/การไฟฟ้าปลายทางที่ตั้งไว้ล่วงหน้า — เลือกอันนี้แล้วจะมีช่องให้พิมพ์ชื่อสถานที่เอง
+  const OTHER_REGION_WORK_AREA = "นอกเขต กฟภ. ภาคกลางเขต 2";
   const LEAVE_TYPES = ["ลาป่วย", "ลากิจส่วนตัว", "ลาพักผ่อน", "ลาคลอดบุตร", "ลาอุปสมบท", "อื่นๆ"];
   // งานที่มีเวลานัดหมายหน้างาน (appointTime) ตั้งแต่เวลานี้เป็นต้นไป นับเป็นโอที แม้จะเป็นวันทำงานปกติ
   const OT_AFTER_HOURS_TIME = "16:30";
@@ -1285,7 +1288,8 @@
     };
     // พื้นที่ปฏิบัติงานเป็นดรอปดาวเลือกอย่างเดียว (ห้ามพิมพ์เอง กันเลือกผิด) — ถ้างานเดิมมีค่าที่ไม่อยู่ใน
     // รายการปัจจุบันแล้ว (เช่นตัวเลือกถูกลบไปทีหลัง) ให้แทรกไว้เป็นตัวเลือกพิเศษ กันข้อมูลเดิมหาย
-    const workAreaOptsForSelect = t.workArea && !WORK_AREAS.includes(t.workArea) ? [...WORK_AREAS, t.workArea] : WORK_AREAS;
+    const workAreaBase = t.workArea && !WORK_AREAS.includes(t.workArea) ? [...WORK_AREAS, t.workArea] : WORK_AREAS;
+    const workAreaOptsForSelect = workAreaBase.includes(OTHER_REGION_WORK_AREA) ? workAreaBase : [...workAreaBase, OTHER_REGION_WORK_AREA];
     const targetPEAOpts = combinedOptions(TARGET_PEA_OFFICES, x => x.targetPEA);
     const targetPeaFilteredOpts = targetPeaOptionsForWorkArea(targetPEAOpts, t.workArea);
     const targetPeaOptsForSelect = t.targetPEA && !targetPeaFilteredOpts.includes(t.targetPEA)
@@ -1355,13 +1359,19 @@
                 ${workAreaOptsForSelect.map(v => `<option value="${esc(v)}" ${t.workArea === v ? "selected" : ""}>${esc(v)}</option>`).join("")}
               </select>
             </div>
-            <div class="form-field">
+            <div class="form-field" id="target-pea-field" style="${t.workArea === OTHER_REGION_WORK_AREA ? "display:none;" : ""}">
               <label>การไฟฟ้าปลายทาง <span class="req">*</span></label>
-              <select name="targetPEA" required>
+              <select name="targetPEA" ${t.workArea === OTHER_REGION_WORK_AREA ? "" : "required"}>
                 <option value="" ${t.targetPEA ? "" : "selected"} disabled>— เลือกการไฟฟ้าปลายทาง —</option>
                 ${targetPeaOptsForSelect.map(v => `<option value="${esc(v)}" ${t.targetPEA === v ? "selected" : ""}>${esc(v)}</option>`).join("")}
               </select>
               <div class="form-hint">เลือกพื้นที่ปฏิบัติงานเป็นจังหวัดก่อน รายการตรงนี้จะกรองเหลือเฉพาะการไฟฟ้าในจังหวัดนั้นให้อัตโนมัติ</div>
+            </div>
+            <div class="form-field" id="target-pea-other-field" style="${t.workArea === OTHER_REGION_WORK_AREA ? "" : "display:none;"}">
+              <label>สถานที่ปฏิบัติงาน (ระบุเอง) <span class="req">*</span></label>
+              <input type="text" name="targetPEAOther" ${t.workArea === OTHER_REGION_WORK_AREA ? "required" : ""}
+                value="${esc(t.workArea === OTHER_REGION_WORK_AREA ? t.targetPEA : "")}"
+                placeholder="เช่น กฟฟ./การไฟฟ้าปลายทางที่ไปปฏิบัติงาน" />
             </div>
             <div class="form-field span2">
               <label>สถานะพื้นที่ปฏิบัติงาน</label>
@@ -1466,9 +1476,9 @@
     const travelStatusField = $("#travel-status-field");
     const travelStatusSelect = travelStatusField.querySelector("select[name=travelOrderStatus]");
     function syncAreaStatus(userTriggered) {
-      const val = document.querySelector("input[name=areaStatus]:checked").value;
-      document.querySelectorAll("#area-status-group .radio-option").forEach(o => o.classList.remove("checked-in", "checked-out"));
-      document.querySelector(`input[name=areaStatus][value=${val}]`).closest(".radio-option").classList.add(val === "in" ? "checked-in" : "checked-out");
+      const val = modalBodyEl.querySelector("input[name=areaStatus]:checked").value;
+      modalBodyEl.querySelectorAll("#area-status-group .radio-option").forEach(o => o.classList.remove("checked-in", "checked-out"));
+      modalBodyEl.querySelector(`input[name=areaStatus][value=${val}]`).closest(".radio-option").classList.add(val === "in" ? "checked-in" : "checked-out");
       travelNoField.style.display = val === "out" ? "" : "none";
       travelStatusField.style.display = val === "out" ? "" : "none";
       // Keep the travel-order-status select consistent with the radio choice so a
@@ -1478,10 +1488,10 @@
         if (val === "in") travelStatusSelect.value = "ไม่ต้องขอคำสั่ง";
       }
     }
-    document.querySelectorAll("input[name=areaStatus]").forEach(r => r.addEventListener("change", () => syncAreaStatus(true)));
+    modalBodyEl.querySelectorAll("input[name=areaStatus]").forEach(r => r.addEventListener("change", () => syncAreaStatus(true)));
     syncAreaStatus(false);
 
-    document.querySelectorAll('input[name=departTime], input[name=appointTime]').forEach(attachTime24Formatter);
+    modalBodyEl.querySelectorAll('input[name=departTime], input[name=appointTime]').forEach(attachTime24Formatter);
 
     const circuitGrid = $("#circuit-check-grid");
     const circuitSumBadge = $("#circuit-sum-badge");
@@ -1521,14 +1531,32 @@
 
     // เลือก "พื้นที่ปฏิบัติงาน" เป็นจังหวัด แล้วกรองรายการ "การไฟฟ้าปลายทาง" ให้เหลือเฉพาะจังหวัดนั้น
     // (เปลี่ยนจังหวัดแล้วต้องเลือกการไฟฟ้าปลายทางใหม่ ของเดิมอาจไม่อยู่ในจังหวัดใหม่แล้ว)
-    const workAreaSelectForFilter = document.querySelector('select[name=workArea]');
-    const targetPeaSelectEl = document.querySelector('select[name=targetPEA]');
+    const workAreaSelectForFilter = modalBodyEl.querySelector('select[name=workArea]');
+    const targetPeaSelectEl = modalBodyEl.querySelector('select[name=targetPEA]');
+    const targetPeaFieldEl = $("#target-pea-field");
+    const targetPeaOtherFieldEl = $("#target-pea-other-field");
+    const targetPeaOtherInputEl = targetPeaOtherFieldEl.querySelector('input[name=targetPEAOther]');
+    // "นอกเขต กฟภ. ภาคกลางเขต 2" ไม่มีรายชื่อการไฟฟ้าปลายทางที่ตั้งไว้ล่วงหน้า — สลับไปให้พิมพ์ชื่อ
+    // สถานที่เองแทน และบังคับสถานะเป็น "นอกพื้นที่" เพราะออกนอกเขตรับผิดชอบถือเป็นการเดินทางเสมอ
+    function syncWorkAreaOtherRegion() {
+      const isOtherRegion = workAreaSelectForFilter.value === OTHER_REGION_WORK_AREA;
+      targetPeaFieldEl.style.display = isOtherRegion ? "none" : "";
+      targetPeaOtherFieldEl.style.display = isOtherRegion ? "" : "none";
+      targetPeaSelectEl.required = !isOtherRegion;
+      targetPeaOtherInputEl.required = isOtherRegion;
+      if (isOtherRegion) {
+        const outRadio = modalBodyEl.querySelector('input[name=areaStatus][value=out]');
+        if (outRadio && !outRadio.checked) { outRadio.checked = true; syncAreaStatus(true); }
+      }
+    }
     workAreaSelectForFilter.addEventListener("change", () => {
       const allOpts = combinedOptions(TARGET_PEA_OFFICES, x => x.targetPEA);
       const filtered = targetPeaOptionsForWorkArea(allOpts, workAreaSelectForFilter.value);
       targetPeaSelectEl.innerHTML = `<option value="" selected disabled>— เลือกการไฟฟ้าปลายทาง —</option>` +
         filtered.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+      syncWorkAreaOtherRegion();
     });
+    syncWorkAreaOtherRegion();
 
     // รถที่ใช้ + คนขับ: รายชื่อคนขับดึงจากพนักงานทั้งหมดในทีม (ไม่ต้องติ๊ก "คนที่ไปงานนี้" ก่อน)
     // ห้ามเลือกรถซ้ำคันหรือคนขับซ้ำคนระหว่าง 2 แถว
@@ -1538,9 +1566,9 @@
     }
     function vehicleDriverRows() {
       return [1, 2].map(i => ({
-        vSel: document.querySelector(`select[name=vehicle${i}]`),
-        dSel: document.querySelector(`select[name=driver${i}]`),
-        vOtherInput: document.querySelector(`input[name=vehicleOther${i}]`)
+        vSel: modalBodyEl.querySelector(`select[name=vehicle${i}]`),
+        dSel: modalBodyEl.querySelector(`select[name=driver${i}]`),
+        vOtherInput: modalBodyEl.querySelector(`input[name=vehicleOther${i}]`)
       }));
     }
     function populateDriverOptions(forceValues) {
@@ -1568,7 +1596,7 @@
         if (row.vOtherInput) row.vOtherInput.classList.toggle("hidden", row.vSel.value !== "__other__");
       });
     }
-    document.querySelectorAll(".va-vehicle-select, .va-driver-select").forEach(sel => {
+    modalBodyEl.querySelectorAll(".va-vehicle-select, .va-driver-select").forEach(sel => {
       sel.addEventListener("change", () => syncVehicleDriverRows());
     });
     populateDriverOptions([
@@ -1579,7 +1607,7 @@
     // การไฟฟ้าต้นสังกัด (บางปะกง) — เลือกแล้วช่วยติ๊ก "ในพื้นที่" ให้ (แก้เองได้ทีหลัง)
     targetPeaSelectEl.addEventListener("change", () => {
       if (isHomeUnitPea(targetPeaSelectEl.value)) {
-        const inRadio = document.querySelector('input[name=areaStatus][value=in]');
+        const inRadio = modalBodyEl.querySelector('input[name=areaStatus][value=in]');
         if (inRadio && !inRadio.checked) { inRadio.checked = true; syncAreaStatus(true); }
       }
     });
@@ -1587,7 +1615,7 @@
     $("#team-input").addEventListener("change", (ev) => {
       const preset = TEAMS[ev.target.value];
       if (!preset) return;
-      document.querySelectorAll('input[name=teamMemberEmp]').forEach(cb => {
+      modalBodyEl.querySelectorAll('input[name=teamMemberEmp]').forEach(cb => {
         cb.checked = preset.some(m => m.includes(cb.value));
       });
     });
@@ -1604,7 +1632,9 @@
     const title = (fd.get("title") || "").trim();
     const date = fd.get("date");
     const workArea = (fd.get("workArea") || "").trim();
-    const targetPEA = (fd.get("targetPEA") || "").trim();
+    const targetPEA = workArea === OTHER_REGION_WORK_AREA
+      ? (fd.get("targetPEAOther") || "").trim()
+      : (fd.get("targetPEA") || "").trim();
     if (!title || !date || !workArea || !targetPEA) {
       showFormError("กรุณากรอกชื่องาน วันที่ พื้นที่ปฏิบัติงาน และการไฟฟ้าปลายทางให้ครบ");
       return;
