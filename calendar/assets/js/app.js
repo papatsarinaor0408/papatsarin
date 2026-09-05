@@ -461,11 +461,14 @@
   function plansForDate(iso) {
     return TEAM_PLANS.filter(p => iso >= p.date_from && iso <= p.date_to);
   }
-  // สีแถบตามพื้นที่จริง — ในพื้นที่ต้นสังกัด (บางปะกง) เป็นสีเขียว ปลายทางอื่นเป็นสีเหลืองทั้งหมด
+  // สีแถบตามพื้นที่จริง — ในพื้นที่ต้นสังกัด (บางปะกง) เป็นสีเขียว ปลายทางอื่นเป็นสีเหลือง
+  // ส่วนภารกิจนอกเขต (แข่งทักษะ/ประชุม/อบรมนอกเขต 2) เป็นสีม่วง เหมือนที่ใช้ในการ์ดปฏิทินรายวัน
   const GANTT_COLOR_HOME = "#5EB6A0";
   const GANTT_COLOR_AWAY = "#EBB348";
-  function ganttRowColor(dest) {
-    return isHomeUnitPea(dest) ? GANTT_COLOR_HOME : GANTT_COLOR_AWAY;
+  const GANTT_COLOR_SPECIAL = "#7c3aed";
+  function ganttRowColor(group) {
+    if (group.plans.some(p => p.work_area === OTHER_REGION_WORK_AREA)) return GANTT_COLOR_SPECIAL;
+    return isHomeUnitPea(group.key) ? GANTT_COLOR_HOME : GANTT_COLOR_AWAY;
   }
   function ganttPlanBounds(plan, monthStart, monthEnd) {
     const from = fromISO(plan.date_from), to = fromISO(plan.date_to);
@@ -526,7 +529,7 @@
   }
   function ganttRowHtml(group, i, year, month0, monthStart, monthEnd, daysInMonth) {
     const dest = group.key;
-    const color = ganttRowColor(dest);
+    const color = ganttRowColor(group);
     const bars = group.plans.map(plan => {
       const bounds = ganttPlanBounds(plan, monthStart, monthEnd);
       if (!bounds) return "";
@@ -977,7 +980,7 @@
           </div>
         </div>
         ${holiday ? `<div class="holiday-name">${esc(holiday)}</div>` : ""}
-        ${dayPlans.length ? `<div class="day-plan-badges">${dayPlans.map(p => `<span class="day-plan-badge ${p.area_status === "out" ? "out" : "in"}" title="แผนงานทีม: ${esc(p.target_pea || p.work_area || p.title || "")}">🧭 ${esc(p.target_pea || p.work_area || p.title || "แผนงานทีม")}</span>`).join("")}</div>` : ""}
+        ${dayPlans.length ? `<div class="day-plan-badges">${dayPlans.map(p => `<span class="day-plan-badge ${p.work_area === OTHER_REGION_WORK_AREA ? "special" : (p.area_status === "out" ? "out" : "in")}" title="แผนงานทีม: ${esc(p.target_pea || p.work_area || p.title || "")}">🧭 ${esc(p.target_pea || p.work_area || p.title || "แผนงานทีม")}</span>`).join("")}</div>` : ""}
         <div class="day-cards">
           ${shown.map(miniCardHtml).join("")}
           ${more > 0 ? `<div class="mini-more">+${more} เพิ่มเติม</div>` : ""}
@@ -2903,7 +2906,7 @@
   // เพราะผู้เข้าชมโหมดนี้ไม่ได้ล็อกอิน จึงไม่มี CURRENT_USER ให้ตรวจสิทธิ์แบบหน้าแอปหลัก
   function ovGanttRowHtml(group, i, year, month0, monthStart, monthEnd, daysInMonth) {
     const dest = group.key;
-    const color = ganttRowColor(dest);
+    const color = ganttRowColor(group);
     const bars = group.plans.map(plan => {
       const bounds = ganttPlanBounds(plan, monthStart, monthEnd);
       if (!bounds) return "";
@@ -2926,7 +2929,7 @@
   function ovGanttMobileListHtml(groups) {
     return `<div class="gantt-mobile-list">
       ${groups.map(g => {
-        const color = ganttRowColor(g.key);
+        const color = ganttRowColor(g);
         const ranges = g.plans.map(plan => `<span class="gantt-mobile-range" style="background:${color}">${esc(ganttBarLabel(plan))}</span>`).join("");
         return `<div class="gantt-mobile-item" style="--gantt-accent:${color}">
           <div class="gantt-mobile-dest">${esc(g.key)}</div>

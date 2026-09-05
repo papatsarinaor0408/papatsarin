@@ -751,6 +751,7 @@ body.role-reviewer .admin-only { display: none !important; }
 }
 .day-plan-badge.in { color: var(--green); background: var(--green-bg); }
 .day-plan-badge.out { color: var(--orange); background: var(--orange-bg); }
+.day-plan-badge.special { color: var(--pea-purple); background: var(--pea-purple-soft); }
 .day-cards { display: flex; flex-direction: column; gap: 3px; overflow: hidden; }
 .mini-card {
   font-size: 10.5px; padding: 3px 6px; border-radius: 6px; border-left: 3px solid var(--green-dot);
