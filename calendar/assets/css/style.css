@@ -68,7 +68,7 @@ html, body {
 /* พื้นหลังลายหกเหลี่ยมจางๆ เฉพาะหน้าแอปหลังล็อกอิน (ไม่ใช้กับหน้าล็อกอิน) */
 #app-root, #overview-page {
   background: var(--bg);
-  background-image: linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url("../img/app-bg.jpg");
+  background-image: linear-gradient(rgba(255,255,255,0.72), rgba(255,255,255,0.72)), url("../img/app-bg.jpg");
   background-position: top center;
   background-size: cover;
   background-repeat: no-repeat;
