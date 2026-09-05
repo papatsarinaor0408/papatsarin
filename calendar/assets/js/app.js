@@ -1735,6 +1735,18 @@
     if (row.area_status !== "out" || !row.target_pea || row.work_area === OTHER_REGION_WORK_AREA) return;
     const covered = TEAM_PLANS.some(p => p.target_pea === row.target_pea && row.task_date >= p.date_from && row.task_date <= p.date_to);
     if (covered) return;
+    // วันที่ติดกับแผนงานเดิมปลายทางเดียวกันพอดี (วันถัดจาก date_to หรือวันก่อน date_from) ให้ต่อช่วงวันที่
+    // ของแผนเดิมแทนสร้างแยกวันต่อวัน กันไม่ให้กลายเป็นแถบสีแยกเป็นท่อนๆ ทั้งที่จริงเป็นงานต่อเนื่อง
+    const prevDay = toISO(addDays(fromISO(row.task_date), -1));
+    const nextDay = toISO(addDays(fromISO(row.task_date), 1));
+    const adjacent = TEAM_PLANS.find(p => p.target_pea === row.target_pea && (p.date_to === prevDay || p.date_from === nextDay));
+    if (adjacent) {
+      const newFrom = adjacent.date_from < row.task_date ? adjacent.date_from : row.task_date;
+      const newTo = adjacent.date_to > row.task_date ? adjacent.date_to : row.task_date;
+      const { error } = await CAL_SB.from("calendar_team_plans").update({ date_from: newFrom, date_to: newTo }).eq("id", adjacent.id);
+      if (!error) await loadTeamPlans();
+      return;
+    }
     const planRow = {
       title: row.target_pea,
       date_from: row.task_date,
