@@ -289,7 +289,13 @@
     return applyFieldFilters(TASKS).filter(t => inRange(t.date, s, e));
   }
   function getTasksForDate(iso) {
-    return getRenderTasks().filter(t => t.date === iso).sort((a, b) => a.departTime.localeCompare(b.departTime));
+    // ภารกิจนอกเขต (สีม่วง) ให้อยู่ล่างสุดเสมอ ไม่ปนกับงานปกติแม้เวลาออกเดินทางจะเร็วกว่า
+    return getRenderTasks().filter(t => t.date === iso).sort((a, b) => {
+      const aSpecial = a.workArea === OTHER_REGION_WORK_AREA ? 1 : 0;
+      const bSpecial = b.workArea === OTHER_REGION_WORK_AREA ? 1 : 0;
+      if (aSpecial !== bSpecial) return aSpecial - bSpecial;
+      return a.departTime.localeCompare(b.departTime);
+    });
   }
 
   /* ---------------- DOM refs ---------------- */
