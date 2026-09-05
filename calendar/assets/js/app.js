@@ -1745,7 +1745,18 @@
     // ของแผนเดิมแทนสร้างแยกวันต่อวัน กันไม่ให้กลายเป็นแถบสีแยกเป็นท่อนๆ ทั้งที่จริงเป็นงานต่อเนื่อง
     const prevDay = toISO(addDays(fromISO(row.task_date), -1));
     const nextDay = toISO(addDays(fromISO(row.task_date), 1));
-    const adjacent = TEAM_PLANS.find(p => p.target_pea === row.target_pea && (p.date_to === prevDay || p.date_from === nextDay));
+    const beforePlan = TEAM_PLANS.find(p => p.target_pea === row.target_pea && p.date_to === prevDay);
+    const afterPlan = TEAM_PLANS.find(p => p.target_pea === row.target_pea && p.date_from === nextDay && p !== beforePlan);
+    // ถ้าวันที่กรอกอยู่ตรงกลางระหว่างแผนเดิม 2 ช่วง (ติดทั้งก่อนหน้าและถัดไป) ให้รวมเป็นแผนเดียว
+    if (beforePlan && afterPlan) {
+      const { error } = await CAL_SB.from("calendar_team_plans").update({ date_from: beforePlan.date_from, date_to: afterPlan.date_to }).eq("id", beforePlan.id);
+      if (!error) {
+        await CAL_SB.from("calendar_team_plans").delete().eq("id", afterPlan.id);
+        await loadTeamPlans();
+      }
+      return;
+    }
+    const adjacent = beforePlan || afterPlan;
     if (adjacent) {
       const newFrom = adjacent.date_from < row.task_date ? adjacent.date_from : row.task_date;
       const newTo = adjacent.date_to > row.task_date ? adjacent.date_to : row.task_date;
