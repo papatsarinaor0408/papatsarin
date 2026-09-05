@@ -201,9 +201,10 @@
       const tasksForDay = tasksForEmployeeOnDate(employeeName, iso);
       const worked = tasksForDay.length > 0;
       // วันที่ลาแล้ว ไม่นับเป็นวันปฏิบัติงาน/OT/คำสั่งเดินทาง แม้จะมีงานติดอยู่ในระบบก็ตาม
-      // นับเป็นวันโอที ถ้าเป็นวันเสาร์/อาทิตย์/วันหยุดนักขัตฤกษ์ หรือมีงานที่เวลานัดหมายหน้างานหลัง 16:30 น. (งานด่วนนอกเวลาราชการ)
-      const isOT = !leave && worked && (isWeekend || !!holiday || tasksForDay.some(t => t.appointTime && t.appointTime > OT_AFTER_HOURS_TIME));
       const hasTravelOrder = !leave && tasksForDay.some(t => t.travelOrder);
+      // นับเป็นวันโอที ถ้าเป็นวันเสาร์/อาทิตย์/วันหยุดนักขัตฤกษ์ หรือมีงานที่เวลานัดหมายหน้างานหลัง 16:30 น. (งานด่วนนอกเวลาราชการ)
+      // แต่ถ้าวันนั้นมีคำสั่งเดินทางอยู่แล้ว ให้นับเป็นวันคำสั่งเดินทางอย่างเดียว ไม่นับซ้ำเป็น OT ด้วย
+      const isOT = !leave && worked && !hasTravelOrder && (isWeekend || !!holiday || tasksForDay.some(t => t.appointTime && t.appointTime > OT_AFTER_HOURS_TIME));
       // "ปฏิบัติงาน บปก." = อยู่ที่การไฟฟ้าบางปะกงจริงๆ (ไม่ใช่แค่ areaStatus "ในพื้นที่" ทั่วไป) และไม่มีคำสั่งเดินทาง
       const inArea = !leave && worked && tasksForDay.some(t => isHomeUnitPea(t.targetPEA) && !t.travelOrder);
       out.push({ iso, day, dow, holiday, isWeekend, leave, leaves, tasksForDay, worked, isOT, hasTravelOrder, inArea });
@@ -377,7 +378,7 @@
     const bizDays = businessDaysProgress(state.cursor.getFullYear(), state.cursor.getMonth());
     const inAreaCount = countUniqueDays(periodTasks, t => isHomeUnitPea(t.targetPEA) && !t.travelOrder);
     const travelOrderCount = countUniqueDays(periodTasks, t => t.travelOrder);
-    const otCount = countUniqueDays(periodTasks, isOTTask);
+    const otCount = countUniqueDays(periodTasks, t => !t.travelOrder && isOTTask(t));
     statRowEl.innerHTML = `
       <div class="stat-card workday" data-stat="workday"><div class="stat-label">วันทำการ</div><div class="stat-value">${bizDays.total}/${bizDays.elapsed}</div></div>
       <div class="stat-card inarea" data-stat="inarea"><div class="stat-label">ปฏิบัติงาน บปก.</div><div class="stat-value">${inAreaCount} วัน</div></div>
