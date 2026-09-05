@@ -628,10 +628,6 @@ body.role-reviewer .admin-only { display: none !important; }
 .todo-done-note { font-size: 11.5px; color: var(--green); font-weight: 500; }
 .todo-pending-note { font-size: 11.5px; color: var(--urgent); font-weight: 500; }
 .todo-row-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.todo-mark-inline { display: flex; align-items: center; gap: 6px; }
-.todo-done-date-input {
-  border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 5px 8px; font-size: 12px; font-family: inherit;
-}
 .todo-add-form { display: flex; flex-direction: column; gap: 8px; }
 .todo-add-row { display: flex; gap: 8px; }
 .todo-add-form input[type=text] {

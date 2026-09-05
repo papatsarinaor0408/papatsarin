@@ -3272,13 +3272,47 @@
         <div class="todo-row-actions admin-only">
           ${item.done
             ? `<button type="button" class="btn-secondary todo-undo-btn">ยกเลิกเครื่องหมาย</button>`
-            : `<span class="todo-mark-inline">
-                 <input type="date" class="todo-done-date-input" value="${TODAY_ISO}" />
-                 <button type="button" class="btn-primary todo-mark-btn">ดำเนินการแล้ว</button>
-               </span>`}
+            : `<button type="button" class="btn-primary todo-mark-btn">ดำเนินการแล้ว</button>`}
           <button type="button" class="btn-danger todo-del-btn" title="ลบรายการ">🗑</button>
         </div>
       </div>`;
+  }
+  // กดดำเนินการแล้ว เปิดป๊อปอัพให้เลือกวันที่เสร็จก่อน แทนที่จะมีช่องวันที่ค้างโชว์ในแถวตลอด (ผู้ใช้งานสับสน)
+  function openTodoDoneModal(id) {
+    const item = MONTHLY_TODOS.find(t => t.id === id);
+    if (!item) return;
+    modalBodyEl.innerHTML = `
+      <div class="modal-head">
+        <div><div class="modal-id">ทำเครื่องหมายว่าดำเนินการแล้ว</div><h2>${esc(item.title)}</h2></div>
+        <button class="modal-close" id="modal-close-btn">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-field">
+          <label>เสร็จสิ้นวันที่ <span class="req">*</span></label>
+          <input type="date" id="todo-done-date-input" value="${TODAY_ISO}" required />
+        </div>
+        <div id="todo-done-error"></div>
+        <div class="form-actions">
+          <div class="form-actions-right"><button type="button" class="btn-primary" id="todo-done-confirm-btn">✓ ยืนยัน</button></div>
+        </div>
+      </div>`;
+    modalBackdropEl.classList.add("open");
+    $("#modal-close-btn").addEventListener("click", closeModal);
+    $("#todo-done-confirm-btn").addEventListener("click", async () => {
+      const dateVal = $("#todo-done-date-input").value || TODAY_ISO;
+      const btn = $("#todo-done-confirm-btn");
+      btn.disabled = true;
+      const { error } = await CAL_SB.from("calendar_monthly_todos")
+        .update({ done: true, done_date: dateVal, updated_at: new Date().toISOString() }).eq("id", id);
+      if (error) {
+        $("#todo-done-error").innerHTML = `<div class="form-error">บันทึกไม่สำเร็จ: ${esc(error.message)}</div>`;
+        btn.disabled = false;
+        return;
+      }
+      closeModal();
+      await loadMonthlyTodos();
+      renderTodoPanel();
+    });
   }
   function renderTodoPanel() {
     const year = state.cursor.getFullYear(), month = state.cursor.getMonth() + 1;
@@ -3293,17 +3327,10 @@
   }
   function bindTodoPanelEvents(year, month) {
     todoListEl.querySelectorAll(".todo-mark-btn").forEach(btn => {
-      btn.addEventListener("click", async () => {
+      btn.addEventListener("click", () => {
         if (!isAdmin()) return;
-        const row = btn.closest(".todo-row");
-        const id = row.getAttribute("data-id");
-        const dateVal = row.querySelector(".todo-done-date-input").value || TODAY_ISO;
-        btn.disabled = true;
-        const { error } = await CAL_SB.from("calendar_monthly_todos")
-          .update({ done: true, done_date: dateVal, updated_at: new Date().toISOString() }).eq("id", id);
-        if (error) { alert("บันทึกไม่สำเร็จ: " + error.message); btn.disabled = false; return; }
-        await loadMonthlyTodos();
-        renderTodoPanel();
+        const id = btn.closest(".todo-row").getAttribute("data-id");
+        openTodoDoneModal(id);
       });
     });
     todoListEl.querySelectorAll(".todo-undo-btn").forEach(btn => {
