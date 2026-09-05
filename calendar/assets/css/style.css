@@ -601,8 +601,8 @@ body.role-reviewer .admin-only { display: none !important; }
   .gantt-row-label { flex-basis: 130px; padding: 8px; }
   .gantt-row-title { font-size: 11.5px; }
   .gantt-row-meta { font-size: 9.5px; }
-  #overview-page .gantt-wrap { display: none; }
-  #overview-page .gantt-mobile-list { display: block; }
+  #overview-page .gantt-wrap, #gantt-panel .gantt-wrap { display: none; }
+  #overview-page .gantt-mobile-list, #gantt-panel .gantt-mobile-list { display: block; }
 }
 
 /* ---------------- Monthly to-do checklist ---------------- */

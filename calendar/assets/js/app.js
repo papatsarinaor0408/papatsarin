@@ -632,6 +632,7 @@
         </div>
       </form>
       ${groups.length ? `
+        ${ganttMobileListHtml(groups)}
         <div class="gantt-wrap">
           <div class="gantt-header-row">
             <div class="gantt-row-num">ลำดับ</div>
@@ -2944,7 +2945,7 @@
   }
   // จอมือถือแคบเกินกว่าจะบีบตารางรายวันทั้งเดือนให้อ่านออก เลยแสดงเป็นการ์ดรายการแทน
   // (สลับด้วย CSS media query เหมือนตารางระเบียบการลาที่ทำไว้ก่อนหน้า ไม่ใช้ JS ตรวจขนาดจอ)
-  function ovGanttMobileListHtml(groups) {
+  function ganttMobileListHtml(groups) {
     return `<div class="gantt-mobile-list">
       ${groups.map(g => {
         const color = ganttRowColor(g);
@@ -2966,7 +2967,7 @@
       <div class="ov-panel">
         <div class="ov-panel-title">🗺️ แผนปฏิบัติการ (คำสั่งเดินทางของทีม)</div>
         ${groups.length ? `
-          ${ovGanttMobileListHtml(groups)}
+          ${ganttMobileListHtml(groups)}
           <div class="gantt-wrap">
             <div class="gantt-header-row">
               <div class="gantt-row-num">ลำดับ</div>
