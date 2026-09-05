@@ -339,6 +339,11 @@
   const accessLogPageEl = $("#access-log-page");
   const accessLogPageBodyEl = $("#access-log-page-body");
   const accessLogBackBtnEl = $("#access-log-back-btn");
+  const phonebookBtnEl = $("#phonebook-btn");
+  const phonebookPageEl = $("#phonebook-page");
+  const phonebookPageBodyEl = $("#phonebook-page-body");
+  const phonebookBackBtnEl = $("#phonebook-back-btn");
+  const phonebookPageCountEl = $("#phonebook-page-count");
   const loginScreenEl = $("#login-screen");
   const appRootEl = $("#app-root");
   const loginFormEl = $("#login-form");
@@ -2700,6 +2705,127 @@
   }
   accessLogBtnEl.addEventListener("click", openAccessLogPage);
   accessLogBackBtnEl.addEventListener("click", closeAccessLogPage);
+
+  /* ---------------- สมุดรายชื่อเบอร์โทรศัพท์ ---------------- */
+  let PHONEBOOK = [];
+  async function loadPhonebook() {
+    const { data, error } = await CAL_SB.from("calendar_phonebook").select("*");
+    if (!error && data) PHONEBOOK = data;
+  }
+  function phonebookAreaLabel(r) {
+    return r.target_pea || r.work_area || "-";
+  }
+  function phonebookRowHtml(r) {
+    return `<tr data-id="${esc(r.id)}">
+      <td>${esc(r.phone)}</td>
+      <td>${esc(r.name)}</td>
+      <td>${esc(phonebookAreaLabel(r))}</td>
+      <td class="admin-only"><button type="button" class="btn-danger phonebook-del-btn" title="ลบรายชื่อ">🗑</button></td>
+    </tr>`;
+  }
+  function phonebookAddFormHtml() {
+    return `
+      <form id="phonebook-add-form" class="admin-only">
+        <div class="form-grid">
+          <div class="form-field"><label>เบอร์โทร <span class="req">*</span></label><input type="tel" name="phone" required placeholder="08x-xxx-xxxx" /></div>
+          <div class="form-field"><label>ชื่อเจ้าของเบอร์ <span class="req">*</span></label><input type="text" name="name" required placeholder="เช่น นายสมชาย ใจดี" /></div>
+          <div class="form-field">
+            <label>พื้นที่ปฏิบัติงาน</label>
+            <select name="workArea">
+              <option value="">— ไม่ระบุ —</option>
+              ${WORK_AREAS.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("")}
+            </select>
+          </div>
+          <div class="form-field">
+            <label>การไฟฟ้า</label>
+            <select name="targetPEA">
+              <option value="">— ไม่ระบุ —</option>
+              ${combinedOptions(TARGET_PEA_OFFICES, x => x.targetPEA).map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("")}
+            </select>
+            <div class="form-hint">เลือกพื้นที่ปฏิบัติงานก่อน รายการนี้จะกรองเหลือเฉพาะการไฟฟ้าในจังหวัดนั้นให้อัตโนมัติ — ไม่ระบุพื้นที่ก็ได้</div>
+          </div>
+        </div>
+        <div id="phonebook-add-error"></div>
+        <div class="form-actions">
+          <div class="form-actions-right"><button type="submit" class="btn-primary">+ เพิ่มรายชื่อ</button></div>
+        </div>
+      </form>`;
+  }
+  function phonebookPageHtml() {
+    const sorted = PHONEBOOK.slice().sort((a, b) => a.name.localeCompare(b.name, "th"));
+    return `
+      ${phonebookAddFormHtml()}
+      <div class="access-log-table-wrap">
+        <table class="access-log-table">
+          <thead><tr><th>เบอร์โทร</th><th>ชื่อ</th><th>พื้นที่</th><th class="admin-only"></th></tr></thead>
+          <tbody>
+            ${sorted.length ? sorted.map(phonebookRowHtml).join("") : `<tr><td colspan="4" style="text-align:center; color:var(--text-faint);">ยังไม่มีรายชื่อในสมุด</td></tr>`}
+          </tbody>
+        </table>
+      </div>`;
+  }
+  function bindPhonebookEvents() {
+    const form = $("#phonebook-add-form");
+    if (form) {
+      const workAreaSel = form.querySelector('select[name=workArea]');
+      const targetPeaSel = form.querySelector('select[name=targetPEA]');
+      workAreaSel.addEventListener("change", () => {
+        const allOpts = combinedOptions(TARGET_PEA_OFFICES, x => x.targetPEA);
+        const filtered = targetPeaOptionsForWorkArea(allOpts, workAreaSel.value);
+        targetPeaSel.innerHTML = `<option value="">— ไม่ระบุ —</option>` + filtered.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+      });
+      form.addEventListener("submit", async (ev) => {
+        ev.preventDefault();
+        if (!isAdmin()) return;
+        const fd = new FormData(form);
+        const phone = (fd.get("phone") || "").trim();
+        const name = (fd.get("name") || "").trim();
+        const errEl = $("#phonebook-add-error");
+        errEl.innerHTML = "";
+        if (!phone || !name) { errEl.innerHTML = `<div class="form-error">กรุณากรอกเบอร์โทรและชื่อให้ครบ</div>`; return; }
+        const btn = form.querySelector("button[type=submit]");
+        btn.disabled = true;
+        const { error } = await CAL_SB.from("calendar_phonebook").insert([{
+          phone, name,
+          work_area: (fd.get("workArea") || "").trim() || null,
+          target_pea: (fd.get("targetPEA") || "").trim() || null
+        }]);
+        if (error) { errEl.innerHTML = `<div class="form-error">บันทึกไม่สำเร็จ: ${esc(error.message)}</div>`; btn.disabled = false; return; }
+        await loadPhonebook();
+        renderPhonebookPage();
+      });
+    }
+    phonebookPageBodyEl.querySelectorAll(".phonebook-del-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        if (!isAdmin()) return;
+        if (!confirm("ลบรายชื่อนี้?")) return;
+        const id = btn.closest("tr").getAttribute("data-id");
+        const { error } = await CAL_SB.from("calendar_phonebook").delete().eq("id", id);
+        if (error) { alert("ลบไม่สำเร็จ: " + error.message); return; }
+        await loadPhonebook();
+        renderPhonebookPage();
+      });
+    });
+  }
+  function renderPhonebookPage() {
+    phonebookPageCountEl.textContent = `สมุดรายชื่อ (${PHONEBOOK.length} รายชื่อ)`;
+    phonebookPageBodyEl.innerHTML = phonebookPageHtml();
+    bindPhonebookEvents();
+  }
+  async function openPhonebookPage() {
+    phonebookPageBodyEl.innerHTML = `<div class="empty-state">กำลังโหลดสมุดรายชื่อ...</div>`;
+    appShellEl.classList.add("hidden");
+    phonebookPageEl.classList.remove("hidden");
+    window.scrollTo(0, 0);
+    await loadPhonebook();
+    renderPhonebookPage();
+  }
+  function closePhonebookPage() {
+    phonebookPageEl.classList.add("hidden");
+    appShellEl.classList.remove("hidden");
+  }
+  phonebookBtnEl.addEventListener("click", openPhonebookPage);
+  phonebookBackBtnEl.addEventListener("click", closePhonebookPage);
 
   /* ---------------- Visitor overview (Operations Overview) — read-only, no login required ----------------
      สำหรับผู้ที่ไม่มีบัญชี/รหัสผ่าน: ระบุรหัสประจำตัว+ชื่อ-นามสกุลเพื่อบันทึกประวัติการเข้าชม (calendar_access_log,

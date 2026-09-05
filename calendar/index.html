@@ -141,6 +141,17 @@
   <div id="access-log-page-body"></div>
 </div>
 
+<div class="app-page app-page-wide hidden" id="phonebook-page">
+  <div class="app-page-head">
+    <button type="button" class="btn-secondary" id="phonebook-back-btn">‹ กลับสู่ปฏิทิน</button>
+    <div>
+      <div class="modal-id" id="phonebook-page-count">สมุดรายชื่อ</div>
+      <h1 class="app-page-title">สมุดรายชื่อเบอร์โทรศัพท์</h1>
+    </div>
+  </div>
+  <div id="phonebook-page-body"></div>
+</div>
+
 <div class="app-shell" id="app-shell">
 
   <div class="stat-row" id="stat-row"></div>
@@ -186,6 +197,7 @@
       <button class="person-btn" id="equipment-btn">📖 คู่มืออุปกรณ์</button>
       <button class="person-btn" id="leave-btn">🗓️ ระเบียบการลา</button>
       <button class="person-btn" id="audit-btn">⚖️ ระเบียบวินัย/ความปลอดภัย</button>
+      <button class="person-btn" id="phonebook-btn">📇 สมุดรายชื่อ</button>
       <button class="settings-btn admin-only" id="access-log-btn">🕒 ประวัติการใช้งาน</button>
       <button class="add-task-btn admin-only" id="add-task-btn">+ เพิ่มงาน</button>
     </div>
@@ -211,6 +223,6 @@
 <script src="assets/js/vendor/supabase-js.min.js"></script>
 <script src="assets/js/supabaseClient.js"></script>
 <script src="assets/js/data.js?v=4"></script>
-<script src="assets/js/app.js?v=61"></script>
+<script src="assets/js/app.js?v=62"></script>
 </body>
 </html>
