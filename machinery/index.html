@@ -115,6 +115,17 @@
   .kpis { display: grid; grid-template-columns: minmax(0, 1.45fr) repeat(4, minmax(0, 1fr)); gap: 14px; }
   .kpi-total { display: flex; flex-direction: column; justify-content: space-between; }
   .kpi-total .ch { margin-bottom: 4px; }
+  .kpi-total.clickable { cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+  .kpi-total.clickable:hover { border-color: var(--blue); box-shadow: 0 14px 28px -16px rgba(15, 37, 87, .45); }
+  .promo-btn { align-self: flex-start; margin-top: 10px; font: inherit; font-size: 13.5px; font-weight: 500; color: var(--navy-800); background: var(--gold-2); border: 0; border-radius: 999px; padding: 4px 14px; cursor: pointer; }
+  .promo-btn:hover { background: var(--gold); }
+  .promo-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .cell-link { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
+  .cell-link:hover { color: var(--blue); text-decoration: underline; text-underline-offset: 3px; }
+  .cell-link:focus-visible { outline: 2px solid var(--navy-2); outline-offset: 2px; border-radius: 3px; }
+  button.plate { font-family: inherit; cursor: pointer; }
+  button.plate:hover { background: #dbe7fb; border-color: #9fbbea; }
+  button.plate:focus-visible { outline: 2px solid var(--navy-2); outline-offset: 1px; }
   .kt-row { display: flex; align-items: center; gap: 14px; }
   .kt-row .art { width: 112px; height: 68px; flex: none; }
   .kt-num { font-size: 56px; font-weight: 600; line-height: 1; color: var(--navy); font-variant-numeric: tabular-nums; }
@@ -237,19 +248,23 @@
 
   /* ความเคลื่อนไหว / ไม่พร้อมใช้ / ประเภทภารกิจ */
   .feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-  .feed li { display: grid; grid-template-columns: 10px 86px minmax(0, 1fr); gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 13.5px; }
+  .feed li, .dlist li, .mt li { border-bottom: 1px dashed var(--line); }
+  .rb { display: grid; align-items: center; width: 100%; font: inherit; font-size: 13.5px; color: inherit; background: none; border: 0; border-radius: 6px; padding: 6px 4px; text-align: left; cursor: pointer; }
+  .rb:hover { background: #f1f6fd; }
+  .rb:focus-visible { outline: 2px solid var(--navy-2); outline-offset: -2px; }
+  .feed .rb { grid-template-columns: 10px 86px minmax(0, 1fr); gap: 10px; }
   .feed li:last-child { border-bottom: 0; }
   .feed .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--gold); }
   .feed .when { color: var(--ink-2); white-space: nowrap; }
   .feed .what { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
   .dlist { list-style: none; margin: 0; padding: 0; }
-  .dlist li { display: grid; grid-template-columns: 9px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 13.5px; }
+  .dlist .rb { grid-template-columns: 9px minmax(0, 1fr) auto; gap: 8px; }
   .dlist .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--st-down); }
   .dlist .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .dlist .ct { font-weight: 600; white-space: nowrap; }
   .dlist .ct small { font-weight: 400; color: var(--ink-3); font-size: 12px; }
   .mt { list-style: none; margin: 0; padding: 0; }
-  .mt li { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 70px; align-items: center; gap: 10px; padding: 4px 0; border-bottom: 1px dashed var(--line); font-size: 13.5px; }
+  .mt .rb { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 70px; gap: 10px; padding: 4px; }
   .mt li:last-child { border-bottom: 0; }
   .mt li span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .mt li i { display: block; height: 8px; border-radius: 4px; background: var(--blue); min-width: 3px; }
@@ -489,7 +504,7 @@
   .ms-card.hl .ms-label { color: var(--ink-c); }
   .ms-val { font-size: 27px; font-weight: 600; color: var(--navy); line-height: 1.15; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .ms-card.hl .ms-val { color: var(--ink-c); }
-  .ms-val small { font-size: 14px; font-weight: 400; margin-left: 5px; }
+  .ms-val small { font-size: 14px; font-weight: 400; margin-left: 5px; white-space: nowrap; }
   .mg { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
   .mg-card { border: 1px solid #e3e8f1; border-radius: 12px; overflow: hidden; background: #fff; box-shadow: 0 1px 2px rgba(15, 37, 87, .04); }
   .mg-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 9px 12px; background: #f6f8fc; border: 0; border-bottom: 1px solid #e3e8f1; font: inherit; color: inherit; text-align: left; cursor: pointer; }
@@ -512,7 +527,42 @@
   .mi-ct b { font-size: 15.5px; font-weight: 600; color: var(--navy); margin-right: 4px; }
   .mi-bar { height: 7px; border-radius: 4px; background: #e9edf3; overflow: hidden; }
   .mi-bar span { display: block; height: 100%; background: var(--c); border-radius: 4px; }
-  .mc { padding: 12px 16px 14px; }
+  .mc { display: block; width: 100%; font: inherit; color: inherit; text-align: left; padding: 12px 16px 14px; cursor: pointer; }
+  .mc:hover { border-color: #b9cdee; background: #fbfdff; }
+  .mc:focus-visible { outline: 2px solid var(--navy-2); outline-offset: 2px; }
+  .mc > span { display: block; }
+  .mdl-back { display: inline-flex; align-items: center; gap: 2px; font: inherit; font-size: 14px; color: var(--blue); background: none; border: 0; padding: 2px 0; margin: 0 0 10px; cursor: pointer; max-width: calc(100% - 100px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mdl-back:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .mdl-back:focus-visible { outline: 2px solid var(--navy-2); outline-offset: 2px; border-radius: 4px; }
+  button.mi { width: 100%; font: inherit; color: inherit; background: none; border: 0; border-bottom: 1px solid #edf0f5; text-align: left; cursor: pointer; grid-template-columns: minmax(0, 1fr) auto 72px 14px; padding-right: 2px; }
+  button.mi:last-child { border-bottom: 0; }
+  button.mi:hover { background: #f5f8fe; }
+  button.mi:focus-visible, .lr:focus-visible, button.ms-card:focus-visible { outline: 2px solid var(--navy-2); outline-offset: -2px; }
+  .go { display: inline-grid; color: var(--ink-3); }
+  button.mi:hover .go, .lr:hover .go { color: var(--blue); }
+  .lr { display: grid; grid-template-columns: minmax(0, 1fr) auto 14px; gap: 2px 12px; align-items: center; width: 100%; font: inherit; color: inherit; background: none; border: 0; border-bottom: 1px solid #edf0f5; padding: 9px 2px 9px 0; text-align: left; cursor: pointer; }
+  .lr:last-child { border-bottom: 0; }
+  .lr:hover { background: #f5f8fe; }
+  .lr-main { display: block; font-size: 14px; line-height: 1.45; color: var(--ink); min-width: 0; }
+  .lr-main .plate { margin-right: 6px; }
+  .lr-main small { display: block; font-size: 12px; color: var(--ink-3); }
+  .lr-main .stack { margin-top: 5px; height: 7px; }
+  .lr-side { font-size: 12.5px; color: var(--ink-2); white-space: nowrap; text-align: right; }
+  .lr-side b { font-size: 15px; font-weight: 600; color: var(--navy); }
+  .kv { display: grid; grid-template-columns: 128px minmax(0, 1fr); gap: 6px 14px; margin: 0; padding: 10px 0; font-size: 14px; line-height: 1.5; }
+  .kv dt { color: var(--ink-2); }
+  .kv dd { margin: 0; color: var(--ink); }
+  .mg-empty { margin: 0; padding: 12px 0; font-size: 14px; color: var(--ink-2); }
+  button.ms-card { font: inherit; color: inherit; text-align: left; cursor: pointer; }
+  button.ms-card:hover { filter: brightness(.98); border-color: var(--c); }
+  .ms-val.sm { font-size: 20px; white-space: normal; line-height: 1.25; }
+  .mdl-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+  .mbtn { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 14.5px; font-weight: 500; color: #fff; background: var(--navy-2); border: 0; border-radius: 10px; padding: 8px 16px; cursor: pointer; }
+  .mbtn:hover { background: var(--navy); }
+  .mbtn.ghost { color: var(--navy-2); background: #eaf1fc; }
+  .mbtn.ghost:hover { background: #dbe7fb; }
+  .mbtn:focus-visible { outline: 2px solid var(--navy-2); outline-offset: 2px; }
+  .hint { font-size: 12.5px; color: var(--ink-3); margin: 10px 0 0; }
   .mc-top { display: flex; justify-content: space-between; gap: 14px; line-height: 1.4; margin-bottom: 8px; font-size: 14px; }
   .mc-top b { font-weight: 600; white-space: nowrap; color: var(--navy); }
   .mc-rate { font-size: 12px; color: var(--ink-3); margin-top: 4px; }
@@ -536,6 +586,8 @@
     .ms-val small { font-size: 12.5px; }
     .mg-body { padding: 0 10px 2px 12px; }
     .mi { grid-template-columns: minmax(0, 1fr) auto 48px; gap: 2px 8px; }
+    button.mi { grid-template-columns: minmax(0, 1fr) auto 40px 12px; }
+    .kv { grid-template-columns: 96px minmax(0, 1fr); }
   }
 
   /* ---------- tooltip ---------- */
@@ -888,6 +940,8 @@ const MISSIONS = [
     grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/>',
     pie: '<path d="M11 3.6a8.5 8.5 0 1 0 9.4 9.4H11z"/><path d="M14 2.9v7.1h7.1A7.2 7.2 0 0 0 14 2.9z"/>',
     chevUp: '<path d="M6 15l6-6 6 6"/>',
+    chevL: '<path d="M15 6l-6 6 6 6"/>',
+    bolt: '<path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/>',
     boxes: '<rect x="3.5" y="12.5" width="7.5" height="7.5" rx="1.2"/><rect x="13" y="12.5" width="7.5" height="7.5" rx="1.2"/><rect x="8.2" y="3.5" width="7.5" height="7.5" rx="1.2"/>',
   };
   function icon(name, size) {
@@ -1000,6 +1054,7 @@ const MISSIONS = [
 
   const scopePill = (scope) => h('span', { class: 'pill' }, h('i', { style: 'background:' + SCOPE[scope].color, 'aria-hidden': 'true' }), SCOPE[scope].label);
   const plate = (code) => h('span', { class: 'plate' }, code);
+  const plateBtn = (code) => (machines[code] ? h('button', { type: 'button', class: 'plate', title: 'ดูรายละเอียดเครื่องรหัส ' + code, 'aria-haspopup': 'dialog', onclick: (e) => { e.stopPropagation(); openMachine(code); } }, code) : plate(code));
   const perDay = (lpm) => lpm * 1.44;
   function bigThai(n) { return n >= 1e6 ? (n / 1e6).toLocaleString('th-TH', { maximumFractionDigits: 2 }) + ' ล้าน' : fmt(Math.round(n)); }
   function rateText(rate, name) {
@@ -1104,21 +1159,38 @@ const MISSIONS = [
   /* =====================================================================
      หน้าต่างรายการ (เลื่อนจากขวา)
      ===================================================================== */
-  const dw = { el: document.getElementById('drawer'), box: document.getElementById('drawer-box'), body: document.getElementById('drawer-body'), ret: null, timer: null };
+  const dw = { el: document.getElementById('drawer'), box: document.getElementById('drawer-box'), body: document.getElementById('drawer-body'), ret: null, timer: null, cur: null, stack: [] };
   const BLUE_VARS = { color: 'var(--blue)', soft: '#e4eefb', ink: '#1d5fb0', line: '#c4d9f4' };
   function setVars(el, v) {
     el.style.setProperty('--c', v.color); el.style.setProperty('--soft-c', v.soft);
     el.style.setProperty('--ink-c', v.ink); el.style.setProperty('--line-c', v.line);
   }
+  // เปิดแผง: ถ้าแผงเปิดอยู่แล้ว จะจำหน้าก่อนหน้าไว้ให้กด "กลับไป" ได้
   function openDrawer(o) {
     clearTimeout(dw.timer);
-    setVars(dw.box, o.vars || BLUE_VARS);
-    put(dw.body, o.body);
-    if (dw.el.hidden) { dw.ret = document.activeElement; document.documentElement.style.overflow = 'hidden'; }
-    dw.el.hidden = false;
+    const isOpen = !dw.el.hidden && dw.el.classList.contains('open');
+    if (isOpen && dw.cur) { dw.cur.scroll = dw.box.scrollTop; dw.stack.push(dw.cur); } else dw.stack = [];
+    dw.cur = o;
+    renderDrawer(0);
+    if (!isOpen) {
+      if (dw.el.hidden) { dw.ret = document.activeElement; document.documentElement.style.overflow = 'hidden'; }
+      dw.el.hidden = false;
+      requestAnimationFrame(() => dw.el.classList.add('open'));
+    }
     hideTip();
-    requestAnimationFrame(() => dw.el.classList.add('open'));
-    dw.el.scrollTop = 0;
+    document.getElementById('drawer-close').focus({ preventScroll: true });
+  }
+  function renderDrawer(scroll) {
+    const o = dw.cur, prev = dw.stack[dw.stack.length - 1];
+    setVars(dw.box, o.vars || BLUE_VARS);
+    put(dw.body, prev ? h('button', { type: 'button', class: 'mdl-back', onclick: drawerBack }, icon('chevL', 16), 'กลับไป ' + prev.label) : null, o.body);
+    dw.box.scrollTop = scroll || 0;
+  }
+  function drawerBack() {
+    const prev = dw.stack.pop();
+    if (!prev) return;
+    dw.cur = prev;
+    renderDrawer(prev.scroll);
     document.getElementById('drawer-close').focus({ preventScroll: true });
   }
   function closeDrawer() {
@@ -1126,7 +1198,7 @@ const MISSIONS = [
     dw.el.classList.remove('open');
     document.documentElement.style.overflow = '';
     const fast = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    dw.timer = setTimeout(() => { dw.el.hidden = true; dw.body.replaceChildren(); }, fast ? 0 : 200);
+    dw.timer = setTimeout(() => { dw.el.hidden = true; dw.body.replaceChildren(); dw.cur = null; dw.stack = []; }, fast ? 0 : 200);
     if (dw.ret && document.contains(dw.ret)) dw.ret.focus({ preventScroll: true });
   }
   document.getElementById('drawer-close').addEventListener('click', closeDrawer);
@@ -1149,10 +1221,10 @@ const MISSIONS = [
       h('div', null, h('h3', { id: 'drawer-title' }, o.title), h('p', null, o.sub)));
   }
   function msCard(o) {
-    const el = h('div', { class: 'ms-card' + (o.hl ? ' hl' : '') }, h('span', { class: 'ms-ico' }, o.ico),
-      h('div', { style: 'min-width:0' }, o.top ? h('div', { class: 'ms-label' }, o.top) : null,
-        h('div', { class: 'ms-val' }, o.val, o.unit ? h('small', null, o.unit) : null),
-        o.bottom ? h('div', { class: 'ms-label' }, o.bottom) : null));
+    const el = h(o.onclick ? 'button' : 'div', { type: o.onclick ? 'button' : null, class: 'ms-card' + (o.hl ? ' hl' : ''), onclick: o.onclick || null }, h('span', { class: 'ms-ico' }, o.ico),
+      h('span', { style: 'min-width:0;display:block' }, o.top ? h('span', { class: 'ms-label', style: 'display:block' }, o.top) : null,
+        h('span', { class: 'ms-val' + (o.small ? ' sm' : ''), style: 'display:block' }, o.val, o.unit ? h('small', null, o.unit) : null),
+        o.bottom ? h('span', { class: 'ms-label', style: 'display:block' }, o.bottom) : null));
     if (o.vars) setVars(el, o.vars);
     return el;
   }
@@ -1163,16 +1235,33 @@ const MISSIONS = [
     btn.addEventListener('click', () => { const open = btn.getAttribute('aria-expanded') !== 'true'; btn.setAttribute('aria-expanded', String(open)); body.hidden = !open; });
     return h('section', { class: 'mg-card' }, btn, body);
   }
-  function mItem(name, sub, n, total) {
-    return h('div', { class: 'mi' }, h('div', { class: 'mi-name' }, name, sub ? h('small', null, sub) : null),
-      h('div', { class: 'mi-ct' }, h('b', null, fmt(n)), 'จาก ' + fmt(total)),
-      h('div', { class: 'mi-bar', role: 'img', 'aria-label': fmt(n) + ' จาก ' + fmt(total) }, h('span', { style: 'width:' + Math.max(3, pct(n, total)) + '%' })));
+  function mItem(name, sub, n, total, onclick, color) {
+    return h(onclick ? 'button' : 'div', { type: onclick ? 'button' : null, class: 'mi', onclick: onclick || null, style: color ? '--c:' + color : null },
+      h('span', { class: 'mi-name' }, name, sub ? h('small', null, sub) : null),
+      h('span', { class: 'mi-ct' }, h('b', null, fmt(n)), 'จาก ' + fmt(total)),
+      h('span', { class: 'mi-bar', role: 'img', 'aria-label': fmt(n) + ' จาก ' + fmt(total) }, h('span', { style: 'width:' + (n ? Math.max(3, pct(n, total)) : 0) + '%' })),
+      onclick ? h('span', { class: 'go' }, icon('chev', 14)) : null);
   }
+  function lrow(o) {
+    return h('button', { type: 'button', class: 'lr', onclick: o.onclick },
+      h('span', { class: 'lr-main' }, o.lead || null, o.main, o.sub ? h('small', null, o.sub) : null, o.extra || null),
+      h('span', { class: 'lr-side' }, o.side || ''), h('span', { class: 'go' }, icon('chev', 14)));
+  }
+  const kvList = (pairs) => h('dl', { class: 'kv' }, pairs.filter((p) => p[1] != null && p[1] !== '').map(([k, v]) => [h('dt', null, k), h('dd', null, v)]));
   function stackBar(o) {
     return h('div', { class: 'stack', role: 'img', 'aria-label': STATES.map((st) => st.short + ' ' + (o[st.key] || 0)).join(', ') },
       STATES.map((st) => (o[st.key] ? h('span', { style: 'flex:' + o[st.key] + ' 1 0;background:' + st.color }) : null)));
   }
   const stackNums = (o) => h('div', { class: 'stack-nums' }, STATES.filter((st) => o[st.key]).map((st) => h('span', null, h('i', { style: 'background:' + st.color }), st.short + ' ' + fmt(o[st.key]))));
+  // จังหวัดที่พบเครื่องประเภทนี้ (จากรหัส ศปข ในรายงานภารกิจ) เทียบกับจำนวนในบัญชีทรัพยากร
+  function whereLine(x, scope) {
+    const list = foundOf(x.no).filter((f) => f.scope === scope);
+    const n = sumBy(list, (f) => f.codes.length), want = x[scope];
+    const names = list.map((f) => f.name.replace('จ.', '') + ' ' + f.codes.length).join(', ');
+    if (!n) return 'รายงานภารกิจไม่ได้ระบุรหัสเครื่อง จึงยังไม่ทราบจังหวัด';
+    if (n >= want) return 'อยู่ที่ ' + names;
+    return 'ระบุจังหวัดได้ ' + n + ' จาก ' + want + ' เครื่อง (' + names + ') อีก ' + (want - n) + ' เครื่องรายงานไม่ได้ระบุรหัส';
+  }
   const rateLine = (x) => (x.rate ? 'อัตราสูบ ' + (x.no === 6 ? 'ไม่น้อยกว่า ' : '') + rateText(x.rate, x.name) + ' ต่อเครื่อง' : '');
 
   /* รายชื่อเครื่องจักรตามสถานะ */
@@ -1181,7 +1270,7 @@ const MISSIONS = [
     const items = inv.filter((x) => x[key] > 0);
     const groups = Object.keys(CATS).map((c) => ({ c, items: items.filter((x) => x.cat === c).sort((a, b) => b[key] - a[key] || a.no - b.no) })).filter((g) => g.items.length);
     const scope = key === 'in' || key === 'out' ? key : null;
-    openDrawer({ vars: st, body: [
+    openDrawer({ vars: st, label: st.kpi, body: [
       mHead({ solid: true, ico: icon(st.big === 'wrench' ? 'wrench' : st.icon, 28), title: st.label + ' ' + fmt(T[key]) + ' หน่วย',
         sub: st.desc + ' · ' + items.length + ' ประเภท (' + pct1(T[key], T.total) + '% ของทั้งหมด)' }),
       h('div', { class: 'ms' },
@@ -1190,22 +1279,153 @@ const MISSIONS = [
         msCard({ ico: icon('pie', 24), val: pct1(T[key], T.total) + '%', bottom: 'ของทั้งหมด' })),
       h('div', { class: 'mg' }, groups.map(({ c, items: list }) => mGroup(CAT_ICON[c], CATS[c], fmt(sumBy(list, (x) => x[key])) + ' หน่วย',
         list.map((x) => {
-          const where = scope ? foundText(x.no, scope) : '';
-          const sub = [rateLine(x), where ? 'ตามรายงานภารกิจ: ' + where : ''].filter(Boolean).join(' · ');
-          return mItem(x.name, sub, x[key], x.total);
+          const sub = [rateLine(x), scope ? whereLine(x, scope) : ''].filter(Boolean).join(' · ');
+          return mItem(x.name, sub, x[key], x.total, () => openItem(x.no));
         })))),
+      scope ? h('p', { class: 'hint' }, 'ตัวเลขด้านขวามาจากบัญชีทรัพยากร ส่วนชื่อจังหวัดมาจากรหัสเครื่อง (รหัส ศปข) ที่ระบุในรายงานภารกิจ ซึ่งรายงานไม่ได้ระบุรหัสครบทุกเครื่อง ตัวเลขรายจังหวัดจึงอาจรวมกันได้น้อยกว่าตัวเลขด้านขวา') : null,
+      h('p', { class: 'hint' }, 'แตะรายการเพื่อดูรายละเอียดของเครื่องจักรประเภทนั้น'),
     ] });
   }
   /* รายการในหมวด (การ์ดภาพ) */
   function openTile(t) {
-    openDrawer({ vars: BLUE_VARS, body: [
+    openDrawer({ vars: BLUE_VARS, label: t.name, body: [
       mHead({ ico: art(t.art), title: t.name + ' ' + fmt(t.total) + ' หน่วย',
         sub: t.items.length + ' ประเภท · พร้อมใช้งาน ' + fmt(t.total - t.down) + ' หน่วย (' + pct(t.total - t.down, t.total) + '%)' }),
       h('div', { class: 'ms four' }, STATES.map((st) => msCard({ hl: true, vars: st, ico: icon(st.big === 'wrench' ? 'wrench' : st.icon, 22), top: st.kpi, val: fmt(t[st.key]), unit: 'หน่วย' }))),
-      h('div', { class: 'mg' }, t.items.slice().sort((a, b) => b.total - a.total || a.no - b.no).map((x) => h('section', { class: 'mg-card mc' },
-        h('div', { class: 'mc-top' }, h('span', null, x.name), h('b', null, fmt(x.total) + ' หน่วย')),
+      h('div', { class: 'mg' }, t.items.slice().sort((a, b) => b.total - a.total || a.no - b.no).map((x) => h('button', { type: 'button', class: 'mg-card mc', onclick: () => openItem(x.no) },
+        h('span', { class: 'mc-top', style: 'display:flex' }, h('span', null, x.name), h('b', null, fmt(x.total) + ' หน่วย ›')),
         stackBar(x), stackNums(x),
-        x.rate ? h('div', { class: 'mc-rate' }, rateLine(x)) : null))),
+        x.rate ? h('span', { class: 'mc-rate' }, rateLine(x)) : null))),
+      h('p', { class: 'hint' }, 'แตะรายการเพื่อดูรายละเอียด สถานะ และรหัสเครื่องที่พบในรายงานภารกิจ'),
+    ] });
+  }
+
+  /* ---------- แผงรายละเอียดอื่น ๆ ---------- */
+  const GROUP_ICON = { pump: 'drop', boat: 'boat', power: 'bolt', transport: 'truck' };
+  const GROUP_ART = { pump: 'pumpSet', boat: 'boat', power: 'support', transport: 'truck' };
+  const TILE_OF = {}; tiles.forEach((tl) => tl.nos.forEach((n) => { TILE_OF[n] = tl; }));
+  const missionByNo = (no) => MISSIONS.find((m) => m.no === no);
+  const missionRow = (m) => lrow({ main: m.task, sub: longDate(m.dateText) + ' · ' + m.place, side: 'ที่ ' + m.no, onclick: () => openMission(m.no) });
+  const machineRow = (mm, side) => lrow({ lead: plate(mm.code), main: mm.name, sub: mm.rate && !/ลิตร/.test(mm.name) ? 'อัตราสูบ ' + fmt(mm.rate) + ' ลิตร/นาที' + (mm.est ? ' (อนุมาน)' : '') : null, side: side || '', onclick: () => openMachine(mm.code) });
+
+  /* ภาพรวมทุกรายการในบัญชี */
+  function openAll() {
+    openDrawer({ vars: BLUE_VARS, label: 'เครื่องจักรทั้งหมด', body: [
+      mHead({ ico: art('pumpTruck'), title: 'เครื่องจักรกลทั้งหมด ' + fmt(T.total) + ' หน่วย', sub: inv.length + ' รายการ · พร้อมใช้งาน ' + fmt(ready) + ' หน่วย (' + pct1(ready, T.total) + '%)' }),
+      h('div', { class: 'ms four' }, STATES.map((st) => msCard({ hl: true, vars: st, ico: icon(st.big === 'wrench' ? 'wrench' : st.icon, 22), top: st.kpi, val: fmt(T[st.key]), unit: 'หน่วย', onclick: () => openDrill(st.key) }))),
+      h('div', { class: 'mg' }, Object.keys(CATS).map((c) => {
+        const list = inv.filter((x) => x.cat === c);
+        return mGroup(CAT_ICON[c], CATS[c], fmt(sumBy(list, (x) => x.total)) + ' หน่วย', list.map((x) => lrow({ main: x.name, extra: stackBar(x), side: h('b', null, fmt(x.total)), onclick: () => openItem(x.no) })));
+      })),
+      h('p', { class: 'hint' }, 'แตะการ์ดสถานะเพื่อดูรายชื่อในสถานะนั้น หรือแตะรายการเพื่อดูรายละเอียด'),
+    ] });
+  }
+
+  /* รายละเอียดเครื่องจักรแต่ละประเภท (ตามบัญชีทรัพยากร) */
+  function openItem(no) {
+    const x = invByNo[no];
+    if (!x) return;
+    const tl = TILE_OF[no];
+    const readyN = x.total - x.down;
+    const codes = ((typeof INV_LINKS !== 'undefined' && INV_LINKS[no]) || []).map((c) => machines[c]).filter(Boolean);
+    openDrawer({ vars: BLUE_VARS, label: x.short, body: [
+      mHead({ ico: art(tl ? tl.art : 'truck'), title: x.name, sub: CATS[x.cat] + ' · ลำดับที่ ' + x.no + ' ในบัญชีทรัพยากร ปีงบประมาณ 2569' }),
+      h('div', { class: 'ms' },
+        msCard({ hl: true, ico: icon('boxes', 24), top: 'มีทั้งหมด', val: fmt(x.total), unit: 'หน่วย' }),
+        msCard({ ico: icon('check', 24), top: 'พร้อมใช้งาน', val: fmt(readyN), unit: 'หน่วย', bottom: pct(readyN, x.total) + '% ของประเภทนี้' }),
+        x.rate ? msCard({ ico: icon('drop', 24), top: 'อัตราสูบต่อเครื่อง', val: (x.no === 6 ? '≥ ' : '') + fmt(x.rate), unit: 'ลิตร/นาที', small: true })
+          : msCard({ ico: icon('wrench', 24), top: 'ไม่พร้อมใช้', val: fmt(x.down), unit: 'หน่วย' })),
+      h('div', { class: 'mg' },
+        mGroup('bars', 'สถานะของเครื่องประเภทนี้', fmt(x.total) + ' หน่วย', STATES.map((st) => mItem(st.label, st.desc, x[st.key], x.total, () => openDrill(st.key), st.color))),
+        x.rate ? mGroup('drop', 'กำลังสูบ', fmt(x.rate * x.total) + ' ลิตร/นาที', kvList([
+          ['ต่อเครื่อง', (x.no === 6 ? 'ไม่น้อยกว่า ' : '') + rateText(x.rate, x.name)],
+          ['พร้อมใช้งาน', fmt(x.rate * readyN) + ' ลิตร/นาที (' + fmt(readyN) + ' เครื่อง)'],
+          ['สแตนด์บายที่ศูนย์', fmt(x.rate * x.standby) + ' ลิตร/นาที (' + fmt(x.standby) + ' เครื่อง)'],
+          ['ต่อวัน (พร้อมใช้)', bigThai(perDay(x.rate * readyN)) + ' ลบ.ม.'],
+        ])) : null,
+        mGroup('pin', 'รหัสเครื่องที่พบในรายงานภารกิจ', codes.length + ' รหัส', codes.length
+          ? codes.map((mm) => machineRow(mm, mm.area ? AREAS[mm.area].prov : 'กลับศูนย์'))
+          : h('p', { class: 'mg-empty' }, 'รายงานภารกิจประจำวันที่ ' + ASOF + ' ไม่ได้ระบุรหัสเครื่องของประเภทนี้'))),
+    ] });
+  }
+
+  /* รายละเอียดภารกิจ */
+  function openMission(no) {
+    const m = missionByNo(no);
+    if (!m) return;
+    const sc = AREAS[m.area].scope;
+    const groups = Object.keys(GROUPS).map((g) => ({ g, items: m.machines.filter(([cd, n]) => machineGroup(cd, n) === g) })).filter((x) => x.items.length);
+    openDrawer({ vars: ST[sc], label: 'ภารกิจที่ ' + m.no, body: [
+      mHead({ ico: art(missionArt(m)), title: m.task, sub: 'ภารกิจที่ ' + m.no + ' · ' + longDate(m.dateText) }),
+      h('div', { class: 'ms' },
+        msCard({ hl: true, ico: icon('pin', 24), top: SCOPE[sc].long, val: AREAS[m.area].prov, small: true }),
+        msCard({ ico: icon('truck', 24), top: 'เครื่องจักร', val: fmt(m.machines.length), unit: 'รายการ' }),
+        msCard({ ico: icon('user', 24), top: 'เจ้าหน้าที่', val: m.staff ? fmt(m.staff) : '–', unit: m.staff ? 'คน' : 'ไม่ระบุ' })),
+      h('div', { class: 'mg' },
+        mGroup('clip', 'ข้อมูลภารกิจ', '', kvList([
+          ['วันที่', longDate(m.dateText)],
+          ['พื้นที่ปฏิบัติงาน', m.place],
+          ['จุดปฏิบัติงาน', m.sites.length ? m.sites.join(', ') : null],
+          ['ขอบเขต', SCOPE[sc].long],
+          ['ประเภทภารกิจ', MTYPES.find((tt) => tt.key === mType(m)).label],
+          ['สถานะ', m.ongoing ? 'ยังปฏิบัติงานอยู่' : null],
+          ['สิ่งของที่นำส่ง', m.supplies ? m.supplies.join(', ') : null],
+        ])),
+        groups.map(({ g, items }) => mGroup(GROUP_ICON[g], GROUPS[g], items.length + ' รายการ', items.map(([cd]) => machineRow(machines[cd]))))),
+      h('div', { class: 'mdl-actions' },
+        h('button', { type: 'button', class: 'mbtn', onclick: () => openProvince(m.area) }, 'ดูข้อมูล' + AREAS[m.area].name),
+        h('button', { type: 'button', class: 'mbtn ghost', onclick: () => { closeDrawer(); goMission(m.no); } }, 'ดูในบันทึกภารกิจ')),
+    ] });
+  }
+
+  /* รายละเอียดเครื่องจักรรายรหัส */
+  function openMachine(code) {
+    const mm = machines[code];
+    if (!mm) return;
+    const no = typeof INV_LINKS !== 'undefined' ? Object.keys(INV_LINKS).find((k) => INV_LINKS[k].includes(code)) : null;
+    const x = no ? invByNo[no] : null;
+    const ms = mm.missions.map(missionByNo).filter(Boolean).sort((a, b) => b.date.localeCompare(a.date) || b.no - a.no);
+    openDrawer({ vars: mm.area ? ST[AREAS[mm.area].scope] : BLUE_VARS, label: 'รหัส ' + code, body: [
+      mHead({ ico: art(GROUP_ART[mm.group]), title: 'รหัส ศปข ' + code, sub: mm.name + ' · ' + GROUPS[mm.group] }),
+      h('div', { class: 'ms' },
+        msCard({ hl: true, ico: icon('pin', 24), top: 'ตำแหน่งล่าสุด', val: mm.area ? AREAS[mm.area].prov : 'กลับศูนย์แล้ว', small: true }),
+        msCard({ ico: icon('clip', 24), top: 'ร่วมภารกิจ', val: fmt(ms.length), unit: 'ครั้ง' }),
+        msCard({ ico: icon('drop', 24), top: 'อัตราสูบ', val: mm.rate ? fmt(mm.rate) : '–', unit: mm.rate ? 'ลิตร/นาที' : '', small: true, bottom: mm.est ? 'อนุมานจากบัญชีทรัพยากร' : null })),
+      h('div', { class: 'mg' },
+        mGroup('clip', 'ภารกิจที่ร่วม', ms.length + ' ภารกิจ', ms.map(missionRow)),
+        x ? mGroup(CAT_ICON[x.cat], 'ประเภทในบัญชีทรัพยากร', fmt(x.total) + ' หน่วย', [lrow({ main: x.name, extra: stackBar(x), side: 'ลำดับที่ ' + x.no, onclick: () => openItem(x.no) })]) : null),
+      h('p', { class: 'hint' }, 'ตำแหน่งล่าสุดคือจังหวัดของภารกิจล่าสุดที่รหัสนี้ปรากฏ รถที่ใช้นำส่งสิ่งของถือว่ากลับศูนย์แล้ว'),
+    ] });
+  }
+
+  /* รายละเอียดรายจังหวัด */
+  function openProvince(key) {
+    if (key === 'base') { openDrill('standby'); return; }
+    const a = areaInfo.find((x) => x.key === key);
+    if (!a) return;
+    const groups = Object.keys(GROUPS).map((g) => ({ g, items: a.machines.filter((mm) => mm.group === g) })).filter((x) => x.items.length);
+    openDrawer({ vars: ST[a.scope], label: a.short, body: [
+      mHead({ solid: true, ico: icon('pin', 28), title: a.name, sub: SCOPE[a.scope].long + ' · ภารกิจ ' + a.missions.length + ' รายการ · ล่าสุด ' + longDate(a.last.dateText) }),
+      h('div', { class: 'ms' },
+        msCard({ hl: true, ico: icon('truck', 24), top: 'เครื่องจักรตามรายงาน', val: fmt(a.machines.length), unit: 'หน่วย' }),
+        msCard({ ico: icon('drop', 24), top: 'เป็นเครื่องสูบน้ำ', val: fmt(a.pumps.length), unit: 'หน่วย' }),
+        msCard({ ico: icon('bars', 24), top: 'กำลังสูบที่ทราบ', val: a.cap ? fmt(a.cap) : '–', unit: a.cap ? 'ลิตร/นาที' : '', small: true })),
+      h('div', { class: 'mg' },
+        a.machines.length ? null : h('p', { class: 'mg-empty' }, 'ไม่มีเครื่องจักรค้างในจังหวัดนี้ เป็นภารกิจนำส่งสิ่งของ และรถกลับศูนย์แล้ว'),
+        mGroup('clip', 'ภารกิจในจังหวัดนี้', a.missions.length + ' รายการ', a.missions.map(missionRow)),
+        groups.map(({ g, items }) => mGroup(GROUP_ICON[g], GROUPS[g], items.length + ' รายการ', items.map((mm) => machineRow(mm))))),
+      h('div', { class: 'mdl-actions' }, h('button', { type: 'button', class: 'mbtn', onclick: () => { closeDrawer(); goArea(a.prov); } }, icon('map', 18), 'ดูบนแผนที่เต็ม')),
+    ] });
+  }
+
+  /* ภารกิจตามประเภท */
+  function openMType(key) {
+    const tt = MTYPES.find((x) => x.key === key);
+    const list = missionsByDate.filter((m) => mType(m) === key);
+    openDrawer({ vars: BLUE_VARS, label: tt.label, body: [
+      mHead({ solid: true, ico: icon('clip', 28), title: tt.label + ' ' + list.length + ' ภารกิจ', sub: 'ตามรายงานภารกิจประจำวันที่ ' + ASOF }),
+      h('div', { class: 'mg' }, mGroup('clip', 'รายการภารกิจ', list.length + ' ภารกิจ', list.map(missionRow))),
+      h('p', { class: 'hint' }, 'แตะภารกิจเพื่อดูรายละเอียดและรหัสเครื่องจักรที่ใช้'),
     ] });
   }
 
@@ -1217,8 +1437,8 @@ const MISSIONS = [
 
     // แถว 1: ตัวเลขหลัก
     p.append(h('div', { class: 'kpis' },
-      h('section', { class: 'card kpi-total' },
-        h('div', { class: 'ch' }, h('h2', null, 'เครื่องจักรกลทั้งหมด')),
+      h('section', { class: 'card kpi-total clickable', onclick: (e) => { if (!e.target.closest('button')) openAll(); } },
+        h('div', { class: 'ch' }, h('h2', null, 'เครื่องจักรกลทั้งหมด'), h('button', { type: 'button', class: 'more', 'aria-haspopup': 'dialog', onclick: openAll }, 'ดูรายละเอียด')),
         h('div', { class: 'kt-row' }, art('pumpTruck', 'blue'), h('div', null,
           h('div', { class: 'kt-num' }, fmt(T.total), h('small', null, 'หน่วย')))),
         h('div', { class: 'kt-sub' }, inv.length + ' รายการ · พร้อมใช้งาน ', h('b', null, fmt(ready) + ' หน่วย (' + pct1(ready, T.total) + '%)'))),
@@ -1255,7 +1475,8 @@ const MISSIONS = [
       h('section', { class: 'promo', 'aria-label': 'เครื่องจักรพร้อมสนับสนุน' },
         h('h3', null, 'เครื่องจักรกลพร้อมสนับสนุน', h('br'), 'ทุกพื้นที่เสี่ยงภัย'),
         h('p', null, 'สแตนด์บายที่ศูนย์ ส่งออกได้ทันที ', h('b', null, fmt(T.standby)), ' หน่วย'),
-        h('div', { class: 'tagline' }, h('span', null, 'รวดเร็ว'), h('span', null, 'ปลอดภัย'), h('span', null, 'เพื่อประชาชน')))));
+        h('div', { class: 'tagline' }, h('span', null, 'รวดเร็ว'), h('span', null, 'ปลอดภัย'), h('span', null, 'เพื่อประชาชน')),
+        h('button', { type: 'button', class: 'promo-btn', 'aria-haspopup': 'dialog', onclick: () => openDrill('standby') }, 'ดูรายชื่อเครื่องที่พร้อมส่ง ›'))));
 
     // แถว 4: แผนที่ + กราฟ + ภารกิจล่าสุด
     const mapBox = h('div', { class: 'mm' }, h('div', { class: 'mm-status' }, 'กำลังโหลดแผนที่'));
@@ -1273,7 +1494,7 @@ const MISSIONS = [
         h('p', { class: 'cap' }, 'แตะจังหวัดหรือป้ายเพื่อดูรายละเอียด ตัวเลขตามรายงานภารกิจ ' + ASOF, h('span', { id: 'mm-credit' }))),
       h('section', { class: 'card' },
         h('div', { class: 'ch' }, h('h2', null, 'จำนวนเครื่องจักรรายจังหวัด')),
-        h('div', { class: 'hb' }, byCount.map((a, i) => h('button', { type: 'button', class: 'hb-row', 'aria-label': a.prov + ' ' + a.machines.length + ' หน่วย ' + SCOPE[a.scope].long + ' กดเพื่อดูรายละเอียด', onclick: () => goArea(a.prov) },
+        h('div', { class: 'hb' }, byCount.map((a, i) => h('button', { type: 'button', class: 'hb-row', 'aria-label': a.prov + ' ' + a.machines.length + ' หน่วย ' + SCOPE[a.scope].long + ' กดเพื่อดูรายละเอียด', 'aria-haspopup': 'dialog', onclick: () => openProvince(a.key) },
           h('span', { class: 'hb-name' }, a.prov, h('small', null, SCOPE[a.scope].long)),
           h('span', { class: 'hb-track', style: '--step:' + (100 * step / axisMax) + '%' },
             h('span', { class: 'hb-fill' + (i === 0 ? ' max' : ''), style: 'width:' + (100 * a.machines.length / axisMax) + '%' }),
@@ -1285,7 +1506,7 @@ const MISSIONS = [
         h('div', { class: 'ops' }, ops.map((m) => {
           const c = missionComp(m);
           const sc = AREAS[m.area].scope;
-          return h('button', { type: 'button', class: 'op', onclick: () => goMission(m.no), 'aria-label': 'ภารกิจที่ ' + m.no + ' ' + m.task + ' ' + m.place + ' ' + m.dateText },
+          return h('button', { type: 'button', class: 'op', 'aria-haspopup': 'dialog', onclick: () => openMission(m.no), 'aria-label': 'ภารกิจที่ ' + m.no + ' ' + m.task + ' ' + m.place + ' ' + m.dateText },
             h('span', { class: 'op-thumb' }, art(missionArt(m))),
             h('span', { style: 'min-width:0' },
               h('span', { class: 'op-title', title: m.task }, m.task),
@@ -1304,15 +1525,15 @@ const MISSIONS = [
         h('div', { class: 'ch' }, h('h2', null, 'ความเคลื่อนไหวล่าสุด'), h('button', { type: 'button', class: 'more', onclick: () => go('t-mission') }, 'ดูทั้งหมด')),
         h('ul', { class: 'feed' }, feed.map((m) => {
           const text = m.task + (m.task.includes(m.place.replace(/^จ\./, '')) ? '' : ' · ' + m.place);
-          return h('li', null, h('span', { class: 'dot', 'aria-hidden': 'true' }), h('span', { class: 'when' }, longDate(m.dateText).replace(' – ปัจจุบัน', '')), h('span', { class: 'what', title: text }, text));
+          return h('li', null, h('button', { type: 'button', class: 'rb', 'aria-haspopup': 'dialog', onclick: () => openMission(m.no) }, h('span', { class: 'dot', 'aria-hidden': 'true' }), h('span', { class: 'when' }, longDate(m.dateText).replace(' – ปัจจุบัน', '')), h('span', { class: 'what', title: text }, text)));
         }))),
       h('section', { class: 'card' },
         h('div', { class: 'ch' }, h('h2', null, 'ไม่พร้อมใช้งาน', h('small', null, fmt(T.down) + ' หน่วย')), h('button', { type: 'button', class: 'more', onclick: () => openDrill('down') }, 'ดูทั้งหมด')),
-        h('ul', { class: 'dlist' }, downs.slice(0, 4).map((x) => h('li', null, h('span', { class: 'dot', 'aria-hidden': 'true' }), h('span', { class: 'nm', title: x.name }, x.short), h('span', { class: 'ct' }, x.down, h('small', null, ' จาก ' + x.total))))),
+        h('ul', { class: 'dlist' }, downs.slice(0, 4).map((x) => h('li', null, h('button', { type: 'button', class: 'rb', 'aria-haspopup': 'dialog', onclick: () => openItem(x.no) }, h('span', { class: 'dot', 'aria-hidden': 'true' }), h('span', { class: 'nm', title: x.name }, x.short), h('span', { class: 'ct' }, x.down, h('small', null, ' จาก ' + x.total)))))),
         downs.length > 4 ? h('p', { class: 'cap' }, 'และอีก ' + (downs.length - 4) + ' ประเภท รวม ' + sumBy(downs.slice(4), (x) => x.down) + ' หน่วย') : null),
       h('section', { class: 'card' },
         h('div', { class: 'ch' }, h('h2', null, 'ประเภทภารกิจ', h('small', null, MISSIONS.length + ' ภารกิจ')), h('button', { type: 'button', class: 'more', onclick: () => go('t-mission') }, 'ดูทั้งหมด')),
-        h('ul', { class: 'mt' }, MTYPES.slice().sort((a, b) => (typeCount[b.key] || 0) - (typeCount[a.key] || 0)).map((t) => h('li', null, h('span', { title: t.label }, t.label), h('span', null, h('i', { style: 'width:' + (100 * (typeCount[t.key] || 0) / Math.max(...Object.values(typeCount))) + '%' })), h('b', null, typeCount[t.key] || 0, h('small', null, 'ภารกิจ'))))),
+        h('ul', { class: 'mt' }, MTYPES.slice().sort((a, b) => (typeCount[b.key] || 0) - (typeCount[a.key] || 0)).map((t) => h('li', null, h('button', { type: 'button', class: 'rb', 'aria-haspopup': 'dialog', onclick: () => openMType(t.key) }, h('span', { title: t.label }, t.label), h('span', null, h('i', { style: 'width:' + (100 * (typeCount[t.key] || 0) / Math.max(...Object.values(typeCount))) + '%' })), h('b', null, typeCount[t.key] || 0, h('small', null, 'ภารกิจ')))))),
         h('p', { class: 'cap' }, 'ระหว่างวันที่ ' + thDate(MISSIONS.map((m) => m.start || m.date).sort()[0]) + ' ถึง ' + ASOF))));
 
     p.append(h('div', { class: 'foot' },
@@ -1370,7 +1591,7 @@ const MISSIONS = [
       if (a || isBase) {
         path.addEventListener('pointermove', (e) => showTip(e, 'จ.' + name, a ? areaTipRows(a).concat([{ line: 'แตะเพื่อดูรายละเอียด' }]) : [{ line: 'ที่ตั้งศูนย์ ปภ.เขต 4' }, { line: 'สแตนด์บายพร้อมสั่งการ ' + fmt(T.standby) + ' หน่วย' }]));
         path.addEventListener('pointerleave', hideTip);
-        path.addEventListener('click', () => { hideTip(); goArea(name); });
+        path.addEventListener('click', () => { hideTip(); openProvince(a ? a.key : 'base'); });
       }
       if (name) done[name] = path;
       svg.append(path);
@@ -1383,8 +1604,8 @@ const MISSIONS = [
       const dot = h('span', { class: 'mm-dot' + (it.base ? ' base' : '') });
       const n = it.base ? 0 : it.a.machines.length;
       const co = it.base
-        ? h('button', { type: 'button', class: 'co base', onclick: () => goArea(BASE_PROV) }, 'ศูนย์ ปภ.เขต 4 (ที่ตั้ง)', h('b', null, 'สแตนด์บาย ' + fmt(T.standby) + ' หน่วย'))
-        : h('button', { type: 'button', class: 'co' + (n ? '' : ' zero'), onclick: () => goArea(it.a.prov), 'aria-label': 'จังหวัด' + it.a.prov + ' ' + n + ' หน่วย' }, 'จ.' + it.a.prov, h('b', null, n ? fmt(n) + ' หน่วย' : 'นำส่งเสร็จ'));
+        ? h('button', { type: 'button', class: 'co base', 'aria-haspopup': 'dialog', onclick: () => openProvince('base') }, 'ศูนย์ ปภ.เขต 4 (ที่ตั้ง)', h('b', null, 'สแตนด์บาย ' + fmt(T.standby) + ' หน่วย'))
+        : h('button', { type: 'button', class: 'co' + (n ? '' : ' zero'), 'aria-haspopup': 'dialog', onclick: () => openProvince(it.a.key), 'aria-label': 'จังหวัด' + it.a.prov + ' ' + n + ' หน่วย' }, 'จ.' + it.a.prov, h('b', null, n ? fmt(n) + ' หน่วย' : 'นำส่งเสร็จ'));
       co.style[it.side] = '2%';
       return Object.assign(it, { co, dot });
     });
@@ -1503,7 +1724,7 @@ const MISSIONS = [
     const body = h('tbody');
     Object.keys(CATS).forEach((c) => {
       const list = inv.filter((x) => x.cat === c), tt = totalsOf(list);
-      const items = list.map((x) => h('tr', { class: 'item-row', 'data-cat': c, hidden: true }, h('td', { class: 'tname' }, x.name), h('td', { class: 'n' }, fmt(x.total)), STATES.map((st) => nCell(x[st.key])), readyCell(x)));
+      const items = list.map((x) => h('tr', { class: 'item-row', 'data-cat': c, hidden: true }, h('td', { class: 'tname' }, h('button', { type: 'button', class: 'cell-link', 'aria-haspopup': 'dialog', onclick: () => openItem(x.no) }, x.name)), h('td', { class: 'n' }, fmt(x.total)), STATES.map((st) => nCell(x[st.key])), readyCell(x)));
       const btn = h('button', { type: 'button', class: 'cat-btn', 'aria-expanded': 'false' }, h('span', { class: 'chev' }, icon('chev', 16)), CATS[c], h('span', { class: 'tsub', style: 'display:inline;margin-left:4px' }, '(' + list.length + ' ประเภท)'));
       btn.addEventListener('click', () => { const open = btn.getAttribute('aria-expanded') !== 'true'; btn.setAttribute('aria-expanded', String(open)); items.forEach((r) => { r.hidden = !open; }); });
       append(body, [h('tr', { class: 'cat-row' }, h('td', null, btn), h('td', { class: 'n' }, h('b', null, fmt(tt.total))), STATES.map((st) => nCell(tt[st.key])), readyCell(tt)), items]);
@@ -1517,7 +1738,7 @@ const MISSIONS = [
     p.append(h('section', { class: 'card', id: 'fix-card' },
       h('div', { class: 'card-head' }, h('h2', null, 'รายการที่ไม่พร้อมใช้ ต้องติดตามการซ่อม'), h('p', null, 'รวม ' + fmt(T.down) + ' หน่วย จาก ' + downs.length + ' ประเภท แถบสีแดงคือสัดส่วนที่ใช้ไม่ได้ของประเภทนั้น')),
       h('ul', { class: 'fixlist' }, downs.map((x) => h('li', null,
-        h('div', { class: 'nm' }, x.short, ' ', x.down === x.total ? h('span', { class: 'tag warn' }, 'ใช้ไม่ได้ทั้งหมด') : null, h('small', null, CATS[x.cat])),
+        h('div', { class: 'nm' }, h('button', { type: 'button', class: 'cell-link', 'aria-haspopup': 'dialog', onclick: () => openItem(x.no) }, x.short), ' ', x.down === x.total ? h('span', { class: 'tag warn' }, 'ใช้ไม่ได้ทั้งหมด') : null, h('small', null, CATS[x.cat])),
         h('div', { class: 'meter', role: 'img', 'aria-label': 'ไม่พร้อมใช้ ' + x.down + ' จาก ' + x.total }, h('span', { style: 'width:' + pct(x.down, x.total) + '%' })),
         h('div', { class: 'ct' }, x.down, h('small', null, ' จาก ' + x.total)))))));
   }
@@ -1550,10 +1771,10 @@ const MISSIONS = [
         h('thead', null, h('tr', null, h('th', null, 'ประเภท'), h('th', { class: 'n' }, 'อัตราสูบต่อเครื่อง'), h('th', { class: 'n' }, 'ทั้งหมด'),
           STATES.map((st) => h('th', { class: 'n' }, h('span', { class: 'dot', style: 'background:' + st.color }), st.short)), h('th', null, 'พบที่ (ตามรายงาน)'))),
         h('tbody', null, sorted.map((x) => h('tr', null,
-          h('td', { class: 'tname' }, x.name),
+          h('td', { class: 'tname' }, h('button', { type: 'button', class: 'cell-link', 'aria-haspopup': 'dialog', onclick: () => openItem(x.no) }, x.name)),
           h('td', { class: 'n' + (x.rate ? '' : ' zero') }, x.rate ? (x.no === 6 ? '≥ ' : '') + fmt(x.rate) + ' ลิตร/นาที' : 'ไม่ระบุ'),
           h('td', { class: 'n' }, h('b', null, fmt(x.total))), STATES.map((st) => nCell(x[st.key])),
-          h('td', { style: 'min-width:240px' }, foundOf(x.no).length ? foundOf(x.no).map((f) => h('div', null, f.name.replace('จ.', '') + ' ' + f.codes.length + ' ', h('span', { class: 'plates' }, f.codes.map(plate)))) : h('span', { class: 'zero' }, '–'))))),
+          h('td', { style: 'min-width:240px' }, foundOf(x.no).length ? foundOf(x.no).map((f) => h('div', null, f.name.replace('จ.', '') + ' ' + f.codes.length + ' ', h('span', { class: 'plates' }, f.codes.map(plateBtn)))) : h('span', { class: 'zero' }, '–'))))),
         h('tfoot', null, h('tr', null, h('td', null, 'รวม'), h('td'), h('td', { class: 'n' }, fmt(PT.total)), STATES.map((st) => h('td', { class: 'n' }, fmt(PT[st.key]))), h('td')))))));
     p.append(h('section', { class: 'card' },
       h('div', { class: 'card-head' }, h('h2', null, 'วิธีคิดตัวเลข')),
@@ -1941,12 +2162,12 @@ const MISSIONS = [
       h('div', { class: 'sublabel' }, 'หน่วยงาน/จุดปฏิบัติงาน'),
       h('ul', { class: 'mini' }, places.map((x) => h('li', null, x))),
       h('div', { class: 'sublabel' }, 'ภารกิจ ' + a.missions.length + ' รายการ (ล่าสุดอยู่บน)'),
-      h('ul', { class: 'mini' }, a.missions.map((m) => h('li', null, h('span', { class: 'when' }, m.dateText.replace(' – ปัจจุบัน', '')), m.task, ' ',
+      h('ul', { class: 'mini' }, a.missions.map((m) => h('li', null, h('span', { class: 'when' }, m.dateText.replace(' – ปัจจุบัน', '')), h('button', { type: 'button', class: 'cell-link', 'aria-haspopup': 'dialog', onclick: () => openMission(m.no) }, m.task), ' ',
         isDelivery(m) ? h('span', { class: 'tag' }, 'นำส่ง') : null, ' ', m.ongoing ? h('span', { class: 'tag live' }, 'ยังปฏิบัติงานอยู่') : null, ' ',
         m.staff ? h('span', { class: 'tag' }, 'เจ้าหน้าที่ ' + m.staff + ' คน') : null))),
       groups.length ? [h('div', { class: 'sublabel' }, 'รหัสเครื่องจักรที่อยู่ในจังหวัดนี้'),
         groups.map(({ g, items }) => h('div', { class: 'grp' }, h('div', { class: 'grp-name' }, GROUPS[g] + ' ' + items.length + ' รายการ'),
-          h('ul', { class: 'mini' }, items.map((m) => h('li', null, plate(m.code), ' ', m.name, m.rate && !/ลิตร/.test(m.name) ? ' (' + fmt(m.rate) + ' ลิตร/นาที)' : '')))))] : null,
+          h('ul', { class: 'mini' }, items.map((m) => h('li', null, plateBtn(m.code), ' ', m.name, m.rate && !/ลิตร/.test(m.name) ? ' (' + fmt(m.rate) + ' ลิตร/นาที)' : '')))))] : null,
     ];
   }
   function renderAreaDetail(a) {
@@ -2048,7 +2269,7 @@ const MISSIONS = [
               m.staff ? h('span', { class: 'tag' }, 'เจ้าหน้าที่ ' + m.staff + ' คน') : null),
             h('details', null, h('summary', null, 'รหัสเครื่องจักร ' + m.machines.length + ' รายการ'),
               groups.map(({ g, items }) => h('div', { class: 'grp' }, h('div', { class: 'grp-name' }, GROUPS[g] + ' ' + items.length),
-                h('ul', { class: 'mini' }, items.map(([c, n, r]) => h('li', null, plate(c), ' ', n, r && !/ลิตร/.test(n) ? ' (' + fmt(r) + ' ลิตร/นาที)' : ''))))))));
+                h('ul', { class: 'mini' }, items.map(([c, n, r]) => h('li', null, plateBtn(c), ' ', n, r && !/ลิตร/.test(n) ? ' (' + fmt(r) + ' ลิตร/นาที)' : ''))))))));
       })),
       h('p', { class: 'note', style: 'margin:10px 0 0' }, 'ในรายงานไม่มีภารกิจลำดับที่ 9')));
   }
@@ -2080,7 +2301,7 @@ const MISSIONS = [
       h('div', { class: 'tbl-wrap' }, h('table', null,
         h('thead', null, h('tr', null, h('th', { class: 'n' }, 'ที่'), h('th', null, 'รายการ'), h('th', { class: 'n' }, 'รวม'),
           STATES.map((st) => h('th', { class: 'n' }, h('span', { class: 'dot', style: 'background:' + st.color }), st.short)), h('th', { class: 'n' }, 'พร้อมใช้'), h('th', { class: 'n' }, 'อัตราสูบ (ลิตร/นาที)'))),
-        h('tbody', null, rows.map((x) => h('tr', null, h('td', { class: 'n' }, x.no), h('td', { class: 'tname' }, x.name, h('span', { class: 'tsub' }, CATS[x.cat])),
+        h('tbody', null, rows.map((x) => h('tr', null, h('td', { class: 'n' }, x.no), h('td', { class: 'tname' }, h('button', { type: 'button', class: 'cell-link', 'aria-haspopup': 'dialog', onclick: () => openItem(x.no) }, x.name), h('span', { class: 'tsub' }, CATS[x.cat])),
           h('td', { class: 'n' }, h('b', null, fmt(x.total))), STATES.map((st) => nCell(x[st.key])), h('td', { class: 'n' }, pct(x.total - x.down, x.total) + '%'),
           h('td', { class: 'n' + (x.rate ? '' : ' zero') }, x.rate ? fmt(x.rate) : '–')))),
         rows.length > 1 ? h('tfoot', null, h('tr', null, h('td'), h('td', null, 'รวม'), h('td', { class: 'n' }, fmt(t.total)), STATES.map((st) => h('td', { class: 'n' }, fmt(t[st.key]))), h('td', { class: 'n' }, pct(t.total - t.down, t.total) + '%'), h('td'))) : null)));
@@ -2089,7 +2310,7 @@ const MISSIONS = [
       h('div', { class: 'card-head' }, h('h2', null, 'ทะเบียนเครื่องจักรตามรายงานภารกิจ (รายรหัส ศปข)'), h('p', null, 'แสดง ' + ms.length + ' จาก ' + machineList.length + ' รหัส ตำแหน่งคือจังหวัดของภารกิจล่าสุดที่รหัสนั้นปรากฏ')),
       h('div', { class: 'tbl-wrap' }, h('table', null,
         h('thead', null, h('tr', null, h('th', null, 'รหัส ศปข'), h('th', null, 'ประเภท'), h('th', null, 'ตำแหน่งล่าสุด'), h('th', null, 'ภารกิจที่ร่วม'), h('th', { class: 'n' }, 'อัตราสูบ (ลิตร/นาที)'))),
-        h('tbody', null, ms.map((m) => h('tr', null, h('td', null, plate(m.code)), h('td', { class: 'tname' }, m.name, h('span', { class: 'tsub' }, GROUPS[m.group])),
+        h('tbody', null, ms.map((m) => h('tr', null, h('td', null, plateBtn(m.code)), h('td', { class: 'tname' }, h('button', { type: 'button', class: 'cell-link', 'aria-haspopup': 'dialog', onclick: () => openMachine(m.code) }, m.name), h('span', { class: 'tsub' }, GROUPS[m.group])),
           h('td', { style: 'min-width:180px' }, m.area ? [AREAS[m.area].name, ' ', scopePill(AREAS[m.area].scope)] : h('span', { class: 'zero' }, 'กลับศูนย์ หลังภารกิจนำส่ง')),
           h('td', { style: 'min-width:120px' }, m.missions.map((n) => 'ที่ ' + n).join(', '), h('span', { class: 'tsub' }, 'ล่าสุด ' + m.lastMission.dateText)),
           h('td', { class: 'n' + (m.rate ? '' : ' zero') }, m.rate ? fmt(m.rate) : '–')))))),
