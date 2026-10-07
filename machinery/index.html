@@ -461,42 +461,82 @@
   .maker span { display: block; }
   .maker b { color: var(--navy); font-weight: 600; }
 
-  /* ---------- หน้าต่างรายการ (เลื่อนจากขวา) ---------- */
-  .drawer-back { position: fixed; inset: 0; z-index: 80; background: rgba(10, 27, 63, .42); opacity: 0; transition: opacity .2s; }
-  .drawer-back.open { opacity: 1; }
-  .drawer-back[hidden], .drawer[hidden] { display: none; }
-  .drawer { position: fixed; top: 0; right: 0; bottom: 0; z-index: 81; width: min(500px, 100vw); background: #fff; box-shadow: -18px 0 40px -18px rgba(10, 27, 63, .5); display: flex; flex-direction: column;
-    transform: translateX(100%); transition: transform .22s ease-out; border-top: 5px solid var(--c, var(--navy-2)); }
-  .drawer.open { transform: none; }
-  @media (prefers-reduced-motion: reduce) { .drawer, .drawer-back { transition: none; } }
-  .drawer-head { display: flex; align-items: flex-start; gap: 12px; justify-content: space-between; padding: 16px 18px 12px; border-bottom: 1px solid var(--line); }
-  .drawer-head h3 { font-size: 20px; font-weight: 600; }
-  .drawer-head p { margin: 2px 0 0; font-size: 14px; color: var(--ink-2); }
-  .btn-close { font: inherit; font-size: 14px; color: var(--ink-2); background: var(--soft); border: 1px solid var(--line); border-radius: 999px; padding: 4px 14px; cursor: pointer; flex: none; }
-  .btn-close:hover { color: var(--ink); }
-  .btn-close:focus-visible { outline: 2px solid var(--navy-2); outline-offset: 2px; }
-  .drawer-body { flex: 1; overflow-y: auto; padding: 4px 18px 22px; -webkit-overflow-scrolling: touch; }
-  .drill-group { margin-top: 14px; }
-  .drill-group h4 { margin: 0 0 6px; font-size: 15px; font-weight: 500; color: var(--navy); display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
-  .drill-group h4 span { color: var(--ink-2); font-weight: 400; }
-  .drill-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 16px; padding: 8px 0; border-bottom: 1px dashed var(--line); }
-  .drill-item:last-child { border-bottom: 0; }
-  .drill-item .nm { line-height: 1.45; }
-  .drill-item .sub { grid-column: 1 / -1; font-size: 13px; color: var(--ink-2); }
-  .drill-item .ct { font-weight: 600; font-size: 18px; color: var(--ink); white-space: nowrap; text-align: right; }
-  .drill-item .ct small { font-size: 13px; font-weight: 400; color: var(--ink-2); margin-left: 3px; }
+  /* ---------- แผงรายละเอียด (เลื่อนออกจากขวา) ---------- */
+  .mdl { position: fixed; inset: 0; z-index: 81; background: rgba(10, 27, 63, .3); opacity: 0; transition: opacity .2s; }
+  .mdl[hidden] { display: none; }
+  .mdl.open { opacity: 1; }
+  .mdl-box { position: absolute; top: 0; right: 0; bottom: 0; width: min(640px, 100vw); overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+    background: #fff; box-shadow: -24px 0 48px -20px rgba(10, 27, 63, .55); padding: 20px 20px 28px; transform: translateX(100%); transition: transform .24s ease-out; }
+  .mdl.open .mdl-box { transform: none; }
+  @media (prefers-reduced-motion: reduce) { .mdl, .mdl-box { transition: none; } }
+  .mdl-close { position: absolute; top: 20px; right: 20px; z-index: 1; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 15px; color: var(--ink); background: #f1f4f9; border: 1px solid #dfe5ef; border-radius: 999px; padding: 4px 16px; cursor: pointer; }
+  .mdl-close:hover { background: #e7ecf4; }
+  .mdl-close:focus-visible { outline: 2px solid var(--navy-2); outline-offset: 2px; }
+  .mh { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 14px; align-items: center; padding-right: 92px; }
+  .mh-ico { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--soft-c); color: var(--c); }
+  .mh-ico.solid { background: var(--c); color: #fff; box-shadow: 0 8px 18px -8px var(--c); }
+  .mh-ico .ico { stroke-width: 2.4; }
+  .mh-ico .art { width: 48px; height: 30px; }
+  .mh h3 { font-size: 22px; font-weight: 600; color: var(--navy); line-height: 1.3; }
+  .mh p { margin: 2px 0 0; font-size: 14.5px; color: var(--ink-2); line-height: 1.45; }
+  .ms { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+  .ms.four { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ms-card { display: flex; align-items: center; gap: 12px; min-width: 0; border: 1px solid #e3e8f1; border-radius: 12px; padding: 12px 12px; background: #f6f8fc; }
+  .ms-card.hl { background: var(--soft-c); border-color: var(--line-c); }
+  .ms-ico { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; flex: none; background: #e5ecf7; color: #3f6fb8; }
+  .ms-card.hl .ms-ico { background: rgba(255, 255, 255, .8); color: var(--c); }
+  .ms-label { font-size: 13px; color: var(--ink-2); line-height: 1.3; }
+  .ms-card.hl .ms-label { color: var(--ink-c); }
+  .ms-val { font-size: 27px; font-weight: 600; color: var(--navy); line-height: 1.15; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ms-card.hl .ms-val { color: var(--ink-c); }
+  .ms-val small { font-size: 14px; font-weight: 400; margin-left: 5px; }
+  .mg { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+  .mg-card { border: 1px solid #e3e8f1; border-radius: 12px; overflow: hidden; background: #fff; box-shadow: 0 1px 2px rgba(15, 37, 87, .04); }
+  .mg-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 9px 12px; background: #f6f8fc; border: 0; border-bottom: 1px solid #e3e8f1; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+  .mg-head[aria-expanded="false"] { border-bottom-color: transparent; }
+  .mg-head:hover { background: #eef2f9; }
+  .mg-head:focus-visible { outline: 2px solid var(--navy-2); outline-offset: -2px; }
+  .mg-ico { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--soft-c); color: var(--c); flex: none; }
+  .mg-ico .ico { stroke-width: 2.1; }
+  .mg-title { font-size: 16.5px; font-weight: 600; color: var(--navy); flex: 1; min-width: 0; }
+  .mg-count { font-size: 16px; font-weight: 600; color: var(--navy); white-space: nowrap; }
+  .mg-chev { display: inline-grid; color: var(--ink-2); transition: transform .15s; }
+  .mg-head[aria-expanded="false"] .mg-chev { transform: rotate(180deg); }
+  .mg-body { padding: 0 14px 2px 16px; }
+  .mg-body[hidden] { display: none; }
+  .mi { display: grid; grid-template-columns: minmax(0, 1fr) auto 72px; gap: 2px 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid #edf0f5; }
+  .mi:last-child { border-bottom: 0; }
+  .mi-name { font-size: 14px; line-height: 1.45; color: var(--ink); }
+  .mi-name small { display: block; font-size: 12px; color: var(--ink-3); margin-top: 1px; }
+  .mi-ct { font-size: 12.5px; color: var(--ink-2); white-space: nowrap; text-align: right; min-width: 52px; }
+  .mi-ct b { font-size: 15.5px; font-weight: 600; color: var(--navy); margin-right: 4px; }
+  .mi-bar { height: 7px; border-radius: 4px; background: #e9edf3; overflow: hidden; }
+  .mi-bar span { display: block; height: 100%; background: var(--c); border-radius: 4px; }
+  .mc { padding: 12px 16px 14px; }
+  .mc-top { display: flex; justify-content: space-between; gap: 14px; line-height: 1.4; margin-bottom: 8px; font-size: 14px; }
+  .mc-top b { font-weight: 600; white-space: nowrap; color: var(--navy); }
+  .mc-rate { font-size: 12px; color: var(--ink-3); margin-top: 4px; }
   .stack { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--soft); gap: 1px; }
   .stack span { display: block; height: 100%; }
-  .stack-nums { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 12.5px; color: var(--ink-2); margin-top: 4px; }
+  .stack-nums { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 12.5px; color: var(--ink-2); margin-top: 5px; }
   .stack-nums span { display: inline-flex; align-items: center; gap: 5px; }
   .stack-nums i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-  .cat-sum { margin-top: 14px; padding: 12px 14px; background: var(--soft); border: 1px solid var(--line); border-radius: 12px; }
-  .cat-sum .art { width: 110px; height: 66px; float: right; margin: -6px -6px 0 8px; }
-  .cat-sum b { font-size: 26px; font-weight: 600; color: var(--navy); }
-  .cat-item { padding: 10px 0; border-bottom: 1px dashed var(--line); }
-  .cat-item:last-child { border-bottom: 0; }
-  .cat-item .top-line { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 6px; line-height: 1.4; }
-  .cat-item .top-line b { font-weight: 600; white-space: nowrap; }
+  @media (max-width: 560px) {
+    .mdl-box { padding: 14px 12px 24px; }
+    .mdl-close { top: 14px; right: 12px; }
+    .mh { grid-template-columns: 46px minmax(0, 1fr); gap: 10px; padding-right: 0; padding-top: 34px; }
+    .mh-ico { width: 46px; height: 46px; }
+    .mh-ico .ico { width: 24px; height: 24px; }
+    .mh h3 { font-size: 20px; }
+    .mh p { font-size: 13.5px; }
+    .ms { gap: 8px; }
+    .ms-card { padding: 8px 10px; }
+    .ms-ico { display: none; }
+    .ms-val { font-size: 22px; }
+    .ms-val small { font-size: 12.5px; }
+    .mg-body { padding: 0 10px 2px 12px; }
+    .mi { grid-template-columns: minmax(0, 1fr) auto 48px; gap: 2px 8px; }
+  }
 
   /* ---------- tooltip ---------- */
   .tip { position: fixed; z-index: 90; pointer-events: none; max-width: 300px; background: var(--navy-800); color: #fff; border-radius: 10px; box-shadow: 0 10px 30px rgba(20, 42, 92, .3); padding: 8px 12px; font-size: 13.5px; line-height: 1.5; }
@@ -584,14 +624,12 @@
 </div>
 </div>
 <div class="swipe-hint off" id="swipe-hint" aria-hidden="true">‹ เลื่อนซ้าย-ขวาเพื่อดูส่วนที่เหลือ ›</div>
-<div class="drawer-back" id="drawer-back" hidden></div>
-<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden>
-  <div class="drawer-head">
-    <div><h3 id="drawer-title"></h3><p id="drawer-desc"></p></div>
-    <button type="button" class="btn-close" id="drawer-close">ปิด ✕</button>
+<div class="mdl" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden>
+  <div class="mdl-box" id="drawer-box">
+    <button type="button" class="mdl-close" id="drawer-close" aria-label="ปิดหน้าต่าง"><span aria-hidden="true">✕</span> ปิด</button>
+    <div id="drawer-body"></div>
   </div>
-  <div class="drawer-body" id="drawer-body"></div>
-</aside>
+</div>
 <div class="tip" id="tip" role="tooltip" hidden></div>
 
 <script>
@@ -775,10 +813,10 @@ const MISSIONS = [
 
   /* ---------- คำและสีที่ใช้ทั้งระบบ ---------- */
   const STATES = [
-    { key: 'standby', label: 'สแตนด์บาย (อยู่ที่ศูนย์)', kpi: 'สแตนด์บาย', short: 'สแตนด์บาย', desc: 'พร้อมใช้ รอสั่งการ ส่งออกได้ทันที', color: 'var(--st-standby)', icon: 'check' },
-    { key: 'in', label: 'ปฏิบัติงานในเขต', kpi: 'ปฏิบัติงานในเขต', short: 'ในเขต', desc: 'กำลังใช้งานในพื้นที่รับผิดชอบ', color: 'var(--st-in)', icon: 'pin' },
-    { key: 'out', label: 'สนับสนุนนอกเขต', kpi: 'สนับสนุนนอกเขต', short: 'นอกเขต', desc: 'สนับสนุนศูนย์หรือจังหวัดอื่น', color: 'var(--st-out)', icon: 'out' },
-    { key: 'down', label: 'ไม่พร้อมใช้', kpi: 'ไม่พร้อมใช้', short: 'ไม่พร้อมใช้', desc: 'ชำรุดหรือรอซ่อม', color: 'var(--st-down)', icon: 'down' },
+    { key: 'standby', label: 'สแตนด์บาย (อยู่ที่ศูนย์)', kpi: 'สแตนด์บาย', short: 'สแตนด์บาย', desc: 'พร้อมใช้ รอสั่งการ ส่งออกได้ทันที', color: 'var(--st-standby)', icon: 'check', big: 'check', soft: '#e3f5e3', ink: '#087a08', line: '#bfe3bf' },
+    { key: 'in', label: 'ปฏิบัติงานในเขต', kpi: 'ปฏิบัติงานในเขต', short: 'ในเขต', desc: 'กำลังใช้งานในพื้นที่รับผิดชอบ', color: 'var(--st-in)', icon: 'pin', big: 'pin', soft: '#e4eefb', ink: '#1d5fb0', line: '#c4d9f4' },
+    { key: 'out', label: 'สนับสนุนนอกเขต', kpi: 'สนับสนุนนอกเขต', short: 'นอกเขต', desc: 'สนับสนุนศูนย์หรือจังหวัดอื่น', color: 'var(--st-out)', icon: 'out', big: 'out', soft: '#ece9f8', ink: '#4a3aa7', line: '#d3cdf0' },
+    { key: 'down', label: 'ไม่พร้อมใช้', kpi: 'ไม่พร้อมใช้', short: 'ไม่พร้อมใช้', desc: 'ชำรุดหรือรอซ่อม', color: 'var(--st-down)', icon: 'down', big: 'wrench', soft: '#fde9e9', ink: '#c22f2f', line: '#f5c9c9' },
   ];
   const ST = Object.fromEntries(STATES.map((x) => [x.key, x]));
   const CATS = { P: 'เครื่องสูบน้ำ / รถสูบน้ำ', S: 'รถสนับสนุนการช่วยเหลือ', W: 'เรือและอุปกรณ์ทางน้ำ', B: 'สะพานและทุ่น' };
@@ -843,6 +881,14 @@ const MISSIONS = [
     info: '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/>',
     cal: '<rect x="4" y="5.5" width="16" height="14.5" rx="2"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/>',
     user: '<circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5"/>',
+    wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.4-3.4a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z"/>',
+    truck: '<path d="M2.5 6.5h11.5v9.5H2.5z"/><path d="M14 10h4.2l3.3 3.4V16H14z"/><circle cx="7" cy="17.6" r="1.9"/><circle cx="17.5" cy="17.6" r="1.9"/>',
+    boat: '<path d="M3 14h18l-2.6 5H5.6z"/><path d="M6.5 14V9.5h7.5l3 4.5"/><path d="M10 9.5V5.5"/>',
+    bridge: '<path d="M2.5 16.5h19"/><path d="M3.5 16.5V12q8.5-7 17 0v4.5"/><path d="M8 16.5v-6M12 16.5v-7.5M16 16.5v-6"/>',
+    grid: '<rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/>',
+    pie: '<path d="M11 3.6a8.5 8.5 0 1 0 9.4 9.4H11z"/><path d="M14 2.9v7.1h7.1A7.2 7.2 0 0 0 14 2.9z"/>',
+    chevUp: '<path d="M6 15l6-6 6 6"/>',
+    boxes: '<rect x="3.5" y="12.5" width="7.5" height="7.5" rx="1.2"/><rect x="13" y="12.5" width="7.5" height="7.5" rx="1.2"/><rect x="8.2" y="3.5" width="7.5" height="7.5" rx="1.2"/>',
   };
   function icon(name, size) {
     const el = document.createElementNS(SVGNS, 'svg');
@@ -1058,29 +1104,33 @@ const MISSIONS = [
   /* =====================================================================
      หน้าต่างรายการ (เลื่อนจากขวา)
      ===================================================================== */
-  const dw = { el: document.getElementById('drawer'), back: document.getElementById('drawer-back'), body: document.getElementById('drawer-body'), ret: null, timer: null };
+  const dw = { el: document.getElementById('drawer'), box: document.getElementById('drawer-box'), body: document.getElementById('drawer-body'), ret: null, timer: null };
+  const BLUE_VARS = { color: 'var(--blue)', soft: '#e4eefb', ink: '#1d5fb0', line: '#c4d9f4' };
+  function setVars(el, v) {
+    el.style.setProperty('--c', v.color); el.style.setProperty('--soft-c', v.soft);
+    el.style.setProperty('--ink-c', v.ink); el.style.setProperty('--line-c', v.line);
+  }
   function openDrawer(o) {
     clearTimeout(dw.timer);
-    dw.el.style.setProperty('--c', o.color || 'var(--navy-2)');
-    put(document.getElementById('drawer-title'), o.title);
-    put(document.getElementById('drawer-desc'), o.desc || '');
+    setVars(dw.box, o.vars || BLUE_VARS);
     put(dw.body, o.body);
-    if (dw.el.hidden) dw.ret = document.activeElement;
-    dw.el.hidden = false; dw.back.hidden = false;
+    if (dw.el.hidden) { dw.ret = document.activeElement; document.documentElement.style.overflow = 'hidden'; }
+    dw.el.hidden = false;
     hideTip();
-    requestAnimationFrame(() => { dw.el.classList.add('open'); dw.back.classList.add('open'); });
-    dw.body.scrollTop = 0;
+    requestAnimationFrame(() => dw.el.classList.add('open'));
+    dw.el.scrollTop = 0;
     document.getElementById('drawer-close').focus({ preventScroll: true });
   }
   function closeDrawer() {
     if (dw.el.hidden) return;
-    dw.el.classList.remove('open'); dw.back.classList.remove('open');
+    dw.el.classList.remove('open');
+    document.documentElement.style.overflow = '';
     const fast = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    dw.timer = setTimeout(() => { dw.el.hidden = true; dw.back.hidden = true; dw.body.replaceChildren(); }, fast ? 0 : 230);
+    dw.timer = setTimeout(() => { dw.el.hidden = true; dw.body.replaceChildren(); }, fast ? 0 : 200);
     if (dw.ret && document.contains(dw.ret)) dw.ret.focus({ preventScroll: true });
   }
   document.getElementById('drawer-close').addEventListener('click', closeDrawer);
-  dw.back.addEventListener('click', closeDrawer);
+  dw.el.addEventListener('click', (e) => { if (e.target === dw.el) closeDrawer(); });
   document.addEventListener('keydown', (e) => {
     if (dw.el.hidden) return;
     if (e.key === 'Escape') { e.preventDefault(); closeDrawer(); return; }
@@ -1092,12 +1142,38 @@ const MISSIONS = [
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   });
 
+  /* ส่วนประกอบของหน้าต่าง */
+  const CAT_ICON = { P: 'drop', S: 'truck', W: 'boat', B: 'bridge' };
+  function mHead(o) {
+    return h('div', { class: 'mh' }, h('div', { class: 'mh-ico' + (o.solid ? ' solid' : '') }, o.ico),
+      h('div', null, h('h3', { id: 'drawer-title' }, o.title), h('p', null, o.sub)));
+  }
+  function msCard(o) {
+    const el = h('div', { class: 'ms-card' + (o.hl ? ' hl' : '') }, h('span', { class: 'ms-ico' }, o.ico),
+      h('div', { style: 'min-width:0' }, o.top ? h('div', { class: 'ms-label' }, o.top) : null,
+        h('div', { class: 'ms-val' }, o.val, o.unit ? h('small', null, o.unit) : null),
+        o.bottom ? h('div', { class: 'ms-label' }, o.bottom) : null));
+    if (o.vars) setVars(el, o.vars);
+    return el;
+  }
+  function mGroup(ico, title, count, rows) {
+    const body = h('div', { class: 'mg-body' }, rows);
+    const btn = h('button', { type: 'button', class: 'mg-head', 'aria-expanded': 'true' },
+      h('span', { class: 'mg-ico' }, icon(ico, 22)), h('span', { class: 'mg-title' }, title), h('span', { class: 'mg-count' }, count), h('span', { class: 'mg-chev' }, icon('chevUp', 18)));
+    btn.addEventListener('click', () => { const open = btn.getAttribute('aria-expanded') !== 'true'; btn.setAttribute('aria-expanded', String(open)); body.hidden = !open; });
+    return h('section', { class: 'mg-card' }, btn, body);
+  }
+  function mItem(name, sub, n, total) {
+    return h('div', { class: 'mi' }, h('div', { class: 'mi-name' }, name, sub ? h('small', null, sub) : null),
+      h('div', { class: 'mi-ct' }, h('b', null, fmt(n)), 'จาก ' + fmt(total)),
+      h('div', { class: 'mi-bar', role: 'img', 'aria-label': fmt(n) + ' จาก ' + fmt(total) }, h('span', { style: 'width:' + Math.max(3, pct(n, total)) + '%' })));
+  }
   function stackBar(o) {
-    const total = STATES.reduce((a, st) => a + (o[st.key] || 0), 0);
     return h('div', { class: 'stack', role: 'img', 'aria-label': STATES.map((st) => st.short + ' ' + (o[st.key] || 0)).join(', ') },
       STATES.map((st) => (o[st.key] ? h('span', { style: 'flex:' + o[st.key] + ' 1 0;background:' + st.color }) : null)));
   }
   const stackNums = (o) => h('div', { class: 'stack-nums' }, STATES.filter((st) => o[st.key]).map((st) => h('span', null, h('i', { style: 'background:' + st.color }), st.short + ' ' + fmt(o[st.key]))));
+  const rateLine = (x) => (x.rate ? 'อัตราสูบ ' + (x.no === 6 ? 'ไม่น้อยกว่า ' : '') + rateText(x.rate, x.name) + ' ต่อเครื่อง' : '');
 
   /* รายชื่อเครื่องจักรตามสถานะ */
   function openDrill(key) {
@@ -1105,31 +1181,32 @@ const MISSIONS = [
     const items = inv.filter((x) => x[key] > 0);
     const groups = Object.keys(CATS).map((c) => ({ c, items: items.filter((x) => x.cat === c).sort((a, b) => b[key] - a[key] || a.no - b.no) })).filter((g) => g.items.length);
     const scope = key === 'in' || key === 'out' ? key : null;
-    openDrawer({ color: st.color, title: st.label + ' ' + fmt(T[key]) + ' หน่วย',
-      desc: st.desc + ' · ' + items.length + ' ประเภท (' + pct1(T[key], T.total) + '% ของทั้งหมด)',
-      body: groups.map(({ c, items: list }) => h('div', { class: 'drill-group' },
-        h('h4', null, CATS[c], h('span', null, fmt(sumBy(list, (x) => x[key])) + ' หน่วย')),
+    openDrawer({ vars: st, body: [
+      mHead({ solid: true, ico: icon(st.big === 'wrench' ? 'wrench' : st.icon, 28), title: st.label + ' ' + fmt(T[key]) + ' หน่วย',
+        sub: st.desc + ' · ' + items.length + ' ประเภท (' + pct1(T[key], T.total) + '% ของทั้งหมด)' }),
+      h('div', { class: 'ms' },
+        msCard({ hl: true, ico: icon('boxes', 24), top: 'รวมทั้งหมด', val: fmt(T[key]), unit: 'หน่วย' }),
+        msCard({ ico: icon('grid', 24), val: fmt(items.length), bottom: 'ประเภท' }),
+        msCard({ ico: icon('pie', 24), val: pct1(T[key], T.total) + '%', bottom: 'ของทั้งหมด' })),
+      h('div', { class: 'mg' }, groups.map(({ c, items: list }) => mGroup(CAT_ICON[c], CATS[c], fmt(sumBy(list, (x) => x[key])) + ' หน่วย',
         list.map((x) => {
           const where = scope ? foundText(x.no, scope) : '';
-          return h('div', { class: 'drill-item' },
-            h('div', { class: 'nm' }, x.name),
-            h('div', { class: 'ct' }, x[key], h('small', null, 'จาก ' + x.total)),
-            (x.rate || where) ? h('div', { class: 'sub' },
-              x.rate ? 'อัตราสูบ ' + (x.no === 6 ? 'ไม่น้อยกว่า ' : '') + rateText(x.rate, x.name) + ' ต่อเครื่อง' : '',
-              x.rate && where ? ' | ' : '', where ? 'พบในรายงานภารกิจที่ ' + where : '') : null);
-        }))) });
+          const sub = [rateLine(x), where ? 'ตามรายงานภารกิจ: ' + where : ''].filter(Boolean).join(' · ');
+          return mItem(x.name, sub, x[key], x.total);
+        })))),
+    ] });
   }
   /* รายการในหมวด (การ์ดภาพ) */
   function openTile(t) {
-    openDrawer({ color: 'var(--blue)', title: t.name + ' ' + fmt(t.total) + ' หน่วย', desc: t.items.length + ' ประเภท · พร้อมใช้งาน ' + fmt(t.total - t.down) + ' หน่วย (' + pct(t.total - t.down, t.total) + '%)',
-      body: [
-        h('div', { class: 'cat-sum' }, art(t.art), h('div', null, 'สแตนด์บายพร้อมส่งออก'), h('b', null, fmt(t.standby) + ' หน่วย'), h('div', { style: 'clear:both;margin-top:8px' }, stackBar(t), stackNums(t))),
-        h('div', { class: 'drill-group' }, h('h4', null, 'แต่ละประเภท', h('span', null, 'จำนวนทั้งหมด')),
-          t.items.slice().sort((a, b) => b.total - a.total || a.no - b.no).map((x) => h('div', { class: 'cat-item' },
-            h('div', { class: 'top-line' }, h('span', null, x.name), h('b', null, fmt(x.total) + ' หน่วย')),
-            stackBar(x), stackNums(x),
-            x.rate ? h('div', { class: 'stack-nums' }, 'อัตราสูบ ' + (x.no === 6 ? 'ไม่น้อยกว่า ' : '') + rateText(x.rate, x.name) + ' ต่อเครื่อง') : null))),
-      ] });
+    openDrawer({ vars: BLUE_VARS, body: [
+      mHead({ ico: art(t.art), title: t.name + ' ' + fmt(t.total) + ' หน่วย',
+        sub: t.items.length + ' ประเภท · พร้อมใช้งาน ' + fmt(t.total - t.down) + ' หน่วย (' + pct(t.total - t.down, t.total) + '%)' }),
+      h('div', { class: 'ms four' }, STATES.map((st) => msCard({ hl: true, vars: st, ico: icon(st.big === 'wrench' ? 'wrench' : st.icon, 22), top: st.kpi, val: fmt(t[st.key]), unit: 'หน่วย' }))),
+      h('div', { class: 'mg' }, t.items.slice().sort((a, b) => b.total - a.total || a.no - b.no).map((x) => h('section', { class: 'mg-card mc' },
+        h('div', { class: 'mc-top' }, h('span', null, x.name), h('b', null, fmt(x.total) + ' หน่วย')),
+        stackBar(x), stackNums(x),
+        x.rate ? h('div', { class: 'mc-rate' }, rateLine(x)) : null))),
+    ] });
   }
 
   /* =====================================================================
